@@ -1,0 +1,425 @@
+#!/bin/bash
+
+set -e
+
+clear
+
+CURRENTUSER=$(whoami)
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+RED='\033[0;31m'
+NC='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+LBLUE='\033[1;34m'
+DGRAY='\033[1;35m'
+PURPLE='\033[0;35m'
+RGRAY='\033[1;30m'
+BOLD=$(tput bold)
+NORM=$(tput sgr0)
+ORANGE='\033[1;33m'
+
+DoubleQuotes='"'
+NoQuotes=''
+
+USERINTERACTION="YES"
+USERVALS=""
+MANUALRUN="NO"
+SOMECON="YES"
+
+THESTACK_FOLDER="THESTACKFOLDER"
+THESTACK_NAME="THESTACKNAME"
+
+BASE="/opt/Matsya"
+sudo mkdir -p $BASE
+sudo mkdir -p $BASE/tmp
+sudo mkdir -p $BASE/Scripts
+sudo mkdir -p $BASE/Secrets
+sudo mkdir -p $BASE/Resources
+sudo mkdir -p $BASE/Output
+
+source $BASE/Resources/StackVersioningAndMisc
+
+if [ "$#" -ne 1 ]; then
+	USERVALS=""
+else
+	USERVALS=$1
+	USERINTERACTION="NO"
+	IFS='├' read -r -a USERLISTVALS <<< $USERVALS
+	SECRETTHEKEY="${USERLISTVALS[0]}"
+	THENODECHOICE="${USERLISTVALS[1]}"
+	REMDEL="${USERLISTVALS[2]}"
+	INOROUT="${USERLISTVALS[3]}"
+	KUBESDEL="${USERLISTVALS[4]}"	
+	NODEREQNUMBER="-1"
+fi
+
+if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+	echo -e "${ORANGE}==============================================================================${NC}"
+	echo -e "${BLUE}${BOLD}\x1b[4mM${NORM}${NC}ultifaceted deploy${BLUE}${BOLD}\x1b[4mA${NORM}${NC}gnostic ${BLUE}${BOLD}\x1b[4mT${NORM}${NC}imesaving ${BLUE}${BOLD}\x1b[4mS${NORM}${NC}calable anal${BLUE}${BOLD}\x1b[4mY${NORM}${NC}tics ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}malgamated ${BOLD}\x1b[30;44mPLATFORM\x1b[m${NORM}"
+	echo -e "${GREEN}==============================================================================${NC}"
+	echo ''
+	echo -e "\x1b[3m\x1b[4mSTACK NODE REMOVE/DELETE\x1b[m"
+	echo ''
+fi
+
+if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+	read -s -p "Key 				> " -e -i "" SECRETTHEKEY
+	echo ''
+	echo ''		
+fi
+
+ALLREQNODES=()
+THENODELISTFILE="$THESTACK_FOLDER/$THESTACK_NAME-LIST"
+
+TEMPRANDOMFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+$BASE/Scripts/SecretsFile-Decrypter "$THENODELISTFILE├1├1├$BASE/tmp/$TEMPRANDOMFILE├$SECRETTHEKEY"
+LINES=$(cat $BASE/tmp/$TEMPRANDOMFILE)
+for LINE in $LINES; do
+	ALLREQNODES+=("$LINE")				
+done	
+sudo rm -rf $BASE/tmp/$TEMPRANDOMFILE
+
+echo "$STACKLINELENGTHY"
+TempXCounter=1
+THETOTALNODELIST=()
+declare -A THETOTALNODEDICTLIST
+THETOTALREQNODELIST=()
+AUTOMATEDNODELIST=()
+THEK8SDETINSTANCE=""
+
+for EACHXNODE in "${ALLREQNODES[@]}"
+do
+	IFS='├' read -r -a _EACHXNODE <<< $EACHXNODE
+	IXP="${_EACHXNODE[0]}"
+	NAXME="${_EACHXNODE[1]}"
+	NM="${_EACHXNODE[9]}"
+	ASSNROLES="${_EACHXNODE[10]}"
+	
+	IFS=',' read -r -a ASSN_ROLES <<< $ASSNROLES
+	for _ASSN_ROLE in "${ASSN_ROLES[@]}"
+	do
+		if [ "$_ASSN_ROLE" == "1" ] ; then
+			THEK8SDETINSTANCE="$EACHXNODE"
+		fi
+	done
+	
+	THETOTALNODELIST+=("$TempXCounter")
+	THETOTALNODEDICTLIST["$TempXCounter"]="$EACHXNODE"
+
+	if [ "$USERINTERACTION" == "NO" ] || [ "$USERINTERACTION" == "no" ] ; then
+		IFS=',' read -r -a THE_NODE_CHOICE <<< $THENODECHOICE
+		for THE_NODE__CHOICE in "${THE_NODE_CHOICE[@]}"
+		do		
+			if [ "$THE_NODE__CHOICE" == "$IXP" ] || [ "$THE_NODE__CHOICE" == "$NAXME" ] || [ "$THE_NODE__CHOICE" == "$NM" ] ; then
+				AUTOMATEDNODELIST+=("$TempXCounter")
+			fi
+		done					
+	fi
+		
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then	
+		if (( TempXCounter < 10 )) ; then
+			echo "(0$TempXCounter) $NM ($IXP)"
+		else
+			echo "($TempXCounter) $NM ($IXP)"
+		fi
+	fi
+	
+	TempXCounter=$((TempXCounter + 1))	
+done
+echo "$STACKLINELENGTHY"
+
+if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+	echo ""	
+	read -p "REMOVE(1) / DELETE(2) / NA(0)	> " -e -i "0" REMDEL
+	echo ""	
+	read -p "INCLUDE(1) / EXCLUDE(2)		> " -e -i "1" INOROUT	
+	echo ""	
+	read -p "K8S YES(1) / NO(2)		> " -e -i "2" KUBESDEL	
+	echo ""	
+	read -p "Enter Node Number(s) {COMMA}	> " -e -i "0" NODEREQNUMBER
+	echo ""	
+fi
+
+if [ "$KUBESDEL" == "1" ] ; then
+	if [ "$THEK8SDETINSTANCE" == "" ] ; then
+		exit
+	fi
+	
+	if [ "$REMDEL" == "2" ] ; then
+		REMDEL="1"
+	fi
+fi
+
+if [ "$REMDEL" == "1" ] || [ "$REMDEL" == "2" ] ; then
+	if [ "$KUBESDEL" == "2" ] ; then
+		KUBESDEL="1"
+	fi
+fi
+
+if [ "$NODEREQNUMBER" == "0" ] ; then
+	exit
+else
+	WHENJOBBEGAN=$(echo $(date +%H):$(date +%M))
+	
+	IFS=',' read -r -a NODEREQ_NUMBER <<< $NODEREQNUMBER
+	
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then		
+		if [ "$INOROUT" == "1" ] ; then
+			for NODEREQ__NUMBER in "${NODEREQ_NUMBER[@]}"
+			do
+				THETOTALREQNODELIST+=("$NODEREQ__NUMBER")	
+			done
+		else
+			THETOTALREQNODELIST=(`echo ${THETOTALNODELIST[@]} ${NODEREQ_NUMBER[@]} | tr ' ' '\n' | sort | uniq -u `)
+		fi
+	else
+		if [ "$INOROUT" == "1" ] ; then
+			for NODEREQ__NUMBER in "${AUTOMATEDNODELIST[@]}"
+			do
+				THETOTALREQNODELIST+=("$NODEREQ__NUMBER")	
+			done
+		else
+			THETOTALREQNODELIST=(`echo ${THETOTALNODELIST[@]} ${AUTOMATEDNODELIST[@]} | tr ' ' '\n' | sort | uniq -u `)
+		fi				
+	fi
+	
+	THELENTOTALREQNODELIST=${#THETOTALREQNODELIST[@]}
+	if (( $THELENTOTALREQNODELIST < 1 )) ; then
+		exit
+	fi
+	
+	LEFTOUTNODES=()	
+	LEFTOUTNODES=(`echo ${THETOTALNODELIST[@]} ${THETOTALREQNODELIST[@]} | tr ' ' '\n' | sort | uniq -u `)
+	
+	sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+	sudo rm -rf /root/.ssh/known_hosts	
+	HOSTSFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	touch $BASE/tmp/$HOSTSFILE	
+	sudo chmod 777 $BASE/tmp/$HOSTSFILE
+	echo "" | sudo tee -a $BASE/tmp/$HOSTSFILE > /dev/null
+	
+	THECOMPLETEFINALNODELIST=()
+	for EACHXNODE in "${LEFTOUTNODES[@]}"
+	do
+		IFS='├' read -r -a _EACHXNODE <<< "${THETOTALNODEDICTLIST[$EACHXNODE]}"
+		IXP="${_EACHXNODE[0]}"
+		NM="${_EACHXNODE[9]}"
+		echo "$IXP $NM" | sudo tee -a $BASE/tmp/$HOSTSFILE > /dev/null
+		THECOMPLETEFINALNODELIST+=("${THETOTALNODEDICTLIST[$EACHXNODE]}")	
+	done
+
+	TEMPRANDOMCFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	
+	STACKDELETELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	DELETESTACKFILESTART='#!/bin/bash'"
+"
+	echo "$DELETESTACKFILESTART" | sudo tee $BASE/tmp/$STACKDELETELIST > /dev/null
+	sudo chmod 777 $BASE/tmp/$STACKDELETELIST	
+
+	STACKK8SDELETELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	DELETESTACKFILESTART='#!/bin/bash'"
+	
+sudo mv /home/matsya/$TEMPRANDOMCFILE /home/matsya/$TEMPRANDOMCFILE.yaml	
+"
+	echo "$DELETESTACKFILESTART" | sudo tee $BASE/tmp/$STACKK8SDELETELIST > /dev/null
+	sudo chmod 777 $BASE/tmp/$STACKK8SDELETELIST
+	
+	LISTOFDELELIGNODES=""
+	for EACHXNODE in "${THETOTALREQNODELIST[@]}"
+	do
+		IFS='├' read -r -a EACHSPLITNODE <<< "${THETOTALNODEDICTLIST[$EACHXNODE]}"
+		IP="${EACHSPLITNODE[0]}"
+		PORT="${EACHSPLITNODE[2]}"
+		UN="${EACHSPLITNODE[3]}"
+		PW="${EACHSPLITNODE[4]}"
+		NM="${EACHSPLITNODE[9]}"
+		
+		LISTOFDELELIGNODES="$LISTOFDELELIGNODES,$NM"
+		OLDNAME=$(echo "${EACHSPLITNODE[1]}" | rev)
+		IFS='-' read -r -a _OLDNAME <<< $OLDNAME
+		NAMEOLD=$(echo "${_OLDNAME[1]}" | rev)
+		INSTANCEID="$NAMEOLD"
+		
+		GetCodeForNodeDelete "$INSTANCEID" "${EACHSPLITNODE[5]}" "${EACHSPLITNODE[7]}" "$BASE/tmp/$STACKDELETELIST"
+		echo "sudo -H -u root bash -c \"kk delete -y node $NM -f /home/matsya/$TEMPRANDOMCFILE.yaml\"" | sudo tee -a $BASE/tmp/$STACKK8SDELETELIST > /dev/null
+		echo "" | sudo tee -a $BASE/tmp/$STACKK8SDELETELIST > /dev/null
+	done
+	LISTOFDELELIGNODES=${LISTOFDELELIGNODES:1}
+
+	echo "sudo rm -rf /home/matsya/$TEMPRANDOMCFILE.yaml" | sudo tee -a $BASE/tmp/$STACKK8SDELETELIST > /dev/null
+
+	ITER=${SECRETTHEKEY:7:6}
+	STACKNODELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$STACKNODELIST && sudo chmod 777 $BASE/tmp/$STACKNODELIST
+	
+	LISTOFELIGNODES=""
+	for THEFINALNODE in "${THECOMPLETEFINALNODELIST[@]}"
+	do
+		IFS='├' read -r -a EACHSPLITNODE <<< $THEFINALNODE
+		NM="${EACHSPLITNODE[9]}"
+		LISTOFELIGNODES="$LISTOFELIGNODES,$NM"
+		echo "$THEFINALNODE" | sudo tee -a $BASE/tmp/$STACKNODELIST > /dev/null
+	done
+	LISTOFELIGNODES=${LISTOFELIGNODES:1}
+	
+	if [ "$REMDEL" == "1" ] || [ "$REMDEL" == "2" ] ; then	
+		VAR8=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/tmp/$STACKNODELIST $BASE/Secrets/$VAR8
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$VAR8
+		sudo chmod u=r,g=,o= $BASE/Secrets/$VAR8
+		openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$VAR8 -out $BASE/Secrets/".$VAR8" -k $SECRETTHEKEY
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$VAR8"
+		sudo chmod u=r,g=,o= $BASE/Secrets/".$VAR8"
+		sudo rm -rf $BASE/Secrets/$VAR8
+		sudo rm -rf /root/.bash_history
+		sudo rm -rf /home/$CURRENTUSER/.bash_history
+		sudo rm -rf $THESTACK_FOLDER/$THESTACK_NAME-LIST
+		sudo mv $BASE/Secrets/".$VAR8" $THESTACK_FOLDER/$THESTACK_NAME-LIST
+	fi
+	
+	EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
+	EXECUTE1SCRIPT='#!/bin/bash'"
+"
+	echo "$EXECUTE1SCRIPT" | sudo tee $BASE/tmp/$EXECUTESCRIPT > /dev/null	
+	echo "sudo rm -rf /etc/hosts && sudo mv /home/matsya/$HOSTSFILE /etc/hosts && hostname && cat /etc/hosts" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null	
+	
+	: '	
+	if [ "$KUBESDEL" == "2" ] ; then
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			$THESTACK_FOLDER/$THESTACK_NAME-FILE-MANAGE "PUSH" "$SECRETTHEKEY├1├$LISTOFELIGNODES├$BASE/tmp/$HOSTSFILE├100"								
+		)
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			$THESTACK_FOLDER/$THESTACK_NAME-FILE-MANAGE "EXECUTE" "$SECRETTHEKEY├1├$LISTOFELIGNODES├$BASE/tmp/$EXECUTESCRIPT├100"								
+		)
+	fi
+	'
+			
+	if [ "$KUBESDEL" == "1" ] ; then
+		IFS='├' read -r -a EACHSPLITNODE <<< "$THEK8SDETINSTANCE"
+		NM="${EACHSPLITNODE[9]}"	
+
+		THENODECONFIGFILE="$THESTACK_FOLDER/$THESTACK_NAME-CONFIG"
+		$BASE/Scripts/SecretsFile-Decrypter "$THENODECONFIGFILE├1├1├$BASE/tmp/$TEMPRANDOMCFILE├$SECRETTHEKEY"
+
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			$THESTACK_FOLDER/$THESTACK_NAME-FILE-MANAGE "PUSH" "$SECRETTHEKEY├1├$NM├$BASE/tmp/$TEMPRANDOMCFILE├100"								
+		)
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			$THESTACK_FOLDER/$THESTACK_NAME-FILE-MANAGE "EXECUTE" "$SECRETTHEKEY├1├$NM├$BASE/tmp/$STACKK8SDELETELIST├100"								
+		)
+		
+		IFS=',' read -r -a QWER <<< "$LISTOFDELELIGNODES"
+		for ASDF in "${QWER[@]}"
+		do
+			sed -i -e s~"  - {name: $ASDF"~"#  - {name: $ASDF"~g $BASE/tmp/$TEMPRANDOMCFILE
+			sed -i -e s~"    - $ASDF"~"#    - $ASDF"~g $BASE/tmp/$TEMPRANDOMCFILE
+		done
+		
+		VARC8=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/tmp/$TEMPRANDOMCFILE $BASE/Secrets/$VARC8
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$VARC8
+		sudo chmod u=r,g=,o= $BASE/Secrets/$VARC8
+		openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$VARC8 -out $BASE/Secrets/".$VARC8" -k $SECRETTHEKEY
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$VARC8"
+		sudo chmod u=r,g=,o= $BASE/Secrets/".$VARC8"
+		sudo rm -rf $BASE/Secrets/$VARC8
+		sudo rm -rf /root/.bash_history
+		sudo rm -rf /home/$CURRENTUSER/.bash_history
+		sudo rm -rf $THESTACK_FOLDER/$THESTACK_NAME-CONFIG
+		sudo mv $BASE/Secrets/".$VARC8" $THESTACK_FOLDER/$THESTACK_NAME-CONFIG
+					
+		sudo rm -rf $BASE/tmp/$TEMPRANDOMCFILE
+	fi
+
+	if [ "$REMDEL" == "2" ] ; then
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			$BASE/tmp/$STACKDELETELIST								
+		)	
+	fi
+	
+	if [ "$REMDEL" == "1" ] || [ "$REMDEL" == "2" ] ; then		
+		echo "$STACKLINELENGTHY"		
+		cat $BASE/tmp/$HOSTSFILE
+		echo "$STACKLINELENGTHY"
+		echo ""
+	fi
+		
+	sudo rm -rf $BASE/tmp/$HOSTSFILE
+	sudo rm -rf $BASE/tmp/$STACKDELETELIST
+	sudo rm -rf $BASE/tmp/$STACKNODELIST
+	sudo rm -rf $BASE/tmp/$EXECUTESCRIPT
+	sudo rm -rf $BASE/tmp/$STACKK8SDELETELIST
+		
+	WHENJOBFIN=$(echo $(date +%H):$(date +%M))
+	SEC1=`date +%s -d ${WHENJOBBEGAN}`
+	SEC2=`date +%s -d ${WHENJOBFIN}`
+	DIFFSEC=`expr ${SEC2} - ${SEC1}`
+	THETOTALTIMETAKEN=$(echo `date +%M -ud @${DIFFSEC}`)
+	echo "Total Time Taken => $THETOTALTIMETAKEN Minutes"	
+	echo ''	
+	echo "=============================================================================="
+	echo ''					
+fi
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+if [ "$MANUALRUN" == "YES" ] || [ "$MANUALRUN" == "yes" ] ; then
+	read -p "" -e -i "" QUIT
+	echo ""
+fi
+

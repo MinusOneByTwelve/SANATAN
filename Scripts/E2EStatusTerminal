@@ -1,0 +1,5 @@
+#!/bin/bash
+
+E2ESTATUSRESPONSE=$(curl -X GET 'https://api.e2enetworks.com/myaccount/api/v1/nodes/E2ETHENEWNODEID/?apikey=E2ETHEAPIKEY&project_id=E2ETHEPROJECTCHOICE' -H 'Authorization: Bearer E2ETHEAUTHTOKEN')
+
+echo $E2ESTATUSRESPONSE > E2ESTATUSRESPONSESAVE

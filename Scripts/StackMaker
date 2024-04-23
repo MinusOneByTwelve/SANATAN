@@ -1,0 +1,657 @@
+#!/bin/bash
+
+set -e
+
+clear
+
+CURRENTUSER=$(whoami)
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+RED='\033[0;31m'
+NC='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+LBLUE='\033[1;34m'
+DGRAY='\033[1;35m'
+PURPLE='\033[0;35m'
+RGRAY='\033[1;30m'
+BOLD=$(tput bold)
+NORM=$(tput sgr0)
+ORANGE='\033[1;33m'
+
+DoubleQuotes='"'
+NoQuotes=''
+
+USERINTERACTION="YES"
+USERVALS=""
+MANUALRUN="NO"
+SOMECON="YES"
+
+BASE="/opt/Matsya"
+sudo mkdir -p $BASE
+sudo mkdir -p $BASE/tmp
+sudo mkdir -p $BASE/Scripts
+sudo mkdir -p $BASE/Secrets
+sudo mkdir -p $BASE/Resources
+sudo mkdir -p $BASE/Output
+
+source $BASE/Resources/StackVersioningAndMisc
+
+LISTOFALLRANDOMNUMBERS=()
+
+function GetNewRandomNumber {
+    local FreshRandomNumber=$(shuf -i 1000-9999 -n 1)
+    if printf '%s\0' "${LISTOFALLRANDOMNUMBERS[@]}" | grep -Fxqz -- $FreshRandomNumber; then	
+    	GetNewRandomNumber
+    else
+        LISTOFALLRANDOMNUMBERS+=("$FreshRandomNumber")
+    fi
+    echo $FreshRandomNumber
+}
+
+echo -e "${ORANGE}==============================================================================${NC}"
+echo -e "${BLUE}${BOLD}\x1b[4mM${NORM}${NC}ultifaceted deploy${BLUE}${BOLD}\x1b[4mA${NORM}${NC}gnostic ${BLUE}${BOLD}\x1b[4mT${NORM}${NC}imesaving ${BLUE}${BOLD}\x1b[4mS${NORM}${NC}calable anal${BLUE}${BOLD}\x1b[4mY${NORM}${NC}tics ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}malgamated ${BOLD}\x1b[30;44mPLATFORM\x1b[m${NORM}"
+echo -e "${GREEN}==============================================================================${NC}"
+echo ''
+echo -e "\x1b[3m\x1b[4mSTACK MAKER\x1b[m"
+echo ''
+
+if [ "$#" -ne 1 ]; then
+	USERVALS=""
+else
+	USERVALS=$1
+	USERINTERACTION="NO"
+	IFS='├' read -r -a USERLISTVALS <<< $USERVALS
+	BASENODELOCATION="${USERLISTVALS[0]}"
+	SECRETTHEKEY="${USERLISTVALS[1]}"
+	THECLUSTERCHOICE="${USERLISTVALS[2]}"
+	THESINGLEFILE="${USERLISTVALS[3]}"
+	THEPICKFILE="${USERLISTVALS[4]}"
+	THEFILEPATTERN="${USERLISTVALS[5]}"
+	THEFILENUMBERS="${USERLISTVALS[6]}"	
+	REQNODENUMBERS="${USERLISTVALS[7]}"	
+	STACKNAME="${USERLISTVALS[8]}"
+	K8SCONFIG="${USERLISTVALS[9]}"
+	TEMPVAR3="${USERLISTVALS[10]}"
+	NODEAVB="${USERLISTVALS[11]}"
+	GOFORIT="${USERLISTVALS[12]}"	
+	USERINPUTCOUNT=${#USERLISTVALS[@]}
+	if (( $USERINPUTCOUNT > 13 )) ; then
+		MANUALRUN="YES"
+	fi
+fi
+
+if [ "$SOMECON" == "YES" ] || [ "$SOMECON" == "yes" ] ; then
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+		UUID=$(uuidgen)
+		UUIDREAL=${UUID:1:6}
+		read -p "Node Files Location 			> " -e -i "$BASE/Output" BASENODELOCATION
+		echo ""	
+		
+		read -s -p "Key 					> " -e -i "" SECRETTHEKEY
+		echo ''	
+		read -p "
+Cluster Choice
+$STACKLINELENGTHY 
+SINGLE(1) / MULTI(2) / PATTERN(3) / PICK(4) 		 
+$STACKLINELENGTHY
+					> " -e -i "4" THECLUSTERCHOICE
+		echo ""
+	fi
+	
+	LISTOFFILES=()
+	
+	if [ "$THECLUSTERCHOICE" == "1" ] ; then
+		if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+			read -p "Node File 				> " -e -i "$BASENODELOCATION/" THESINGLEFILE
+			echo ""
+		fi
+		if [ -f "$THESINGLEFILE" ]
+		then		
+			LISTOFFILES+=("$THESINGLEFILE")	
+		fi
+	fi
+	if [ "$THECLUSTERCHOICE" == "2" ] ; then
+		if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+			TempCounter=0
+			while [ $TempCounter -lt 1 ]
+			do
+				read -p "Node File (Type 'Q' To Quit) 			> " -e -i "$BASENODELOCATION/" THEPICKFILE
+				echo ""
+				if [ "$THEPICKFILE" == "Q" ] || [ "$THEPICKFILE" == "q" ] ; then
+					TempCounter=$((TempCounter + 1))
+				else
+					if [ -f "$THEPICKFILE" ]
+					then			
+						LISTOFFILES+=("$THEPICKFILE")
+					fi
+				fi		
+			done
+		else
+			IFS='¬' read -r -a THEPICK_FILE <<< $THEPICKFILE
+			for THEPICK__FILE in "${THEPICK_FILE[@]}"
+			do
+				LISTOFFILES+=("$THEPICK__FILE")		
+			done			
+		fi				
+	fi	
+	if [ "$THECLUSTERCHOICE" == "3" ] ; then
+		if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+			read -p "File Pattern 				> " -e -i "$BASENODELOCATION/" THEFILEPATTERN
+			echo ""
+		fi	
+		for PATTERNFILE in $THEFILEPATTERN
+		do
+			if [ -f "$PATTERNFILE" ]
+			then
+				LISTOFFILES+=("$PATTERNFILE")
+			fi
+		done		
+	fi
+	if [ "$THECLUSTERCHOICE" == "4" ] ; then
+		echo "$STACKLINELENGTHY"
+		TempCounter=1
+		for EVERYFILE in "$BASENODELOCATION"/*; do
+			if [ -f "$EVERYFILE" ]; then
+				if (( TempCounter < 10 )) ; then
+					echo "(0$TempCounter) $EVERYFILE"
+				else
+					echo "($TempCounter) $EVERYFILE"
+				fi
+				TempCounter=$((TempCounter + 1))
+			fi
+		done
+		echo "$STACKLINELENGTHY"
+		echo ""
+		if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then	
+			read -p "Enter File Number(s) Comma Based	> " -e -i "" THEFILENUMBERS
+			echo ""
+		fi
+		IFS=',' read -r -a CHOICELIST <<< $THEFILENUMBERS
+		
+		TempCounter=1
+		TempCounter2=1
+		for EVERYFILE in "$BASENODELOCATION"/*; do
+			if [ -f "$EVERYFILE" ]; then
+				for _CHOICE in "${CHOICELIST[@]}"
+				do
+					if (( TempCounter == _CHOICE )) ; then
+						LISTOFFILES+=("$EVERYFILE")
+					fi
+					TempCounter2=$((TempCounter2 + 1))		
+				done
+				TempCounter=$((TempCounter + 1))				
+			fi
+		done		
+	fi
+	
+	ALLNODESLIST=()
+	
+	TEMPRANDOMFOLDER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo mkdir -p $BASE/tmp/$TEMPRANDOMFOLDER
+	for EACHFILE in "${LISTOFFILES[@]}"
+	do
+		$BASE/Scripts/SecretsFile-Decrypter "$EACHFILE├1├2├$BASE/tmp/$TEMPRANDOMFOLDER├$SECRETTHEKEY"
+	done
+	for EVERYFILE in "$BASE/tmp/$TEMPRANDOMFOLDER"/*; do
+		if [ -f "$EVERYFILE" ]; then
+			LINES=$(cat $EVERYFILE)
+			for LINE in $LINES; do
+				ALLNODESLIST+=("$LINE")				
+			done		
+		fi
+	done	
+	sudo rm -rf $BASE/tmp/$TEMPRANDOMFOLDER
+
+	REQNODEACTUALNUMBERS=()
+	echo "$STACKLINELENGTHY"
+	TempXCounter=1
+	for EACHXNODE in "${ALLNODESLIST[@]}"
+	do
+		REQNODEACTUALNUMBERS+=("$EACHXNODE")	
+		IFS='├' read -r -a _EACHXNODE <<< $EACHXNODE
+		IXP="${_EACHXNODE[0]}"
+		NAXME="${_EACHXNODE[1]}"
+		
+		if (( TempXCounter < 10 )) ; then
+			echo "(0$TempXCounter) $NAXME ($IXP)"
+		else
+			echo "($TempXCounter) $NAXME ($IXP)"
+		fi
+		TempXCounter=$((TempXCounter + 1))	
+	done
+	echo "$STACKLINELENGTHY"
+	
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+		echo ""	
+		read -p "Enter Node Number(s) Comma Based 0=ALL	> " -e -i "0" REQNODENUMBERS
+	fi
+	
+	if [ "$REQNODENUMBERS" == "0" ] ; then
+		echo ""	
+	else
+		echo ""
+		REQNODEACTUALNUMBERS=()	
+		
+		IFS=',' read -r -a CHOICELIST <<< $REQNODENUMBERS
+		
+		TempCounter=1
+		TempCounter2=1
+		for EACHNODE in "${ALLNODESLIST[@]}"
+		do
+			for _CHOICE in "${CHOICELIST[@]}"
+			do
+				if (( TempCounter == _CHOICE )) ; then
+					REQNODEACTUALNUMBERS+=("$EACHNODE")
+				fi
+				TempCounter2=$((TempCounter2 + 1))		
+			done
+			TempCounter=$((TempCounter + 1))
+		done		
+	fi
+	
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+		UUID=$(uuidgen)
+		UUIDREAL=${UUID:1:5}
+		read -p "Stack Name 				> " -e -i "s$UUIDREAL" STACKNAME
+	fi
+
+	TempCounter=0
+	NODEARRAYLEN=$(echo ${#REQNODEACTUALNUMBERS[@]})
+	ALLITEMINSTACKLIST=()
+	while [ $TempCounter -lt 1 ]
+	do
+		if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+			read -p "
+Stack Config (All Nodes)
+$ALLSTACKITEMSLIST
+					> " -e -i "" K8SCONFIG
+			echo ""
+		fi
+		
+		IFS='|' read -r -a CONFIGITEMSLIST <<< $K8SCONFIG
+		CONFIGITEMSLISTLEN=$(echo ${#CONFIGITEMSLIST[@]})
+		
+		if [[ $CONFIGITEMSLISTLEN -eq $NODEARRAYLEN ]] ; then
+			TempCounter=$((TempCounter + 1))
+		fi
+		
+		for _CIL in "${CONFIGITEMSLIST[@]}"
+		do
+			IFS=',' read -r -a _CIL_SUB <<< $_CIL
+			for _CIL_SUB_ in "${_CIL_SUB[@]}"
+			do
+				ALLITEMINSTACKLIST+=("$_CIL_SUB_")
+			done						
+		done						
+	done
+
+	echo "$STACKLINELENGTHY"
+	ALLITEMINSTACKUNIQUELIST=($(echo "${ALLITEMINSTACKLIST[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+	
+	declare -A ALLITEMINSTACKVERSIONLIST
+	
+	for _ALLITEMINSTACKUNIQUELIST in "${ALLITEMINSTACKUNIQUELIST[@]}"
+	do
+		TEMPVAR1="${STACKITEMSVERSIONMAPPING[$_ALLITEMINSTACKUNIQUELIST]}"
+		if [ "$TEMPVAR1" == "" ] ; then
+			ALLITEMINSTACKVERSIONLIST["$_ALLITEMINSTACKUNIQUELIST"]="NA"
+		else
+			if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+				TEMPVAR2="${STACKITEMSVERSIONQMAPPING[$_ALLITEMINSTACKUNIQUELIST]}"
+				read -p "$TEMPVAR2" -e -i "$TEMPVAR1" TEMPVAR3
+				ALLITEMINSTACKVERSIONLIST["$_ALLITEMINSTACKUNIQUELIST"]="$TEMPVAR3"
+			else
+				ALLITEMINSTACKVERSIONLIST["$_ALLITEMINSTACKUNIQUELIST"]="$TEMPVAR1"
+			fi		
+		fi
+	done
+	echo "$STACKLINELENGTHY"
+	
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
+		echo ""
+		read -p "Nodes List
+$STACKLINELENGTHY 
+Attach(1) / View(2) / Both(3)		 
+$STACKLINELENGTHY
+					> " -e -i "3" NODEAVB
+		echo ""
+	fi
+	
+	WHENJOBBEGAN=$(echo $(date +%H):$(date +%M))
+
+	echo "$STACKLINELENGTHY"
+	sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+	sudo rm -rf /root/.ssh/known_hosts	
+	HOSTSFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	touch $BASE/tmp/$HOSTSFILE	
+	sudo chmod 777 $BASE/tmp/$HOSTSFILE
+	echo "
+127.0.0.1 localhost
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+" | sudo tee -a $BASE/tmp/$HOSTSFILE > /dev/null
+	TempCounter=0
+	if [ "$NODEAVB" == "1" ] || [ "$NODEAVB" == "3" ] ; then
+		sudo -H -u root bash -c "echo \"\" >> /etc/hosts"
+		sudo -H -u root bash -c "echo \"#MATSYA => $STACKNAME START \" >> /etc/hosts"	
+	fi
+	THECOMPLETEFINALNODELIST=()
+	
+	STACKDELETELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	DELETESTACKFILESTART='#!/bin/bash'"
+"
+	echo "$DELETESTACKFILESTART" | sudo tee $BASE/tmp/$STACKDELETELIST > /dev/null
+	sudo chmod 777 $BASE/tmp/$STACKDELETELIST	
+	
+	for THEFINALNODE in "${REQNODEACTUALNUMBERS[@]}"
+	do
+		THESTACKPREFIX=""	
+		IFS='├' read -r -a EACHSPLITNODE <<< $THEFINALNODE
+		IP="${EACHSPLITNODE[0]}"
+		PORT="${EACHSPLITNODE[2]}"
+		UN="${EACHSPLITNODE[3]}"
+		PW="${EACHSPLITNODE[4]}"
+		
+		OLDNAME=$(echo "${EACHSPLITNODE[1]}" | rev)
+		IFS='-' read -r -a _OLDNAME <<< $OLDNAME
+		NAMEOLD=$(echo "${_OLDNAME[1]}" | rev)
+		INSTANCEID="$NAMEOLD"
+		
+		GetCodeForNodeDelete "$INSTANCEID" "${EACHSPLITNODE[5]}" "${EACHSPLITNODE[7]}" "$BASE/tmp/$STACKDELETELIST"
+						
+		IFS='|' read -r -a CONFIGITEMSLIST <<< $K8SCONFIG
+		TempCounter2=0
+		THEALLOTMENT=""
+		for _CIL in "${CONFIGITEMSLIST[@]}"
+		do
+			if (( TempCounter == TempCounter2 )) ; then
+				IFS=',' read -r -a _CIL_SUB <<< $_CIL
+				THEALLOTMENT="$_CIL"
+				for _CIL_SUB_ in "${_CIL_SUB[@]}"
+				do
+					STACKITEMNAME="${STACKITEMSMAPPING[$_CIL_SUB_]}"
+					STACKITEMNAME=$(echo "$STACKITEMNAME" | tr '[:upper:]' '[:lower:]')				
+					THESTACKPREFIX="$THESTACKPREFIX-$STACKITEMNAME"
+				done
+			fi
+			TempCounter2=$((TempCounter2 + 1))						
+		done
+				
+		SOMERANDOMNUMBER=$(GetNewRandomNumber)
+		SOMERANDOMCHAR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 4 | head -n 1)
+		SOMERANDOMCHAR=$(echo "$SOMERANDOMCHAR" | tr '[:upper:]' '[:lower:]')
+		NAME="$STACKNAME""$THESTACKPREFIX-$SOMERANDOMNUMBER-$SOMERANDOMCHAR"
+		
+		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo rm -rf /etc/hostname && echo \"$NAME\" | sudo tee -a /etc/hostname > /dev/null && sudo hostnamectl set-hostname \"$NAME\""
+		
+		THERESPONSE=$(sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT  -o "StrictHostKeyChecking=no" "[ -e \"/usr/bin/kk\" ] && echo \"YES\" || echo \"NO\"")
+		if [ "$THERESPONSE" == "NO" ] ; then
+			sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "wget https://github.com/kubesphere/kubekey/releases/download/$THEK8SKUBESPHEREVERSION/kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && tar xf kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && rm -f kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && chmod +x kk && sudo mv kk /usr/bin/kk"
+		fi
+		
+		THECOMPLETEFINALNODELIST+=("$THEFINALNODE├$NAME├$THEALLOTMENT")
+		
+		echo "$IP $NAME" | sudo tee -a $BASE/tmp/$HOSTSFILE > /dev/null	
+		if [ "$NODEAVB" == "1" ] || [ "$NODEAVB" == "3" ] ; then
+			sudo -H -u root bash -c "sed -i -e s~\"$IP\"~\"#$IP\"~g /etc/hosts"
+			sudo -H -u root bash -c "echo \"$IP $NAME\" >> /etc/hosts"	
+		fi			
+		TempCounter=$((TempCounter + 1))
+	done
+	if [ "$NODEAVB" == "1" ] || [ "$NODEAVB" == "3" ] ; then
+		sudo -H -u root bash -c "echo \"#MATSYA => $STACKNAME END \" >> /etc/hosts"
+		sudo -H -u root bash -c "echo \"\" >> /etc/hosts"	
+	fi	
+	echo "$STACKLINELENGTHY"
+	echo ""
+	
+	echo "$STACKLINELENGTHY"
+	for THEFINALNODE in "${REQNODEACTUALNUMBERS[@]}"
+	do
+		IFS='├' read -r -a EACHSPLITNODE <<< $THEFINALNODE
+		IP="${EACHSPLITNODE[0]}"
+		PORT="${EACHSPLITNODE[2]}"
+		UN="${EACHSPLITNODE[3]}"
+		PW="${EACHSPLITNODE[4]}"
+				
+		sshpass -p "$PW" scp -P $PORT $BASE/tmp/$HOSTSFILE $UN@$IP:/home/$UN
+		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo rm -rf /etc/hosts && sudo mv /home/$UN/$HOSTSFILE /etc/hosts"
+	done
+	echo "$STACKLINELENGTHY"
+	
+	if [ "$NODEAVB" == "2" ] || [ "$NODEAVB" == "3" ] ; then
+		echo ""	
+		echo "$STACKLINELENGTHY"		
+		cat $BASE/tmp/$HOSTSFILE
+		echo "$STACKLINELENGTHY"
+	fi
+		
+	sudo rm -rf $BASE/tmp/$HOSTSFILE
+
+	K8SHELPERFILEREAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	K8SHELPERFILE2REAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE2REAL && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE2REAL
+	K8SHELPERFILE3REAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE3REAL && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE3REAL		
+	K8SHELPERFILE1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE1 && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE1
+	K8SHELPERFILE2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE2 && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE2
+	K8SHELPERFILE3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE3 && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE3
+	K8SHELPERFILE4=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$K8SHELPERFILE4 && sudo chmod 777 $BASE/tmp/$K8SHELPERFILE4
+	sudo cp $BASE/Resources/KubeSphereConfigTemplate $BASE/tmp/$K8SHELPERFILEREAL
+	sudo chmod 777 $BASE/tmp/$K8SHELPERFILEREAL
+	K8SINSTALLER=""
+	K8SCOREVERSION=""
+	echo "  hosts:" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
+	echo "  roleGroups:
+    etcd:" | sudo tee -a $BASE/tmp/$K8SHELPERFILE2 > /dev/null
+	echo "    control-plane:" | sudo tee -a $BASE/tmp/$K8SHELPERFILE3 > /dev/null
+	echo "    worker:" | sudo tee -a $BASE/tmp/$K8SHELPERFILE4 > /dev/null
+
+	STACKNODELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$STACKNODELIST && sudo chmod 777 $BASE/tmp/$STACKNODELIST
+	
+	K8SHACounter=0
+	for THEREALFINALNODE in "${THECOMPLETEFINALNODELIST[@]}"
+	do
+		echo "$THEREALFINALNODE" | sudo tee -a $BASE/tmp/$STACKNODELIST > /dev/null
+		
+		IFS='├' read -r -a EACHSPLITNODE <<< $THEREALFINALNODE
+		IP="${EACHSPLITNODE[0]}"
+		PORT="${EACHSPLITNODE[2]}"
+		UN="${EACHSPLITNODE[3]}"
+		PW="${EACHSPLITNODE[4]}"
+		NM="${EACHSPLITNODE[9]}"
+		STA1CK="${EACHSPLITNODE[10]}"
+		
+		IFS=',' read -r -a _CIL_SUB <<< $STA1CK
+		for _CIL_SUB_ in "${_CIL_SUB[@]}"
+		do
+			if [ "$_CIL_SUB_" == "1" ] ; then
+				K8SINSTALLER="$THEREALFINALNODE"
+			fi
+			if [ "$_CIL_SUB_" == "2" ] || [ "$_CIL_SUB_" == "3" ] ; then
+				K8SCOREVERSION="${ALLITEMINSTACKVERSIONLIST[$_CIL_SUB_]}"
+				echo "  - {name: $NM, address: $IP, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
+				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE2 > /dev/null
+				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE3 > /dev/null
+				
+				K8SHACounter=$((K8SHACounter + 1))
+			fi
+			if [ "$_CIL_SUB_" == "4" ] ; then
+				echo "  - {name: $NM, address: $IP, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
+				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE4 > /dev/null
+			fi						
+		done						
+	done
+	
+	K8SHELPERFILE5=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	cat $BASE/tmp/$K8SHELPERFILE1 $BASE/tmp/$K8SHELPERFILE2 $BASE/tmp/$K8SHELPERFILE3 $BASE/tmp/$K8SHELPERFILE4 > $BASE/tmp/$K8SHELPERFILE5
+	sudo chmod 777 $BASE/tmp/$K8SHELPERFILE5
+
+	IFS='|' read -r -a _K8SCOREVERSION <<< $K8SCOREVERSION
+	sed -i -e "s/KSCTK8S/${_K8SCOREVERSION[0]}/g" $BASE/tmp/$K8SHELPERFILEREAL
+	sed -i -e "s/KSCTKS/${_K8SCOREVERSION[1]}/g" $BASE/tmp/$K8SHELPERFILEREAL
+	sed -i -e "s/KSCTNAME/$STACKNAME/g" $BASE/tmp/$K8SHELPERFILEREAL
+	if (( $K8SHACounter > 2 )) ; then
+		sed -i -e s~"KSCTINFOK8S"~'  controlPlaneEndpoint:\\\n    internalLoadbalancer: haproxy\\\n    domain: lb.'"$STACKNAME"'.local\\\n    address: ""\\\n    port: 6443'~g $BASE/tmp/$K8SHELPERFILEREAL
+		sed -i -e s~'\\'~''~g $BASE/tmp/$K8SHELPERFILEREAL    	
+	else
+		sed -i -e s~"KSCTINFOK8S"~'  controlPlaneEndpoint:\\\n    #internalLoadbalancer: haproxy\\\n    domain: lb.'"$STACKNAME"'.local\\\n    address: ""\\\n    port: 6443'~g $BASE/tmp/$K8SHELPERFILEREAL
+		sed -i -e s~'\\'~''~g $BASE/tmp/$K8SHELPERFILEREAL				
+	fi
+	sed -n '8,$p' <$BASE/tmp/$K8SHELPERFILEREAL | sudo tee -a $BASE/tmp/$K8SHELPERFILE2REAL > /dev/null
+	head -6 $BASE/tmp/$K8SHELPERFILEREAL | sudo tee -a $BASE/tmp/$K8SHELPERFILE3REAL > /dev/null
+	K8SHELPERFILE4REAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	cat $BASE/tmp/$K8SHELPERFILE3REAL $BASE/tmp/$K8SHELPERFILE5 $BASE/tmp/$K8SHELPERFILE2REAL > $BASE/tmp/$K8SHELPERFILE4REAL
+	sudo chmod 777 $BASE/tmp/$K8SHELPERFILE4REAL	
+
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE1
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE2
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE3
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE4		
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE5
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILEREAL
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE2REAL
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE3REAL
+				
+	IFS='├' read -r -a EACHSPLITNODE <<< $K8SINSTALLER
+	IP="${EACHSPLITNODE[0]}"
+	PORT="${EACHSPLITNODE[2]}"
+	UN="${EACHSPLITNODE[3]}"
+	PW="${EACHSPLITNODE[4]}"
+	echo ""	
+	echo "$STACKLINELENGTHY"
+	EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
+	EXECUTE1SCRIPT='#!/bin/bash'"
+"
+	echo "$EXECUTE1SCRIPT" | sudo tee $BASE/tmp/$EXECUTESCRIPT > /dev/null	
+	echo "sudo -H -u root bash -c \"kk create -y cluster -f /home/$UN/$STACKNAME-KubeSphere-Config.yaml\"
+sudo rm -f /home/$UN/$STACKNAME-KubeSphere-Execute.sh
+sudo rm -f /home/$UN/$STACKNAME-KubeSphere-Config.yaml
+	" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null			
+	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$K8SHELPERFILE4REAL $UN@$IP:/home/$UN
+	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /home/$UN/$K8SHELPERFILE4REAL $STACKNAME-KubeSphere-Config.yaml"
+	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$EXECUTESCRIPT $UN@$IP:/home/$UN
+	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /home/$UN/$EXECUTESCRIPT $STACKNAME-KubeSphere-Execute.sh && sudo chmod 777 $STACKNAME-KubeSphere-Execute.sh"	
+
+	sudo rm -rf $BASE/tmp/$EXECUTESCRIPT
+	ITER=${SECRETTHEKEY:7:6}
+	
+	if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then	
+		read -p "Avengers... (HailHydra To Abort)	> " -e -i "ASSEMBLE" GOFORIT
+	fi
+		
+	if [ "$GOFORIT" == "ASSEMBLE" ] ; then
+		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "/home/$UN/$STACKNAME-KubeSphere-Execute.sh"
+		
+		sudo mkdir -p $BASE/Output/$STACKNAME
+		sudo rm -rf $BASE/Output/$STACKNAME/*
+		sudo chown -R $CURRENTUSER:$CURRENTUSER $BASE/Output/$STACKNAME
+		sudo chmod -R u=rwx,g=,o= $BASE/Output/$STACKNAME
+
+		STACKNODECONNECTFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/Scripts/StackConnect $BASE/tmp/$STACKNODECONNECTFILE
+		sudo chmod 777 $BASE/tmp/$STACKNODECONNECTFILE
+		sed -i -e "s#THEENCNODELISTFILE#$BASE/Output/$STACKNAME/$STACKNAME-LIST#g" $BASE/tmp/$STACKNODECONNECTFILE
+		sudo mv $BASE/tmp/$STACKNODECONNECTFILE $BASE/Output/$STACKNAME/$STACKNAME-CONNECT
+
+		STACKNODEFILESYNC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/Scripts/StackFileManage $BASE/tmp/$STACKNODEFILESYNC
+		sudo chmod 777 $BASE/tmp/$STACKNODEFILESYNC
+		sed -i -e "s#THEENCNODELISTFILE#$BASE/Output/$STACKNAME/$STACKNAME-LIST#g" $BASE/tmp/$STACKNODEFILESYNC
+		sudo mv $BASE/tmp/$STACKNODEFILESYNC $BASE/Output/$STACKNAME/$STACKNAME-FILE-MANAGE
+
+		STACKNODEADDDELETEREMOVE1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/Scripts/StackNodeManageA $BASE/tmp/$STACKNODEADDDELETEREMOVE1
+		sudo chmod 777 $BASE/tmp/$STACKNODEADDDELETEREMOVE1
+		sed -i -e "s#THESTACKFOLDER#$BASE/Output/$STACKNAME#g" $BASE/tmp/$STACKNODEADDDELETEREMOVE1
+		sed -i -e "s#THESTACKNAME#$STACKNAME#g" $BASE/tmp/$STACKNODEADDDELETEREMOVE1		
+		sudo mv $BASE/tmp/$STACKNODEADDDELETEREMOVE1 $BASE/Output/$STACKNAME/$STACKNAME-NODE-MANAGE-ADD
+
+		STACKNODEADDDELETEREMOVE2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/Scripts/StackNodeManageRMD $BASE/tmp/$STACKNODEADDDELETEREMOVE2
+		sudo chmod 777 $BASE/tmp/$STACKNODEADDDELETEREMOVE2
+		sed -i -e "s#THESTACKFOLDER#$BASE/Output/$STACKNAME#g" $BASE/tmp/$STACKNODEADDDELETEREMOVE2
+		sed -i -e "s#THESTACKNAME#$STACKNAME#g" $BASE/tmp/$STACKNODEADDDELETEREMOVE2		
+		sudo mv $BASE/tmp/$STACKNODEADDDELETEREMOVE2 $BASE/Output/$STACKNAME/$STACKNAME-NODE-MANAGE-REMOVE-DELETE
+								
+		echo "
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-EXECUTE-ORDER-66
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-CONFIG
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-LIST
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-CONNECT
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-FILE-MANAGE
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-NODE-MANAGE-ADD
+sudo rm -rf $BASE/Output/$STACKNAME/$STACKNAME-NODE-MANAGE-REMOVE-DELETE
+sudo rm -rf $BASE/Output/$STACKNAME
+" | sudo tee -a $BASE/tmp/$STACKDELETELIST > /dev/null
+
+		VAR6=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/tmp/$STACKDELETELIST $BASE/Secrets/$VAR6
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$VAR6
+		sudo chmod u=r,g=,o= $BASE/Secrets/$VAR6
+		openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$VAR6 -out $BASE/Secrets/".$VAR6" -k $SECRETTHEKEY
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$VAR6"
+		sudo chmod u=r,g=,o= $BASE/Secrets/".$VAR6"
+		sudo rm -rf $BASE/Secrets/$VAR6
+		sudo rm -rf /root/.bash_history
+		sudo rm -rf /home/$CURRENTUSER/.bash_history
+		sudo mv $BASE/Secrets/".$VAR6" $BASE/Output/$STACKNAME/$STACKNAME-EXECUTE-ORDER-66
+
+		VAR7=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/tmp/$K8SHELPERFILE4REAL $BASE/Secrets/$VAR7
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$VAR7
+		sudo chmod u=r,g=,o= $BASE/Secrets/$VAR7
+		openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$VAR7 -out $BASE/Secrets/".$VAR7" -k $SECRETTHEKEY
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$VAR7"
+		sudo chmod u=r,g=,o= $BASE/Secrets/".$VAR7"
+		sudo rm -rf $BASE/Secrets/$VAR7
+		sudo rm -rf /root/.bash_history
+		sudo rm -rf /home/$CURRENTUSER/.bash_history
+		sudo mv $BASE/Secrets/".$VAR7" $BASE/Output/$STACKNAME/$STACKNAME-CONFIG
+		
+		VAR8=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $BASE/tmp/$STACKNODELIST $BASE/Secrets/$VAR8
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$VAR8
+		sudo chmod u=r,g=,o= $BASE/Secrets/$VAR8
+		openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$VAR8 -out $BASE/Secrets/".$VAR8" -k $SECRETTHEKEY
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$VAR8"
+		sudo chmod u=r,g=,o= $BASE/Secrets/".$VAR8"
+		sudo rm -rf $BASE/Secrets/$VAR8
+		sudo rm -rf /root/.bash_history
+		sudo rm -rf /home/$CURRENTUSER/.bash_history
+		sudo mv $BASE/Secrets/".$VAR8" $BASE/Output/$STACKNAME/$STACKNAME-LIST				
+	fi	
+	echo "$STACKLINELENGTHY"	
+	echo ""	
+
+	sudo rm -rf $BASE/tmp/$K8SHELPERFILE4REAL	
+	sudo rm -rf $BASE/tmp/$STACKDELETELIST
+	sudo rm -rf $BASE/tmp/$STACKNODELIST
+			
+	WHENJOBFIN=$(echo $(date +%H):$(date +%M))
+	SEC1=`date +%s -d ${WHENJOBBEGAN}`
+	SEC2=`date +%s -d ${WHENJOBFIN}`
+	DIFFSEC=`expr ${SEC2} - ${SEC1}`
+	THETOTALTIMETAKEN=$(echo `date +%M -ud @${DIFFSEC}`)
+	echo "Total Time Taken => $THETOTALTIMETAKEN Minutes"	
+	echo ''	
+	echo "=============================================================================="
+	echo ''	
+fi
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+if [ "$MANUALRUN" == "YES" ] || [ "$MANUALRUN" == "yes" ] ; then
+	read -p "" -e -i "" QUIT
+	echo ""
+fi		
+

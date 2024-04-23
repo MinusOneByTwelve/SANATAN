@@ -1,0 +1,232 @@
+#!/bin/bash
+
+#set -e
+
+DoubleQuotes='"'
+NoQuotes=''
+
+E2ERESPONSE=""				
+											
+RANDOMINSTANCENAME=$1
+RANDOMRESPONSEFILE=$2
+RANDOMINSTANCENEWNAME=$3
+TENTHPARAM=$(echo ${10})
+ELEVENTHPARAM=$(echo ${11})
+CLUSTERNAME=$(echo ${12})
+GLOBALPEM=$(echo ${13})	
+GlobalE2EPassword=$(echo ${14})	
+THEJOBDONE=$(echo ${15})	
+THEJOBNOTDONE=$(echo ${16})
+THEJOBERROR=$(echo ${17})
+BASE=$(echo ${18})
+TerminalSSHPort=$(echo ${19})
+THENODEDELETEFILE=$(echo ${20})
+THETEMPFOLDER=$(echo ${21})
+
+source $BASE/Resources/StackVersioningAndMisc
+
+E2EMatsyaUserCreationCode="sudo useradd -d /home/matsya -s /bin/bash -m matsya && sudo usermod -p \$(echo \"$GlobalE2EPassword\" | openssl passwd -1 -stdin) matsya && sudo usermod -aG wheel matsya && sudo rm -f /etc/sudoers.d/matsya-user && echo \"matsya ALL=(ALL) NOPASSWD:ALL\" | sudo tee /etc/sudoers.d/matsya-user > /dev/null && sudo sed -i -e s~\"PasswordAuthentication\"~\"#PasswordAuthentication\"~g /etc/ssh/sshd_config && sudo sed -i -e s~\"PermitRootLogin\"~\"#PermitRootLogin\"~g /etc/ssh/sshd_config && echo \"PasswordAuthentication yes\" | sudo tee -a /etc/ssh/sshd_config > /dev/null && sudo systemctl restart sshd.service && sudo rm -rf /root/.ssh/authorized_keys && sudo yum install -y curl openssl tar socat conntrack wget nano ebtables ipset chrony && sudo systemctl stop firewalld && sudo systemctl disable firewalld && sudo systemctl stop iptables && sudo systemctl disable iptables && wget https://github.com/kubesphere/kubekey/releases/download/$THEK8SKUBESPHEREVERSION/kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && tar xf kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && rm -f kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && chmod +x kk && sudo mv kk /usr/bin/kk"
+
+if [ $TENTHPARAM == "Ubuntu-22.04-Distro" ] ; then
+	E2EMatsyaUserCreationCode="sudo useradd -d /home/matsya -s /bin/bash -m matsya && sudo usermod -p \$(echo \"$GlobalE2EPassword\" | openssl passwd -1 -stdin) matsya && sudo usermod -aG sudo matsya && sudo rm -f /etc/sudoers.d/matsya-user && echo \"matsya ALL=(ALL) NOPASSWD:ALL\" | sudo tee /etc/sudoers.d/matsya-user > /dev/null && sudo sed -i -e s~\"PasswordAuthentication\"~\"#PasswordAuthentication\"~g /etc/ssh/sshd_config && sudo sed -i -e s~\"PermitRootLogin\"~\"#PermitRootLogin\"~g /etc/ssh/sshd_config && echo \"PasswordAuthentication yes\" | sudo tee -a /etc/ssh/sshd_config > /dev/null && sudo systemctl restart sshd.service && sudo rm -rf /root/.ssh/authorized_keys && sudo apt-get install -y curl openssl tar socat conntrack wget nano ebtables ipset chrony && sudo ufw disable && wget https://github.com/kubesphere/kubekey/releases/download/$THEK8SKUBESPHEREVERSION/kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && tar xf kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && rm -f kubekey-$THEK8SKUBESPHEREVERSION-linux-amd64.tar.gz && chmod +x kk && sudo mv kk /usr/bin/kk"
+fi
+						
+sudo cp $BASE/Scripts/E2ENewTerminal $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME 
+
+IFS='¤' read -r -a E2ECHOICEVALS <<< $5
+E2ETHEPROJECTUSERCHOICE="${E2ECHOICEVALS[0]}"
+E2ETHEVMUSERLOCATION="${E2ECHOICEVALS[1]}"
+
+sed -i -e s~"E2ETHEAPIKEY"~"$4"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEPROJECTCHOICE"~"$E2ETHEPROJECTUSERCHOICE"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEVMLOCATION"~"$E2ETHEVMUSERLOCATION"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEAUTHTOKEN"~"$6"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHETOKENNAME"~"$7"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHENAMEOFINSTANCE"~"$RANDOMINSTANCENAME"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEREGION"~"$8"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEPLAN"~"$9"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEDISTRO"~"$TENTHPARAM"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHESSHKEYS"~"$ELEVENTHPARAM"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sed -i -e s~"E2ETHEPLACETOSAVERESPONSE"~"$BASE/tmp/$THETEMPFOLDER/$RANDOMRESPONSEFILE"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+(
+	set -Ee
+	function _catch {
+		echo "ERROR"
+		exit 0
+	}
+	function _finally {
+		ABC="XYZ"
+	}
+	trap _catch ERR
+	trap _finally EXIT
+	sudo $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME								
+)
+E2ERESPONSE=$(<$BASE/tmp/$THETEMPFOLDER/$RANDOMRESPONSEFILE)							
+E2ECODE=$(echo $E2ERESPONSE | jq -c ".code")
+E2ECODE="${E2ECODE//$DoubleQuotes/$NoQuotes}"
+if [ "$E2ECODE" == "200" ] || [ "$E2ECODE" = "200" ] ; then
+	E2EMESSAGE=$(echo $E2ERESPONSE | jq -c ".message")
+	E2EMESSAGE="${E2EMESSAGE//$DoubleQuotes/$NoQuotes}"
+	if [ "$E2EMESSAGE" == "Success" ] || [ "$E2EMESSAGE" = "Success" ] ; then
+		E2EINSTANCEID=$(echo $E2ERESPONSE | jq -c ".data.id")
+		E2EINSTANCEID="${E2EINSTANCEID//$DoubleQuotes/$NoQuotes}"
+		E2EINSTANCEIP=$(echo $E2ERESPONSE | jq -c ".data.public_ip_address")
+		E2EINSTANCEIP="${E2EINSTANCEIP//$DoubleQuotes/$NoQuotes}"
+		IFS='.' read -r -a IPAddressPieces <<< $E2EINSTANCEIP							
+		THENEWNAME="$CLUSTERNAME-""${IPAddressPieces[0]}""-""${IPAddressPieces[1]}""-""${IPAddressPieces[2]}""-"${IPAddressPieces[3]}"-""e2e$E2EINSTANCEID""-""$8"
+		sudo cp $BASE/Scripts/E2ENameTerminal $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME 
+		sed -i -e s~"E2ETHEAPIKEY"~"$4"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sed -i -e s~"E2ETHEAUTHTOKEN"~"$6"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sed -i -e s~"E2ETHENEWNODEID"~"$E2EINSTANCEID"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sed -i -e s~"E2ETHENEWNODENAME"~"$THENEWNAME"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sed -i -e s~"E2ETHEPROJECTCHOICE"~"$E2ETHEPROJECTUSERCHOICE"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+		sed -i -e s~"E2ETHEVMLOCATION"~"$E2ETHEVMUSERLOCATION"~g $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME		
+		(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			sudo $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME								
+		)
+		TempCounter=0
+		while [ $TempCounter -lt 1 ]
+		do
+			THEFIRSTCONNECTE2E=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			touch $BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E	
+			sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E
+													
+			(
+			set -Ee
+			function _catch {
+				echo "ERROR"
+				exit 0
+			}
+			function _finally {
+				ABC="XYZ"
+			}
+			trap _catch ERR
+			trap _finally EXIT
+			THERESPONSE=$(ssh -o ConnectTimeout=15 -o BatchMode=yes -o PasswordAuthentication=no root@$E2EINSTANCEIP -p $TerminalSSHPort -o "StrictHostKeyChecking=no" -i $GLOBALPEM "echo \"$THEFIRSTCONNECTE2E\"")
+			echo "$THERESPONSE" >> $BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E		
+			)
+			
+			THERESULT="NO"
+			LINE=$(<$BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E)
+			if [ "$LINE" == "$THEFIRSTCONNECTE2E" ] || [ "$LINE" == "$THEFIRSTCONNECTE2E" ] ; then										
+			E2EHOSTDETAILSETUP="sudo systemctl stop one-context && sudo systemctl disable one-context && sudo rm -rf /etc/hosts && sudo rm -rf /etc/hostname && echo \"
+127.0.0.1 localhost
+# The following lines are desirable for IPv6 capable hosts
+::1 ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+ff02::3 ip6-allhosts
+$E2EINSTANCEIP	$THENEWNAME
+\" | sudo tee -a /etc/hosts > /dev/null && echo \"$THENEWNAME\" | sudo tee -a /etc/hostname > /dev/null"										
+				ssh -o ConnectTimeout=15 -o BatchMode=yes -o PasswordAuthentication=no root@$E2EINSTANCEIP -p $TerminalSSHPort -o "StrictHostKeyChecking=no" -i $GLOBALPEM "$E2EHOSTDETAILSETUP"
+				ssh -o ConnectTimeout=15 -o BatchMode=yes -o PasswordAuthentication=no root@$E2EINSTANCEIP -p $TerminalSSHPort -o "StrictHostKeyChecking=no" -i $GLOBALPEM "$E2EMatsyaUserCreationCode"
+				sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E
+				TempCounter=$((TempCounter + 1))
+				THERESULT="YES"
+				E2EALLOCATIONHAPPENED="YES"
+				touch $BASE/tmp/$THETEMPFOLDER/$THEJOBDONE	
+				sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$THEJOBDONE
+				echo "$E2EINSTANCEIP├$THENEWNAME├$TerminalSSHPort├matsya├$GlobalE2EPassword├$4├$7├$6├SSHRSA" >> $BASE/tmp/$THETEMPFOLDER/$THEJOBDONE
+				BLABLABLA=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+				echo "
+C$BLABLABLA=\$(curl -X DELETE 'https://api.e2enetworks.com/myaccount/api/v1/nodes/$E2EINSTANCEID/?apikey=$4' -H 'Authorization: Bearer $6')" | sudo tee -a $BASE/tmp/$THETEMPFOLDER/$THENODEDELETEFILE > /dev/null				
+			else
+				sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$THEFIRSTCONNECTE2E									
+			fi
+			if [ "$THERESULT" == "NO" ] || [ "$THERESULT" == "NO" ] ; then
+				CHECKNEWNODESTATUS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+				CHECKFILENEWNODESTATUS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+				sudo cp $BASE/Scripts/E2EStatusTerminal $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS 
+				touch $BASE/tmp/$THETEMPFOLDER/$CHECKFILENEWNODESTATUS	
+				sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$CHECKFILENEWNODESTATUS
+			
+				sed -i -e s~"E2ETHEAPIKEY"~"$4"~g $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				sed -i -e s~"E2ETHEAUTHTOKEN"~"$6"~g $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				sed -i -e s~"E2ETHENEWNODEID"~"$E2EINSTANCEID"~g $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				sed -i -e s~"E2ETHEPROJECTCHOICE"~"$E2ETHEPROJECTUSERCHOICE"~g $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS				
+				sed -i -e s~"E2ESTATUSRESPONSESAVE"~"$BASE/tmp/$THETEMPFOLDER/$CHECKFILENEWNODESTATUS"~g $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				(
+					set -Ee
+					function _catch {
+						echo "ERROR"
+						exit 0
+					}
+					function _finally {
+						ABC="XYZ"
+					}
+					trap _catch ERR
+					trap _finally EXIT
+					sudo $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS								
+				)
+				E2ESTATUSARESPONSE=$(<$BASE/tmp/$THETEMPFOLDER/$CHECKFILENEWNODESTATUS)							
+				THECURRENTSTATUS=$(echo $E2ESTATUSARESPONSE | jq -c ".data.status")
+				THECURRENTSTATUS="${THECURRENTSTATUS//$DoubleQuotes/$NoQuotes}"	
+				sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$CHECKNEWNODESTATUS
+				sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$CHECKFILENEWNODESTATUS
+				
+				if [ "$THECURRENTSTATUS" == "Failed" ] || [ "$THECURRENTSTATUS" = "Failed" ] ; then
+					TempCounter=$((TempCounter + 1))
+					THERESULT="YES"
+					E2EALLOCATIONHAPPENED="YES"
+					touch $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE	
+					sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE
+					echo "FAIL MESSAGE - $THECURRENTSTATUS" >> $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE
+					
+					READYTODELETEFAILED=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+					sudo cp $BASE/Scripts/E2EDeleteTerminal $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED
+					sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED 
+					sed -i -e s~"E2ETHEAPIKEY"~"$4"~g $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED
+					sed -i -e s~"E2ETHEAUTHTOKEN"~"$6"~g $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED
+					sed -i -e s~"E2ETHENEWNODEID"~"$E2EINSTANCEID"~g $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED
+					(
+						set -Ee
+						function _catch {
+							echo "ERROR"
+							exit 0
+						}
+						function _finally {
+							ABC="XYZ"
+						}
+						trap _catch ERR
+						trap _finally EXIT
+						sudo $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED								
+					)
+					sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$READYTODELETEFAILED															
+				else		
+					sleep 10
+				fi
+			fi
+		done								
+	else
+		touch $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE	
+		sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE
+		echo "FAIL MESSAGE - $E2EMESSAGE" >> $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE		
+	fi	 
+else
+		touch $BASE/tmp/$THETEMPFOLDER/$THEJOBERROR	
+		sudo chmod 777 $BASE/tmp/$THETEMPFOLDER/$THEJOBERROR
+		echo "ERROR MESSAGE - $E2EMESSAGE" >> $BASE/tmp/$THETEMPFOLDER/$THEJOBNOTDONE		
+fi
+
+sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENAME
+sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$RANDOMRESPONSEFILE
+sudo rm -rf $BASE/tmp/$THETEMPFOLDER/$RANDOMINSTANCENEWNAME
+CURRENTUSER=$(whoami)
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
