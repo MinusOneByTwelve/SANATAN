@@ -8,3 +8,5 @@ sudo mv /opt/Matsya/tmp/Udemy1/Scripts/* /opt/Matsya/Scripts
 sudo rm -rf /opt/Matsya/tmp/Udemy1
 
 sudo chmod -R 777 /opt/Matsya/Scripts
+
+sudo chmod -R 777 /opt/Matsya
