@@ -1,0 +1,44 @@
+
+THEFILE1NAME="THEFILE_1NAME.yaml"
+THEHOST1NAME="THEHOST_1NAME"
+THE1IPADDRESS="THE_1IPADDRESS"
+THEHOST1UNAME="THEHOST_1UNAME"
+THEHOST1UPWD="THEHOST_1UPWD"
+STACK1MAPPING="STACK_1MAPPING"
+DOES1IPADDRESS="NO"
+ALREADY1ONCE="NO"
+
+while read -r THE1LINE ; do
+	if [ "$THE1LINE" == "" ] ; then
+		DOES1IPADDRESS="NO"
+	else
+		DOES1IPADDRESS="YES"
+	fi
+done <<< "$(grep -wn $THE1IPADDRESS $THEFILE1NAME | cut -d: -f1)"
+
+if [ "$DOES1IPADDRESS" == "NO" ] ; then
+	IFS=',' read -r -a STACK1_MAPPING <<< $STACK1MAPPING
+	for STACK1_MAPPING_ in "${STACK1_MAPPING[@]}"
+	do
+		if [ "$STACK1_MAPPING_" == "2" ] || [ "$STACK1_MAPPING_" == "3" ] ; then
+			ALREADY1ONCE="YES"
+			sed -i -e s~"  hosts:"~'  hosts:\
+  - {name: '$THEHOST1NAME', address: '$THE1IPADDRESS', internalAddress: '$THE1IPADDRESS', user: '$THEHOST1UNAME', password: \"'$THEHOST1UPWD'\"}'~g $THEFILE1NAME
+			sed -i -e s~"    etcd:"~'    etcd:\
+    - '$THEHOST1NAME~g $THEFILE1NAME
+			sed -i -e s~"    control-plane:"~'    control-plane:\
+    - '$THEHOST1NAME~g $THEFILE1NAME    
+		fi
+		if [ "$STACK1_MAPPING_" == "4" ] ; then
+			if [ "$ALREADY1ONCE" == "NO" ] ; then
+				sed -i -e s~"  hosts:"~'  hosts:\
+  - {name: '$THEHOST1NAME', address: '$THE1IPADDRESS', internalAddress: '$THE1IPADDRESS', user: '$THEHOST1UNAME', password: \"'$THEHOST1UPWD'\"}'~g $THEFILE1NAME			
+			fi
+			sed -i -e s~"    worker:"~'    worker:\
+    - '$THEHOST1NAME~g $THEFILE1NAME    			
+		fi						
+	done  
+else
+	echo "$THE1IPADDRESS $THEHOST1NAME ALREADY MAPPED"	
+fi
+

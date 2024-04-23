@@ -1,0 +1,31 @@
+
+THEFILE1NAME="/etc/hosts"
+THEHOST1NAME="THEHOST1REPLACENAME"
+THE1IPADDRESS="THE1REPLACEIPADDRESS"
+DOES1IPADDRESS="NO"
+
+while read -r THE1LINE ; do
+	if [ "$THE1LINE" == "" ] ; then
+		DOES1IPADDRESS="NO"
+	else
+		DOES1IPADDRESS="YES"
+	fi
+done <<< "$(grep -wn $THE1IPADDRESS $THEFILE1NAME | cut -d: -f1)"
+
+grep -wn $THE1IPADDRESS $THEFILE1NAME | cut -d: -f1 | while read -r THE2LINE ; do
+	THEREAL1LINE=$(sed "$THE2LINE"'q;d' $THEFILE1NAME)
+	if [ "$DOES1IPADDRESS" == "YES" ] ; then
+		if [[ $THEREAL1LINE == *"$THEHOST1NAME"* ]]; then
+			echo "$THE1IPADDRESS $THEHOST1NAME ALREADY MAPPED"
+		else
+			sudo -H -u root bash -c "sed -i \"$THE2LINE\"'s/.*/'\"$THEREAL1LINE $THEHOST1NAME\"'/' $THEFILE1NAME"
+		fi	
+	fi
+done
+
+if [ "$DOES1IPADDRESS" == "NO" ] ; then
+	sudo -H -u root bash -c "echo \"\" >> $THEFILE1NAME"
+	sudo -H -u root bash -c "echo \"$THE1IPADDRESS $THEHOST1NAME\" >> $THEFILE1NAME"
+	sudo -H -u root bash -c "echo \"\" >> $THEFILE1NAME"
+fi
+

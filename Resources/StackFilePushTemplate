@@ -1,0 +1,55 @@
+
+echo '' | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+echo "$STACKLINELENGTHY" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+echo "		FINAL REPORT" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+echo "$STACKLINELENGTHY" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+
+CNTR=0
+
+for __NC in "${_NC[@]}"
+do			
+	echo "* $__NC : " | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+	echo "-------------------" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+	
+	TRES="${_RC[$CNTR]}"
+	IFS=',' read -r -a _TRES <<< $TRES
+	CNTR2=0
+	FAILF=""
+	CNTR3=0
+	CNTR4=0
+	
+	for __FC in "${_FC[@]}"
+	do
+		TEMPF="${_TRES[$CNTR2]}"
+		
+		if [ "$TEMPF" == "1" ] ; then
+			CNTR3=$((CNTR3 + 1))
+			IFS='├' read -r -a EXEDATAGEN <<< "${_NAC[$CNTR]}"
+			COREFILEEXENAME=$(basename -- "$__FC")
+			THEEXECUTIONLIST+=("${EXEDATAGEN[0]}""├""${EXEDATAGEN[1]}""├""${EXEDATAGEN[2]}""├""${EXEDATAGEN[3]}""├""$COREFILEEXENAME""├""$__NC")			
+		else
+			CNTR4=$((CNTR4 + 1))
+			FAILF="$FAILF,$__FC"
+		fi
+		
+		CNTR2=$((CNTR2 + 1))
+	done
+	
+	if [ "$FAILF" == "" ] ; then
+		CNTR4=0
+	else
+		FAILF="["${FAILF:1}"]"
+	fi
+	
+	echo "SUCCESS = $CNTR3" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+	echo "FAILURE = $CNTR4 $FAILF" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+	echo "-------------------" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+	
+	CNTR=$((CNTR + 1))				
+done
+echo "$STACKLINELENGTHY" | sudo tee -a $BASE/tmp/$TPFL4 > /dev/null
+cat $BASE/tmp/$TPFL4
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+

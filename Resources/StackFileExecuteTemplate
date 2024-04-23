@@ -1,0 +1,115 @@
+
+PARAEXELLELFUNCCOUNT=0
+THEPARAEXELLELFUNC_LIST=()
+
+THENEWPREXEFUNC='#!/bin/bash'"
+"
+echo "$THENEWPREXEFUNC" | sudo tee $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+sudo chmod 777 $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST
+
+CNTRN=0
+for NODE in "${THEEXECUTIONLIST[@]}"
+do
+	IFS='├' read -r -a EACHSPLITNODE <<< "$NODE"
+	IP="${EACHSPLITNODE[0]}"
+	PORT="${EACHSPLITNODE[1]}"
+	UN="${EACHSPLITNODE[2]}"
+	PW="${EACHSPLITNODE[3]}"
+	FILE="${EACHSPLITNODE[4]}"
+	NM="${EACHSPLITNODE[5]}"
+	VAREXE1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	
+	THEPARAEXELLELFUNCTIONNAME="PF_""$VAREXE1""_$CNTRN"
+	echo "function $THEPARAEXELLELFUNCTIONNAME(){" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "echo \"$STACKLINELENGTHY\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "echo \"$NM : $FILE\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "echo \"$STACKLINELENGTHY\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "sshpass -p \"$PW\" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o \"StrictHostKeyChecking=no\" \"sudo chmod 777 /home/$UN/$FILE && /home/$UN/$FILE && sudo rm -rf /home/$UN/$FILE\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "echo \"$STACKLINELENGTHY\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "echo \"\"" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null				
+	echo "}" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	
+	THEPARAEXELLELFUNC_LIST+=("$THEPARAEXELLELFUNCTIONNAME")
+	PARAEXELLELFUNCCOUNT=$((PARAEXELLELFUNCCOUNT + 1))
+	
+	CNTRN=$((CNTRN + 1))	
+done
+			
+echo "function ParallelEXEFunctionDummy(){
+echo \"\"
+}" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null	
+
+if [ "$PARAEXELLELFUNCCOUNT" -gt "$PLIMIT" ]; then
+	echo "" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	THEREQPARAEXELLEL=$((PARAEXELLELFUNCCOUNT))
+	ITERATIONREQ=$((THEREQPARAEXELLEL / PLIMIT))
+	ITERATIONREQMOD=$((THEREQPARAEXELLEL % PLIMIT))
+	if [ "$ITERATIONREQMOD" -gt 0 ]; then
+		ITERATIONREQ=$((ITERATIONREQ + 1))
+	fi
+	TotalIteration=0
+	LEFTOVERCOUNT=$((PARAEXELLELFUNCCOUNT))
+	TOBERUN=$((PLIMIT))
+	for (( IterationOuter=0; IterationOuter<ITERATIONREQ; IterationOuter++ ))
+	do
+		if (( $TotalIteration == 0 )) ; then
+			DEDUCTRUN=$((LEFTOVERCOUNT-TOBERUN))	
+		else
+			DEDUCTRUN=$((DEDUCTRUN-TOBERUN))	
+		fi	
+		if [ "$DEDUCTRUN" -lt 0 ]; then
+			TOBERUN=$((TOBERUN + DEDUCTRUN))
+		fi
+		
+		THEEXPORTLIST=""
+		THEPARAEXELLELEXECLIST="parallel -j $TOBERUN :::"	
+		FromCurrent=$((TotalIteration))
+		ToLimit=$((TOBERUN + TotalIteration))
+		LastNumber=$((ToLimit - 1))
+		for (( Iteration=FromCurrent; Iteration<ToLimit; Iteration++ ))
+		do  
+			if (( $Iteration == $LastNumber )) ; then
+				THEEXPORTLIST+="export -f ${THEPARAEXELLELFUNC_LIST[$Iteration]}"
+			else
+				THEEXPORTLIST+="export -f ${THEPARAEXELLELFUNC_LIST[$Iteration]} && "
+			fi
+			THEPARAEXELLELEXECLIST+=" ${THEPARAEXELLELFUNC_LIST[$Iteration]}"	   
+			TotalIteration=$((TotalIteration + 1))
+		done
+
+		echo "$THEEXPORTLIST" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+		echo "$THEPARAEXELLELEXECLIST" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+		echo "" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null			
+	done
+else
+	THEEXPORTLIST=""
+	THEPARAEXELLELEXECLIST="parallel -j $((PARAEXELLELFUNCCOUNT + 1)) :::"
+
+	for THEPARAEXELLELFUNC_LIST_1 in "${THEPARAEXELLELFUNC_LIST[@]}"
+	do
+		THEEXPORTLIST+="export -f $THEPARAEXELLELFUNC_LIST_1 && "
+		THEPARAEXELLELEXECLIST+=" $THEPARAEXELLELFUNC_LIST_1"
+	done
+	THEEXPORTLIST+="export -f ParallelEXEFunctionDummy"
+	THEPARAEXELLELEXECLIST+=" ParallelEXEFunctionDummy"
+	echo "$THEEXPORTLIST" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null
+	echo "$THEPARAEXELLELEXECLIST" | sudo tee -a $BASE/tmp/$THEPARAEXELLELFUNCTIONLIST > /dev/null		
+fi
+
+(
+	set -Ee
+	function _catch {
+		echo "ERROR"
+		exit 0
+	}
+	function _finally {
+		ABC="XYZ"
+	}
+	trap _catch ERR
+	trap _finally EXIT
+	$BASE/tmp/$THEPARAEXELLELFUNCTIONLIST								
+)
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
