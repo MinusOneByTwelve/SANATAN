@@ -418,13 +418,17 @@ else
 		IFS='┼' read -r -a _MAPPED_ACTION <<< $MAPPED_ACTION
 		_MAPPED_ACTION1="${_MAPPED_ACTION[0]}" 
 		_MAPPED_ACTION2="${_MAPPED_ACTION[1]}"
+		#echo $_MAPPED_ACTION1
+		#echo $_MAPPED_ACTION2
 		if [[ "$_MAPPED_ACTION2" == $THEACTIONCHOICE* ]]; then
 			actionselect="$_MAPPED_ACTION1"
 			break
 		fi
 	done	
 fi
-
+#echo 1$actionselect
+#echo 2$THEACTIONCHOICE
+#exit
 ((OVERALLCOUNTER--))
 
 if ! [[ "$actionselect" =~ ^[1-9][0-9]*$ && "$actionselect" -le "$OVERALLCOUNTER" ]]; then
@@ -434,7 +438,30 @@ if ! [[ "$actionselect" =~ ^[1-9][0-9]*$ && "$actionselect" -le "$OVERALLCOUNTER
 fi
 
 find_occur=$(echo "${MAPPED_ACTION_LIST[@]}" | awk '{for(i=1;i<=NF;i++) if($i ~ /^'"$actionselect┼"'/) {print $i; exit}}')
-echo $find_occur
+#echo $find_occur
+
+IFS="º" read -ra INPUT <<< "$find_occur"
+TEMP1="${INPUT[0]}"
+IFS="┼" read -ra TEMP2 <<< "$TEMP1"
+_INPUT1="${TEMP2[1]}"
+IFS="├" read -ra INPUT_1 <<< "$_INPUT1"
+INPUT_1_="${INPUT_1[0]}"
+INPUT_1__="${INPUT_1[2]}"
+THECHOICE="$INPUT_1_""_""$INPUT_1__"
+
+#echo "$THECHOICE" 
+#exit
+
+$BASE/Scripts/ActionRUN.sh "$THECHOICE" "$find_occur"
 
 echo ''
+
+
+
+
+
+
+
+
+
 

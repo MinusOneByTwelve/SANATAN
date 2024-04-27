@@ -64,6 +64,121 @@ echo ''
 declare -A name_map
 THEPARALLELFUNC_LIST=()
 FILESTOBEDELETED=()
+THEOVERALLPEMFILES=()
+
+deploy_instances_azure() {
+	local CHOICE=$1
+
+	if [ "$CHOICE" == "A" ] ; then
+		local AZNAME=$2
+		local thevar1=$3
+		local thevar2=$4
+		local thevar3=$5
+		local thevar4=$6
+		
+		IFS='¬' read -r -a CHOICEVALS2 <<< $thevar2
+		SECRETSTHEFILE="${CHOICEVALS2[0]}"
+		SECRETTHEKEY="${CHOICEVALS2[1]}"
+		ITER=${SECRETTHEKEY:7:6}
+		RANDOMSECFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo cp $SECRETSTHEFILE $BASE/tmp/$RANDOMSECFILENAME
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/tmp/$RANDOMSECFILENAME
+		sudo chmod u=r,g=,o= $BASE/tmp/$RANDOMSECFILENAME
+		REALSECRETSFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		openssl enc -a -d -aes-256-cbc -pbkdf2 -iter $ITER -k $SECRETTHEKEY -in $BASE/tmp/$RANDOMSECFILENAME -out $BASE/tmp/$REALSECRETSFILENAME
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/tmp/$REALSECRETSFILENAME
+		sudo chmod u=r,g=,o= $BASE/tmp/$REALSECRETSFILENAME
+		THEACTUALSECRETS=$(<$BASE/tmp/$REALSECRETSFILENAME)		
+		sudo rm -rf $BASE/tmp/$REALSECRETSFILENAME				
+		sudo rm -rf $BASE/tmp/$RANDOMSECFILENAME
+		
+		FILESTOBEDELETED+=("$BASE/tmp/$REALSECRETSFILENAME")
+		FILESTOBEDELETED+=("$BASE/tmp/$RANDOMSECFILENAME")
+
+		IFS='¬' read -r -a CHOICEVALS <<< $thevar1
+		_AZVAL="${CHOICEVALS[3]}"
+		_AZVAL2=""
+		if [ "$_AZVAL" == "A" ]; then
+			_AZVAL2="${AZUREOSCHOICE[0]}"
+		elif [ "$_AZVAL" == "U" ]; then
+			_AZVAL2="${AZUREOSCHOICE[1]}"
+		else
+			_AZVAL2="${AZUREOSCHOICE[0]}"
+		fi
+		IFS='├' read -r -a _AZVAL3 <<< $_AZVAL2
+
+		SECPORTFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/$SECPORTFILE
+		sudo chmod 777 $BASE/tmp/$SECPORTFILE
+		COUNTER=1002
+		for itemSP in "${ALLSTACKOPENPORTS[@]}"; do
+			IFS='├' read -r -a _itemSP <<< $itemSP
+			_itemSP1="${_itemSP[0]}"
+			_itemSP2="${_itemSP[1]}"
+			_itemSP3="${_itemSP[2]}"			
+			echo "  security_rule {
+    name                       = \"SR$_itemSP3\"
+    priority                   = $_itemSP3
+    direction                  = \"Inbound\"
+    access                     = \"Allow\"
+    protocol                   = \"$_itemSP1\"
+    source_port_range          = \"*\"
+    destination_port_range     = \"$_itemSP2\"
+    source_address_prefix      = \"*\"
+    destination_address_prefix = \"*\"
+  }
+" | sudo tee -a $BASE/tmp/$SECPORTFILE > /dev/null
+			COUNTER=$((COUNTER + 1))
+		done
+		COUNTER=1002
+							
+		AZURESCOPEVAL="$thevar3"
+		AZURESCOPE1VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE1VAL?") && AZURESCOPE1VAL="${AZURESCOPE1VAL//$DoubleQuotes/$NoQuotes}"
+		AZURESCOPE2VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE2VAL?") && AZURESCOPE2VAL="${AZURESCOPE2VAL//$DoubleQuotes/$NoQuotes}"
+		AZURESCOPE3VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE3VAL?") && AZURESCOPE3VAL="${AZURESCOPE3VAL//$DoubleQuotes/$NoQuotes}"
+		AZURESCOPE4VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE4VAL?") && AZURESCOPE4VAL="${AZURESCOPE4VAL//$DoubleQuotes/$NoQuotes}"
+		_AZURESCOPE5VAL="${CHOICEVALS[0]}"
+		AZURESCOPE5VAL=$(echo "$_AZURESCOPE5VAL" | sed 's@┼@ @g')
+
+		AZURESCOPE6VAL="$BASE/Output/Pem/$thevar3.pem"
+		THEOVERALLPEMFILES+=("$AZURESCOPE6VAL")	
+		AZURESCOPE7VAL="$thevar4"				
+		AZURESCOPE8VAL="${CHOICEVALS[1]}"
+		AZURESCOPE9VAL="${_AZVAL3[0]}"
+		AZURESCOPE10VAL="${_AZVAL3[1]}"
+		AZURESCOPE11VAL="${_AZVAL3[2]}"
+		AZURESCOPE12VAL="${_AZVAL3[3]}"		
+		AZURESCOPE14VAL="${CHOICEVALS[2]}"
+
+		sed -i -e s~"AZURESCOPEVAL"~"$AZURESCOPEVAL"~g $BASE/tmp/$AZNAME.tf 
+		sed -i -e s~"AZURESCOPE1VAL"~"$AZURESCOPE1VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE2VAL"~"$AZURESCOPE2VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i "5s/.*/  client_secret   = \"$AZURESCOPE3VAL\"/" "$BASE/tmp/$AZNAME.tf"		
+		sed -i -e s~"AZURESCOPE4VAL"~"$AZURESCOPE4VAL"~g $BASE/tmp/$AZNAME.tf 
+		sed -i -e s~"AZURESCOPE5VAL"~"$AZURESCOPE5VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE6VAL"~"$AZURESCOPE6VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE7VAL"~"$AZURESCOPE7VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE8VAL"~"$AZURESCOPE8VAL"~g $BASE/tmp/$AZNAME.tf 
+		sed -i -e s~"AZURESCOPE9VAL"~"$AZURESCOPE9VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE10VAL"~"$AZURESCOPE10VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE11VAL"~"$AZURESCOPE11VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE12VAL"~"$AZURESCOPE12VAL"~g $BASE/tmp/$AZNAME.tf
+		sed -i -e s~"AZURESCOPE14VAL"~"$AZURESCOPE14VAL"~g $BASE/tmp/$AZNAME.tf
+
+		source_file="$BASE/tmp/$SECPORTFILE"
+		target_file="$BASE/tmp/$AZNAME.tf"
+		line_number=69
+		sed -i "${line_number}r ${source_file}" "${target_file}"
+		sed -i -e s~"AZURESCOPE13VAL"~""~g $BASE/tmp/$AZNAME.tf
+																
+		sudo rm -rf $BASE/tmp/$SECPORTFILE
+		
+		FILESTOBEDELETED+=("$BASE/tmp/$SECPORTFILE")
+		
+		#echo "done.check"
+		#exit				
+	fi			
+}
 
 deploy_instances() {
     local num_instances=$1
@@ -81,7 +196,38 @@ deploy_instances() {
         
 	if [ "$terraform_file" == "NA" ] ; then
 		createnewtf="YES"
-		
+
+		if [ "$cloud_provider" == "azure" ] ; then
+			RANDOMINSTANCEAZNAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo cp $BASE/Resources/TerraformTemplateAZURE.tf $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCEAZNAME.tf 
+			
+			terraform_file="$BASE/tmp/$RANDOMINSTANCEAZNAME.tf"
+			
+			FILESTOBEDELETED+=("$terraform_file")
+			
+			guid=$(echo "$guid" | tr -d '_')
+			guid=$(echo "$guid" | tr '[:upper:]' '[:lower:]')
+						
+			RANDOMSCOPEVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo '      {
+        "Name": "'"$guid"'",
+        "Type": "'"$cloud_provider"'",        
+        "Action": [
+          "DELETE",
+          "IDENTITYADD",
+          "RUNSCRIPT",      
+          "LOADFILE"
+        ],
+        "Identity": [        ' | sudo tee $BASE/tmp/$RANDOMSCOPEVAL > /dev/null
+			sudo chmod 777 $BASE/tmp/$RANDOMSCOPEVAL
+						
+			FILESTOBEDELETED+=("$BASE/tmp/$RANDOMSCOPEVAL")
+			echo "$BASE/tmp/$RANDOMSCOPEVAL" | sudo tee -a $thevar3 > /dev/null
+												
+			deploy_instances_azure "A" "$RANDOMINSTANCEAZNAME" "$thevar1" "$thevar2" "$guid" "$num_instances"
+		fi
+				
 		if [ "$cloud_provider" == "aws" ] ; then
 			RANDOMINSTANCENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			sudo cp $BASE/Resources/TerraformTemplateAWS.tf $BASE/tmp/$RANDOMINSTANCENAME.tf
@@ -111,7 +257,18 @@ deploy_instances() {
 			THEREQUIREDAMI="${CHOICEVALS[0]}"
 			THEREQUIREDTYPE="${CHOICEVALS[1]}"
 			THEREQUIREDUSER="${CHOICEVALS[2]}"
-			
+			THEBASEOSCHOICE="${CHOICEVALS[3]}"
+			THEBASEOSUSER=$(for item in "${AWSOSCHOICE[@]}"; do if [[ $(echo "$item" | awk -F '├' '{print $1}') == "$THEBASEOSCHOICE" ]]; then echo "$item" | awk -F '├' '{print $2}'; fi; done);
+			_THEREQUIREDREGION="${CHOICEVALS[4]}"
+			THEREQUIREDREGION=$(echo "$_THEREQUIREDREGION" | sed 's@┼@ @g')
+
+			_THEREQUIREDSUBREGION="${CHOICEVALS[5]}"
+			THEREQUIREDSUBREGION=$(echo "$_THEREQUIREDSUBREGION" | sed 's@┼@ @g')
+			THEREQUIREDSUBREQUIREDREGION="YES"
+			if [ "$THEREQUIREDSUBREGION" == "NA" ] ; then
+				THEREQUIREDSUBREQUIREDREGION="NO"
+			fi
+					
 			THEREQUIREDPEMKEY="$guid"
 			THEREQUIREDLOCPEMKEY="$BASE/Output/Pem"
 			THEREQUIREDINSTNUM="$num_instances"
@@ -136,17 +293,52 @@ deploy_instances() {
 			FILESTOBEDELETED+=("$BASE/tmp/$REALSECRETSFILENAME")
 			FILESTOBEDELETED+=("$BASE/tmp/$RANDOMSECFILENAME")
 			#FILESTOBEDELETED+=("$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem")
+			THEOVERALLPEMFILES+=("$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem")	
 			
-			THEREQUIREDREGION=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDREGION?")
-			THEREQUIREDREGION="${THEREQUIREDREGION//$DoubleQuotes/$NoQuotes}"
+			#THEREQUIREDREGION=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDREGION?")
+			#THEREQUIREDREGION="${THEREQUIREDREGION//$DoubleQuotes/$NoQuotes}"
 			THEREQUIREDACCESSKEY=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDACCESSKEY?")
 			THEREQUIREDACCESSKEY="${THEREQUIREDACCESSKEY//$DoubleQuotes/$NoQuotes}"
 			THEREQUIREDSECRETKEY=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDSECRETKEY?")
 			THEREQUIREDSECRETKEY="${THEREQUIREDSECRETKEY//$DoubleQuotes/$NoQuotes}"
-			THEREQUIREDSUBNET=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDSUBNET?")
-			THEREQUIREDSUBNET="${THEREQUIREDSUBNET//$DoubleQuotes/$NoQuotes}"
-			THEREQUIREDSECGRP=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDSECGRP?")
-			THEREQUIREDSECGRP="${THEREQUIREDSECGRP//$DoubleQuotes/$NoQuotes}"
+			#THEREQUIREDSUBNET=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDSUBNET?")
+			#THEREQUIREDSUBNET="${THEREQUIREDSUBNET//$DoubleQuotes/$NoQuotes}"
+			#THEREQUIREDSECGRP=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].THEREQUIREDSECGRP?")
+			#THEREQUIREDSECGRP="${THEREQUIREDSECGRP//$DoubleQuotes/$NoQuotes}"
+
+			THESUBREGIONSUBSTITUTE=""
+			if [ "$THEREQUIREDSUBREQUIREDREGION" == "YES" ] ; then
+				THESUBREGIONSUBSTITUTE="default     = \"$THEREQUIREDSUBREGION\""
+			fi
+
+			SECPORTFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo touch $BASE/tmp/$SECPORTFILE
+			sudo chmod 777 $BASE/tmp/$SECPORTFILE
+			for itemSP in "${ALLSTACKOPENPORTS[@]}"; do
+				IFS='├' read -r -a _itemSP <<< $itemSP
+				_itemSP1="${_itemSP[0]}"
+				_itemSP1="${_itemSP1,,}"
+				_itemSP2="${_itemSP[1]}"
+				IFS='-' read -ra PORTS <<< "$_itemSP2"
+				from_port="${PORTS[0]}"
+				to_port="${PORTS[1]:-$from_port}"			
+				echo "    ingress {
+    from_port   = $from_port
+    to_port     = $to_port
+    protocol    = \"$_itemSP1\"
+    cidr_blocks = [\"0.0.0.0/0\"]
+  }
+" | sudo tee -a $BASE/tmp/$SECPORTFILE > /dev/null
+			done
+			source_file="$BASE/tmp/$SECPORTFILE"
+			target_file="$terraform_file"
+			line_number=81
+			sed -i "${line_number}r ${source_file}" "${target_file}"
+			sed -i -e s~"THEAWSFIREWALLSETTINGS"~""~g $terraform_file
+																	
+			sudo rm -rf $BASE/tmp/$SECPORTFILE
+			
+			FILESTOBEDELETED+=("$BASE/tmp/$SECPORTFILE")		
 			
 			sed -i -e s~"THEREQUIREDAMI"~"$THEREQUIREDAMI"~g $terraform_file
 			sed -i -e s~"THEREQUIREDTYPE"~"$THEREQUIREDTYPE"~g $terraform_file
@@ -157,8 +349,11 @@ deploy_instances() {
 			sed -i -e s~"THEREQUIREDREGION"~"$THEREQUIREDREGION"~g $terraform_file
 			sed -i -e s~"THEREQUIREDACCESSKEY"~"$THEREQUIREDACCESSKEY"~g $terraform_file
 			sed -i -e s~"THEREQUIREDSECRETKEY"~"$THEREQUIREDSECRETKEY"~g $terraform_file
-			sed -i -e s~"THEREQUIREDSUBNET"~"$THEREQUIREDSUBNET"~g $terraform_file
-			sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file												
+			sed -i -e s~"THEBASEOSUSER"~"$THEBASEOSUSER"~g $terraform_file
+			sed -i -e s~"THEREQUIREDUSER"~"$THEREQUIREDUSER"~g $terraform_file
+			sed -i -e s~"THESUBREGIONSUBSTITUTE"~"$THESUBREGIONSUBSTITUTE"~g $terraform_file			
+			#sed -i -e s~"THEREQUIREDSUBNET"~"$THEREQUIREDSUBNET"~g $terraform_file
+			#sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file												
 		fi
 	fi
             
@@ -187,7 +382,27 @@ deploy_instances() {
     FILESTOBEDELETED+=("$BASE/tmp/$cp_guid.matsya")
             
     echo "        CURRENTUSER=\$(whoami) && sudo rm -rf $BASE/tmp/$cp_guid.matsya && sudo touch $BASE/tmp/$cp_guid.matsya && sudo chmod 777 $BASE/tmp/$cp_guid.matsya" | sudo tee -a $flnmofcldp > /dev/null
-    
+
+    if [ "$cloud_provider" == "azure" ] ; then
+	echo "        public_ips_json_$guid=\$(terraform output -json)
+        names_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.hostnames.value[]'))
+        ips_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.public_ips.value[]'))
+        totcnt_$guid=\${#names_$guid[@]}
+        for i in \"\${"'!'"names_$guid[@]}\"; do
+            echo \"\${ips_$guid[\$i]}¬\${names_$guid[\$i]}¬$AZURESCOPE14VAL¬$AZURESCOPE6VAL\" >> \"$BASE/tmp/$cp_guid.matsya\"
+            #echo \"CURRENTUSER=\$(whoami) && sudo rm -rf /home/\$CURRENTUSER/.ssh/known_hosts && sudo rm -rf /root/.ssh/known_hosts && ssh -o StrictHostKeyChecking=no -i $AZURESCOPE6VAL $AZURESCOPE14VAL@\${ips_$guid[\$i]}\"
+            echo '          {
+            \"Attribute\": \"'\"\${ips_$guid[\$i]}\"'¬$AZURESCOPE14VAL¬$AZURESCOPE6VAL\",
+            \"Action\": [\"DELETE\",\"RUNSCRIPT\",\"LOADFILE\"],
+            \"IP\": \"'\"\${ips_$guid[\$i]}\"'\",
+            \"Type\": \"'\"$cloud_provider\"'\",            
+            \"Name\": \"'\"\${names_$guid[\$i]}\"'\",                        
+            \"Info\": \"'\"\${ips_$guid[\$i]}\"'¤$BASE/Output/Terraform/$guid¤$guid¤$thevar2¤'\"\${names_$guid[\$i]}\"'\"
+          },' | sudo tee -a $BASE/tmp/$RANDOMSCOPEVAL > /dev/null    
+        done" | sudo tee -a $flnmofcldp > /dev/null
+	echo "        echo '        {}],\"Info\": \"'\"\$totcnt_$guid\"'¤$BASE/Output/Terraform/$guid¤$thevar2\"},' | sudo tee -a $BASE/tmp/$RANDOMSCOPEVAL > /dev/null" | sudo tee -a $flnmofcldp > /dev/null	
+    fi
+        
     if [ "$cloud_provider" == "aws" ] ; then
 	echo "        public_ips_json_$guid=\$(terraform output -json)
         names_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.instance_names.value[]'))
@@ -214,20 +429,35 @@ deploy_instances() {
     		echo "        CURRENTUSER=\$(whoami) && sudo chown \$CURRENTUSER:\$CURRENTUSER $THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem && sudo chmod 400 $THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem" | sudo tee -a $flnmofcldp > /dev/null 	    	
 	    fi
     fi 
-
+    if [ "$cloud_provider" == "azure" ] ; then
+	    if [ "$createnewtf" == "YES" ] ; then
+    		echo "        CURRENTUSER=\$(whoami) && sudo chown \$CURRENTUSER:\$CURRENTUSER $AZURESCOPE6VAL && sudo chmod 400 $AZURESCOPE6VAL" | sudo tee -a $flnmofcldp > /dev/null 	    	
+	    fi
+    fi 
+    
     echo "        echo \"Instances deployed successfully for $cloud_provider-$4.File Name is $BASE/tmp/$cp_guid.matsya\"" | sudo tee -a $flnmofcldp > /dev/null
     
     echo "    else" | sudo tee -a $flnmofcldp > /dev/null
     echo "        CURRENTUSER=\$(whoami) && sudo rm -rf $BASE/tmp/$cp_guid.matsya && sudo touch $BASE/tmp/$cp_guid.matsya && sudo chmod 777 $BASE/tmp/$cp_guid.matsya && echo \"ERROR\" >> \"$BASE/tmp/$cp_guid.matsya\" && sudo chown -R \$CURRENTUSER:\$CURRENTUSER $BASE/tmp/$cp_guid.matsya && sudo chmod -R 700 $BASE/tmp/$cp_guid.matsya" | sudo tee -a $flnmofcldp > /dev/null
+    
     if [ "$cloud_provider" == "aws" ] ; then
 	    if [ "$createnewtf" == "YES" ] ; then
     		echo "        sudo rm -rf $THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem" | sudo tee -a $flnmofcldp > /dev/null 	    	
 	    fi
-    fi        
+    fi 
+    if [ "$cloud_provider" == "azure" ] ; then
+	    if [ "$createnewtf" == "YES" ] ; then
+    		echo "        sudo rm -rf $AZURESCOPE6VAL" | sudo tee -a $flnmofcldp > /dev/null 	    	
+	    fi
+    fi
+               
     echo "        echo \"Terraform plan failed for $terraform_file. Aborting...File Name is $BASE/tmp/$cp_guid.matsya\"" | sudo tee -a $flnmofcldp > /dev/null
     echo "    fi" | sudo tee -a $flnmofcldp > /dev/null
 
-    if [ "$cloud_provider" == "aws" ] ; then
+    if [ "$cloud_provider" == "aws" ] || [ "$cloud_provider" == "azure" ]; then
+    	    if [ "$cloud_provider" == "azure" ] ; then
+    	    	RANDOMINSTANCENAME="$RANDOMINSTANCEAZNAME"
+    	    fi
 	    if [ "$createnewtf" == "YES" ] ; then
 		echo "    if [ -f \"$BASE/Output/Terraform/$guid/$RANDOMINSTANCENAME.tf\" ]; then" | sudo tee -a $flnmofcldp > /dev/null
 		echo "        CURRENTUSER=\$(whoami)" | sudo tee -a $flnmofcldp > /dev/null
@@ -495,6 +725,10 @@ Execute(1) / Abort(0)
 	if (( $THECLOUDRUNCHOICE == 0 )) ; then
 		sudo rm -rf $BASE/tmp/$THEVISIONNAME
 		FILESTOBEDELETED+=("$BASE/Output/$THEVISIONNAME")
+		
+		for FILE in "${THEOVERALLPEMFILES[@]}"; do
+		    sudo rm -rf "$FILE"
+		done		
 	fi	
 fi
 
