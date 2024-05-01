@@ -1,0 +1,4 @@
+#!/bin/bash
+
+E2ERESPONSE=$(curl -X DELETE 'https://api.e2enetworks.com/myaccount/api/v1/nodes/E2ETHENEWNODEID/?apikey=E2ETHEAPIKEY' -H 'Authorization: Bearer E2ETHEAUTHTOKEN')
+
