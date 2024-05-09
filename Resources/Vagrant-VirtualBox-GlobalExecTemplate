@@ -1,0 +1,78 @@
+#!/bin/bash
+
+BASE="THEBASELOCATION"
+COORDINATOR="THECOORDINATOR"
+CLUSTERNAME="THECLUSTERNAME"
+RANDOMSSHPORT="THERANDOMSSHPORT"
+
+if [ "$#" -ne 2 ]; then
+	echo "
+==============================================================  
+Params -: 
+[1] (I)nclude / (E)xclude Coordinator 
+[2] Password For User => vagrant
+
+Write Command(s) => $BASE/op-$CLUSTERNAME-exec 
+==============================================================
+    "
+	exit
+fi
+
+ISFA="$BASE/op-$CLUSTERNAME-exec"
+if [ -f "$ISFA" ]
+then
+	echo ""
+else
+	echo "
+==============================================================  
+Params -: 
+[1] (I)nclude / (E)xclude Coordinator 
+[2] Password For User => vagrant
+
+Write Command(s) => $BASE/op-$CLUSTERNAME-exec 
+==============================================================
+    "
+	exit
+fi
+
+for Config in $BASE/VagVBox/$CLUSTERNAME/Configs/*; do
+    if [ -d "$Config" ]; then
+    	Config=${Config//$BASE/}
+    	Config=${Config//VagVBox/}
+    	Config=${Config//$CLUSTERNAME/}
+    	Config=${Config//Configs/}
+    	Config=${Config//matsya-vagvbox-sa/}
+    	Config=${Config//\//}
+    	Config=${Config//-/.}
+    	Config=${Config//../}
+    	CHOICE=$1
+    	if [ $CHOICE == "E" ] || [ $CHOICE == "e" ] ; then
+		if [ $Config == "$COORDINATOR" ] || [ $Config == "$COORDINATOR" ] ; then
+			Config="Coordinator"
+		fi
+	fi    	
+	if [ $Config == "Coordinator" ] || [ $Config == "Coordinator" ] ; then
+		echo ""
+	else
+		echo "---------------------"
+		echo "$Config"
+		echo "---------------------"
+		echo 'Execution Started...'
+		echo '~~~~~~~~~~~~~~~~~~~~~'
+		RANDOMFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/VagVBox/$CLUSTERNAME/$RANDOMFILENAME
+		echo '#!/bin/bash
+' | sudo tee -a $BASE/VagVBox/$CLUSTERNAME/$RANDOMFILENAME > /dev/null
+		sudo bash -c "cat $BASE/op-$CLUSTERNAME-exec >> $BASE/VagVBox/$CLUSTERNAME/$RANDOMFILENAME"
+		sudo sshpass -p $2 scp -P $RANDOMSSHPORT -o "StrictHostKeyChecking=no" $BASE/VagVBox/$CLUSTERNAME/$RANDOMFILENAME vagrant@$Config:/home/vagrant
+		sudo ssh vagrant@$Config -p $RANDOMSSHPORT  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo chmod 777 $RANDOMFILENAME && ./$RANDOMFILENAME && sudo rm -f $RANDOMFILENAME"
+		sudo rm -f $BASE/VagVBox/$CLUSTERNAME/$RANDOMFILENAME 
+		echo '~~~~~~~~~~~~~~~~~~~~~'
+		echo 'Execution Complete...'
+		echo "---------------------"		
+		echo ''
+	fi    	
+    fi
+done
+
+

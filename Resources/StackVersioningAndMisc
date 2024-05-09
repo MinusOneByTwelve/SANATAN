@@ -6,6 +6,11 @@ STACKLINELENGTHY="-----------------------------------------------"
 
 STACKSOFTWAREMASTERS=(2 3 5 6 8 9)
 
+#VBOXGENERICUBUNTU="https://app.vagrantup.com/ubuntu/boxes/jammy64/versions/20240426.0.0/providers/virtualbox/unknown/vagrant.box"
+VBOXGENERICUBUNTU="https://app.vagrantup.com/Minus1By12/boxes/MATSYA-VagVBox-Generic/versions/1.0.0/providers/virtualbox/unknown/vagrant.box"
+#VBOXGENERICSTACKUBUNTU="vagrant-virtualbox-generic-ubuntu-2204.box"
+VBOXGENERICSTACKUBUNTU="minus1by12-vagrant-virtualbox-generic-ubuntu-2204-v1-0-0.box"
+
 ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├35000-65000├1004")
 
 AZUREOSCHOICE=("almalinux├almalinux-x86_64├9-gen2├latest" "Canonical├UbuntuServer├22_04-lts├latest")
@@ -129,5 +134,70 @@ GetCodeForConfigAddition() {
 	cat $BASE/tmp/$JKLHOSTT1RANDOM >> $PQRTHEDYNA1SCRIPTFILE
 	
 	sudo rm -rf $BASE/tmp/$JKLHOSTT1RANDOM
+}
+
+NARASIMHA() {
+    local action="$1"
+    
+    if [ $action == "encrypt" ] ; then
+        local plaintext="$2"
+        local key="$3"    
+        local encrypted=$(echo -n "$plaintext" | openssl enc -aes-256-cbc -a -pbkdf2 -k "$key")
+        echo "$encrypted"
+    fi
+    
+    if [ $action == "decrypt" ] ; then
+        local encrypted="$2"
+        local key="$3"
+        local decrypted=$(echo "$encrypted" | openssl enc -aes-256-cbc -a -d -pbkdf2 -k "$key")
+        echo "$decrypted"    
+    fi        
+}
+
+GETMEUNIQUEIPS() {
+	final1ips=()
+
+	required_ips="$1"
+	the1nic="$2"
+	thenameofthefilewhereGETMEUNIQUEIPSwillwriteresult="$3"
+	required_1ips="$required_ips"
+	required_1ips_allowed="10"
+	
+	if [ "$required_1ips" -gt "$required_1ips_allowed" ]; then
+		required_1ips="8"
+	fi
+	#echo $required_1ips
+	while [ ${#final1ips[@]} -lt $required_ips ]; do
+		start_range=$((RANDOM % 231 + 10))
+		end_range=$((start_range + 10))
+		thenameofthefilewhereipscannerwillwriteresult=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		$BASE/Scripts/IPScanner.sh "$the1nic■$start_range■$end_range■$required_1ips■$BASE/tmp/$thenameofthefilewhereipscannerwillwriteresult"
+		if [ -e "$BASE/tmp/$thenameofthefilewhereipscannerwillwriteresult" ]; then result=$(head -n 1 $BASE/tmp/$thenameofthefilewhereipscannerwillwriteresult); fi;
+		sudo rm -f $BASE/tmp/$thenameofthefilewhereipscannerwillwriteresult
+		#echo "$start_range : $end_range : => $result"
+		IFS=',' read -r -a ips <<< "$result"
+		
+		for ip in "${ips[@]}"; do
+			#echo $ip
+			if [[ ! " ${final1ips[@]} " =~ " $ip " ]]; then			
+				final1ips+=("$ip")
+			fi
+		done
+		#echo "----------"
+		#echo "${final1ips[@]}"
+		#echo "----------"
+		#echo "${#final1ips[@]}"
+		#echo "----------"				
+	done
+
+	trimmed1_ips=()
+	for ((i = 0; i < required_ips && i < ${#final1ips[@]}; i++)); do
+		trimmed1_ips+=("${final1ips[i]}")
+	done
+	
+	IPAs1String=$(IFS=,; echo "${trimmed1_ips[*]}")
+	
+	#echo "$IPAs1String"
+	echo "$IPAs1String" | sudo tee $thenameofthefilewhereGETMEUNIQUEIPSwillwriteresult > /dev/null && sudo chmod 777 $thenameofthefilewhereGETMEUNIQUEIPSwillwriteresult
 }
 
