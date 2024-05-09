@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IFS="¤" read -ra REQPRM <<< "$1"
+IFS="■" read -ra REQPRM <<< "$1"
 FILE="${REQPRM[0]}"
 NOOFROWS="${REQPRM[1]}"
 IFVALS="${REQPRM[2]}"

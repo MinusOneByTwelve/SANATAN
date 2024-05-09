@@ -55,9 +55,9 @@ fi
 source $BASE/Resources/StackVersioningAndMisc
 SSKEYGENSH="$BASE/Scripts/KeyGeneratorSSH.sh"
 
-echo -e "${ORANGE}=====================================================================${NC}"
-echo -e "${BLUE}${BOLD}\x1b[4mM${NORM}${NC}ultifaceted deploy${BLUE}${BOLD}\x1b[4mA${NORM}${NC}gnostic ${BLUE}${BOLD}\x1b[4mT${NORM}${NC}imesaving ${BLUE}${BOLD}\x1b[4mS${NORM}${NC}calable anal${BLUE}${BOLD}\x1b[4mY${NORM}${NC}tics ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}malgamator"
-echo -e "${GREEN}=====================================================================${NC}"
+echo -e "${ORANGE}==========================================================${NC}"
+echo -e "${BLUE}${BOLD}\x1b[4mM${NORM}${NC}odular ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}malgamation ${BLUE}${BOLD}\x1b[4mT${NORM}${NC}ransforming ${BLUE}${BOLD}\x1b[4mS${NORM}${NC}ystems ${BLUE}${BOLD}\x1b[4mY${NORM}${NC}ielding ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}gility"
+echo -e "${GREEN}==========================================================${NC}"
 echo ''
 echo -e "\x1b[3mM   M  AAAAA  TTTTT  SSS   Y   Y  AAAAA\x1b[m"
 echo -e "\x1b[3mMM MM  A   A    T   S        Y    A   A\x1b[m"
@@ -105,9 +105,9 @@ deploy_instances_azure() {
 		IFS='¬' read -r -a CHOICEVALS <<< $thevar1
 		_AZVAL="${CHOICEVALS[3]}"
 		_AZVAL2=""
-		if [ "$_AZVAL" == "A" ]; then
+		if [ "$_AZVAL" == "ALMA" ]; then
 			_AZVAL2="${AZUREOSCHOICE[0]}"
-		elif [ "$_AZVAL" == "U" ]; then
+		elif [ "$_AZVAL" == "UBU" ]; then
 			_AZVAL2="${AZUREOSCHOICE[1]}"
 		else
 			_AZVAL2="${AZUREOSCHOICE[0]}"
@@ -736,8 +736,8 @@ validate_parameters() {
         return 1
     fi
 
-    if [ "$cloud_provider" != "gcp" ] && [ "$cloud_provider" != "aws" ] && [ "$cloud_provider" != "azure" ]; then
-        echo "Error: Cloud provider must be either GCP, AWS, or Azure."
+    if [ "$cloud_provider" != "gcp" ] && [ "$cloud_provider" != "aws" ] && [ "$cloud_provider" != "azure" ] && [ "$cloud_provider" != "onprem" ]; then
+        echo "Error: Cloud provider must be either GCP, AWS, Azure, or On Premise."
         return 1
     fi
 
