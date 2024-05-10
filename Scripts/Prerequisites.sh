@@ -81,5 +81,5 @@ echo "Commands installable via apt-get : sudo apt-get install ${filteredarr[@]}"
 echo "Commands available in ubuntu                            : ${sysarr[@]}" && echo "====================================================================================="
 echo ""
 
-#sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget
+#sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools
 

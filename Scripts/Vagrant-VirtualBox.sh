@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 clear
 
@@ -76,18 +76,6 @@ declare -A KEYVALIPS
 declare -A KEYVALIDENTITIES
 THENEWIDENTITYNAME=""
 
-function GetNewPort {
-    local FreshPort=$(newport)
-    if printf '%s\0' "${LISTOFALLPORTS[@]}" | grep -Fxqz -- $FreshPort; then	
-    	GetNewPort
-    else
-        LISTOFALLPORTS+=("$FreshPort")
-    fi
-    echo $FreshPort
-}
-
-#xyz=$(GetNewPort) && echo $xyz && exit
-
 if [ "$#" -ne 1 ]; then
 	USERVALS=""
 else
@@ -140,14 +128,37 @@ else
 	fi					
 fi
 
+function GetNewPort {
+    local FreshPort=$($BASE/Scripts/GetRandomPort.sh)
+    if printf '%s\0' "${LISTOFALLPORTS[@]}" | grep -Fxqz -- $FreshPort; then	
+    	GetNewPort
+    else
+        LISTOFALLPORTS+=("$FreshPort")
+    fi
+    echo $FreshPort
+}
+
+#xyz=$(GetNewPort) && echo $xyz && exit
+
 if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
 	read -p "Enter Base Location (If Missing, Will Be Created) > " -e -i "/opt/Matsya" BASE
 fi
+
+sudo mkdir -p $BASE
 sudo mkdir -p $BASE/MN
 sudo mkdir -p $BASE/mounts
 sudo mkdir -p $BASE/Repo
 sudo mkdir -p $BASE/tmp
 sudo mkdir -p $BASE/VagVBox
+sudo mkdir -p $BASE/Scripts
+sudo mkdir -p $BASE/Secrets
+sudo mkdir -p $BASE/Resources
+sudo mkdir -p $BASE/Output
+sudo mkdir -p $BASE/Output/Terraform
+if [[ ! -d "$BASE/Output/Pem" ]]; then
+	sudo mkdir -p $BASE/Output/Pem
+	sudo chmod -R 777 $BASE/Output/Pem
+fi
 
 source $BASE/Resources/StackVersioningAndMisc
 
@@ -540,8 +551,10 @@ pushd /opt && sudo 7za x /opt/docker-generic-ubuntu-2204-v1-0-0.tar.7z -o. && po
 
 	TERMINATORCOMMANDS=("ECHO1" "ECHO2" "ECHO3" "ECHO4" "ECHO5" "ECHO6" "ECHO7" "ECHO8" "ECHO9" "ECHOX" "ECHOY")
 	TERMINATORCONFIG=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	cp $TERMINALNEWCONFIG $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG
-
+	if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
+		cp $TERMINALNEWCONFIG $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG
+	fi
+	
 	THEWORKERLIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	sudo touch $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEWORKERLIST	
 	sudo chmod 777 $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEWORKERLIST
@@ -617,7 +630,7 @@ sleep 5
 		echo "$NEWIPADDR	op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb"
 		sudo mkdir -p $BASE/VagVBox/$CLUSTERNAME/Configs/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME
 		
-		TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"
+		TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"
 		
 		if (( $COUNTERx > 0 )) ; then
 			SSHBYCOORDINATOR+="sudo sshpass -p \"$MATSYAPWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes matsya@$NEWIPADDR && "
@@ -643,62 +656,62 @@ sleep 5
 				if (( THESPARKNODENO == COUNTERx )) ; then
 				
 					if [ "$THESPARKNODETYPE" == "M" ] ; then
-						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/SparkHA.conf BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/Spark/conf/slaves BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU tail /opt/Spark/conf/spark-env.sh BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"
+						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/SparkHA.conf BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/Spark/conf/slaves BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU tail /opt/Spark/conf/spark-env.sh BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"
 					fi
 					if [ "$THESPARKNODETYPE" == "Z" ] ; then
-						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU java -version BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/ZooKeeper/Data/myid BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/ZooKeeper/Core/conf/zoo.cfg BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"						
+						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU java -version BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/ZooKeeper/Data/myid BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/ZooKeeper/Core/conf/zoo.cfg BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"						
 					fi					
 					if [ "$THESPARKNODETYPE" == "W" ] ; then
-						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU tail .bashrc BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"
+						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU tail .bashrc BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"
 						
 						echo "op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEWORKERLIST > /dev/null
 					fi
 					if [ "$THESPARKNODETYPE" == "D" ] ; then
-						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/SparkJobHistoryServerConf BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker images BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker ps -a BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker ps BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"
+						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU cat /opt/SparkJobHistoryServerConf BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker images BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker ps -a BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU docker ps BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"
 						
 						echo "op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEDRIVERLIST > /dev/null
 					fi
 					if [ "$THESPARKNODETYPE" == "S" ] ; then
-						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt/JEC/.Keys BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/op-$CLUSTERNAME.pem\DOUBLEQ"
+						TERMINALRUNCOMMAND="clear BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ SINGLEQls -la . BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt BLABLU echo \DOUBLEQ\DOUBLEQ BLABLU ls -la /opt/JEC/.Keys BLABLU echo \DOUBLEQ\DOUBLEQSINGLEQ BLABLU sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \DOUBLEQStrictHostKeyChecking=no\DOUBLEQ -i \DOUBLEQ$BASE/Output/Pem/op-$CLUSTERNAME.pem\DOUBLEQ"
 						echo "op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEJECLIST > /dev/null						
 					fi
 					
 					echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $GENERICUBUDOCKER vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 					if [ "$THESPARKNODETYPE" == "D" ] || [ "$THESPARKNODETYPE" == "S" ] ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$DOCKERFIRSTTIMEFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null					
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$GENERICUBUDOCKER_ && sudo mv /home/vagrant/$GENERICUBUDOCKER_ /opt && sudo chmod 777 /opt/$GENERICUBUDOCKER_\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$DOCKERFIRSTTIMEFILE && sudo mv /home/vagrant/$DOCKERFIRSTTIMEFILE /opt/Docker1stTime.sh && sudo chmod 777 /opt/Docker1stTime.sh\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$GENERICUBUDOCKER_ && sudo mv /home/vagrant/$GENERICUBUDOCKER_ /opt && sudo chmod 777 /opt/$GENERICUBUDOCKER_\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$DOCKERFIRSTTIMEFILE && sudo mv /home/vagrant/$DOCKERFIRSTTIMEFILE /opt/Docker1stTime.sh && sudo chmod 777 /opt/Docker1stTime.sh\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					else
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$GENERICUBUDOCKER_ && sudo mv /home/vagrant/$GENERICUBUDOCKER_ /opt && sudo chmod 777 /opt/$GENERICUBUDOCKER_\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$GENERICUBUDOCKER_ && sudo mv /home/vagrant/$GENERICUBUDOCKER_ /opt && sudo chmod 777 /opt/$GENERICUBUDOCKER_\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 					fi
 					
 					if [ "$THESPARKNODETYPE" == "D" ] ; then
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $NFSSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THESECRETKEY vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THESECRETKEY /opt/.THESECRETKEY && sudo chmod u=r,g=r,o=r /opt/.THESECRETKEY && sudo chown root:root /opt/.THESECRETKEY\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THESECRETKEY /opt/.THESECRETKEY && sudo chmod u=r,g=r,o=r /opt/.THESECRETKEY && sudo chown root:root /opt/.THESECRETKEY\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					fi
 					if [ "$THESPARKNODETYPE" == "W" ] ; then
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $NFSSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THESECRETKEY vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THESECRETKEY /opt/.THESECRETKEY && sudo chmod u=r,g=r,o=r /opt/.THESECRETKEY && sudo chown root:root /opt/.THESECRETKEY\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THESECRETKEY /opt/.THESECRETKEY && sudo chmod u=r,g=r,o=r /opt/.THESECRETKEY && sudo chown root:root /opt/.THESECRETKEY\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					fi										
 					if [ "$THESPARKNODETYPE" == "S" ] ; then
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --add-service=nfs && sudo firewall-cmd --permanent --add-service=mountd && sudo firewall-cmd --permanent --add-service=rpc-bind && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $NFSSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/CreateNFSMount.sh && sudo mv /home/vagrant/CreateNFSMount.sh /opt/CreateNFSMount.sh && sudo chmod 777 /opt/CreateNFSMount.sh && sudo ln -s /opt/CreateNFSMount.sh /usr/bin/jec-nfsmount\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					fi
 														
 					if [ "$THESPARKNODETYPE" == "D" ] ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THESPARKCONFFUNCFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $SHELLSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $SYNCJOBSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/SparkInitiate.sh && sudo mv /home/vagrant/SparkInitiate.sh /opt/SparkInitiate.sh && sudo chmod 777 /opt/SparkInitiate.sh && sudo ln -s /opt/SparkInitiate.sh /usr/bin/jec-spark-initiate\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/SyncJobLogs.sh && sudo mv /home/vagrant/SyncJobLogs.sh /opt/SyncJobLogs.sh && sudo chmod 777 /opt/SyncJobLogs.sh && sudo ln -s /opt/SyncJobLogs.sh /usr/bin/jec-spark-syncjoblogs\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$THESPARKCONFFUNCFILE && sudo mv /home/vagrant/$THESPARKCONFFUNCFILE /opt/SparkConf.sh && sudo chmod 777 /opt/SparkConf.sh && sudo ln -s /opt/SparkConf.sh /usr/bin/jec-spark-conf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/SparkInitiate.sh && sudo mv /home/vagrant/SparkInitiate.sh /opt/SparkInitiate.sh && sudo chmod 777 /opt/SparkInitiate.sh && sudo ln -s /opt/SparkInitiate.sh /usr/bin/jec-spark-initiate\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/SyncJobLogs.sh && sudo mv /home/vagrant/SyncJobLogs.sh /opt/SyncJobLogs.sh && sudo chmod 777 /opt/SyncJobLogs.sh && sudo ln -s /opt/SyncJobLogs.sh /usr/bin/jec-spark-syncjoblogs\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$THESPARKCONFFUNCFILE && sudo mv /home/vagrant/$THESPARKCONFFUNCFILE /opt/SparkConf.sh && sudo chmod 777 /opt/SparkConf.sh && sudo ln -s /opt/SparkConf.sh /usr/bin/jec-spark-conf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 
 						echo "sudo cat /opt/JEC/.Keys/id_rsa.pub | sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"/home/vagrant/op-$CLUSTERNAME.pem\" 'cat >> \$HOME/.ssh/authorized_keys'" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$JECDRIVERACCESS > /dev/null
 						
@@ -712,20 +725,20 @@ sleep 5
 						
 						THESPARKURLSLIST+=" http://op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb:$SPARKDPORT1"
 						
-						echo "* SPARK_HISTORY_START		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/start-history-server.sh --properties-file /opt/SparkJobHistoryServerConf && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
-						echo "* SPARK_HISTORY_STOP 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/stop-history-server.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null						
+						echo "* SPARK_HISTORY_START		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/start-history-server.sh --properties-file /opt/SparkJobHistoryServerConf && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
+						echo "* SPARK_HISTORY_STOP 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/stop-history-server.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null						
 						echo "~~~~~~~~~~~~~~~~~~~~~~~" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null	
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKDPORT1/tcp && sudo firewall-cmd --reload && sudo touch /opt/SparkJobHistoryServerConf && echo \"spark.history.ui.port              $SPARKDPORT1\" | sudo tee -a /opt/SparkJobHistoryServerConf > /dev/null && echo \"spark.history.fs.logDirectory      file:/opt/SparkJob_History_Events_Logs\" | sudo tee -a /opt/SparkJobHistoryServerConf > /dev/null && sudo chown -R root:root /opt/SparkJobHistoryServerConf && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/SparkJobHistoryServerConf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null																														
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKDPORT1/tcp && sudo firewall-cmd --reload && sudo touch /opt/SparkJobHistoryServerConf && echo \"spark.history.ui.port              $SPARKDPORT1\" | sudo tee -a /opt/SparkJobHistoryServerConf > /dev/null && echo \"spark.history.fs.logDirectory      file:/opt/SparkJob_History_Events_Logs\" | sudo tee -a /opt/SparkJobHistoryServerConf > /dev/null && sudo chown -R root:root /opt/SparkJobHistoryServerConf && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/SparkJobHistoryServerConf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null																														
 					fi
 									
 					if [ "$THESPARKNODETYPE" == "S" ] || [ "$THESPARKNODETYPE" == "D" ] ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THENEWPORTFUNCFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$THENEWPORTFUNCFILE && sudo mv /home/vagrant/$THENEWPORTFUNCFILE /opt/NewPort.sh && sudo chmod 777 /opt/NewPort.sh && sudo ln -s /opt/NewPort.sh /usr/bin/jec-newport\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null																		
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 /home/vagrant/$THENEWPORTFUNCFILE && sudo mv /home/vagrant/$THENEWPORTFUNCFILE /opt/NewPort.sh && sudo chmod 777 /opt/NewPort.sh && sudo ln -s /opt/NewPort.sh /usr/bin/jec-newport\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null																		
 					fi
 									
 					if [ "$THESPARKNODETYPE" == "W" ] || [ "$THESPARKNODETYPE" == "D" ] ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $SPARKSTACKBUNDLE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 Spark.7z && sudo 7z x Spark.7z -o. && sudo rm -f Spark.7z && sudo chmod -R 777 Spark && cd Spark && ./SetUpSpark.sh '/home/vagrant/$FIREWALLFILE' && cd .. && sudo rm -rf Spark\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 Spark.7z && sudo 7z x Spark.7z -o. && sudo rm -f Spark.7z && sudo chmod -R 777 Spark && cd Spark && ./SetUpSpark.sh '/home/vagrant/$FIREWALLFILE' && cd .. && sudo rm -rf Spark\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					fi
 					
 					if [ "$THESPARKNODETYPE" == "M" ] ; then
@@ -733,7 +746,7 @@ sleep 5
 						SPARKPORT2=$(GetNewPort)					
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $SPARKSTACKBUNDLE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$SLAVESFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo chmod 777 Spark.7z && sudo 7z x Spark.7z -o. && sudo rm -f Spark.7z && sudo chmod -R 777 Spark && cd Spark && ./SetUpSpark.sh '/home/vagrant/$FIREWALLFILE' Y 'op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb' $SPARKPORT1 $SPARKPORT2 '/home/vagrant/$SLAVESFILE' && cd .. && sudo rm -rf Spark\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo chmod 777 Spark.7z && sudo 7z x Spark.7z -o. && sudo rm -f Spark.7z && sudo chmod -R 777 Spark && cd Spark && ./SetUpSpark.sh '/home/vagrant/$FIREWALLFILE' Y 'op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb' $SPARKPORT1 $SPARKPORT2 '/home/vagrant/$SLAVESFILE' && cd .. && sudo rm -rf Spark\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						THESPARKMASTERHOSTNAME="op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN-$THENEWIDENTITYNAME-vvb"
 						
 						echo "" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
@@ -751,10 +764,10 @@ sleep 5
 							THESPARKMASTERLIST+=",$THESPARKMASTERHOSTNAME:$SPARKPORT1"
 						fi
 												
-						echo "* SPARK_START	 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/start-all.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
-						echo "* SPARK_STOP	 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/stop-all.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null																		
+						echo "* SPARK_START	 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/start-all.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
+						echo "* SPARK_STOP	 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd /opt/Spark && ./sbin/stop-all.sh && cd ~\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null																		
 						echo "-----------------------" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null	
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKPORT2/tcp && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null											
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKPORT2/tcp && sudo firewall-cmd --reload\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null											
 					fi
 					
 					echo "sudo firewall-cmd --permanent --zone=public --add-source=$NEWIPADDR/24" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$FIREWALLFILE > /dev/null
@@ -775,7 +788,7 @@ sleep 5
 						echo "* SPARK_WORKER_PORT 		= $SPARKWPORT1" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
 						echo "* SPARK_WORKER_WEBUI_PORT 	= $SPARKWPORT2" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
 						echo "~~~~~~~~~~~~~~~~~~~~~~~" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null	
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKWPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKWPORT2/tcp && sudo firewall-cmd --reload && echo \"\" | tee -a ~/.bashrc > /dev/null && echo \"export SPARK_WORKER_PORT=$SPARKWPORT1\" | tee -a ~/.bashrc > /dev/null && echo \"export SPARK_WORKER_WEBUI_PORT=$SPARKWPORT2\" | tee -a ~/.bashrc > /dev/null\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKWPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKWPORT2/tcp && sudo firewall-cmd --reload && echo \"\" | tee -a ~/.bashrc > /dev/null && echo \"export SPARK_WORKER_PORT=$SPARKWPORT1\" | tee -a ~/.bashrc > /dev/null && echo \"export SPARK_WORKER_WEBUI_PORT=$SPARKWPORT2\" | tee -a ~/.bashrc > /dev/null\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 					fi				
 				fi
 				
@@ -802,9 +815,9 @@ sleep 5
 						echo "* ZOOKEEPER_CLIENT_PORT 	= $SPARKZPORT1" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
 						echo "* ZOOKEEPER_LEADER_PORT 	= $SPARKZPORT2" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
 						echo "* ZOOKEEPER_PEER_PORT 		= $SPARKZPORT3" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
-						echo "* ZOOKEEPER_EXECUTE 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"/opt/ZooKeeper/Core/bin/zkServer.sh start\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null												
+						echo "* ZOOKEEPER_EXECUTE 		= sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"/opt/ZooKeeper/Core/bin/zkServer.sh start\"" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null												
 						echo "~~~~~~~~~~~~~~~~~~~~~~~" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null	
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT2/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT3/tcp && sudo firewall-cmd --reload && sudo mkdir /opt/ZK && sudo chown -R root:root /opt/ZK && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/ZK && sudo touch /opt/ZK/myid && echo \"$ZOOSTARTPOINT\" | sudo tee -a /opt/ZK/myid > /dev/null && sudo chown -R root:root /opt/ZK/myid && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/ZK/myid\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT1/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT2/tcp && sudo firewall-cmd --permanent --zone=public --add-port=$SPARKZPORT3/tcp && sudo firewall-cmd --reload && sudo mkdir /opt/ZK && sudo chown -R root:root /opt/ZK && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/ZK && sudo touch /opt/ZK/myid && echo \"$ZOOSTARTPOINT\" | sudo tee -a /opt/ZK/myid > /dev/null && sudo chown -R root:root /opt/ZK/myid && sudo chmod -R u=rwx,g=rwx,o=rwx /opt/ZK/myid\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						ZOOSTARTPOINT=$((ZOOSTARTPOINT + 1))																		
 					fi				
 				fi								
@@ -813,7 +826,9 @@ sleep 5
 		
 		THESTRINGTOREPLACE="${TERMINATORCOMMANDS[$COUNTERx]}"
 		#echo $THESTRINGTOREPLACE
+		if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
 		sed -i s~"$THESTRINGTOREPLACE"~"$TERMINALRUNCOMMAND"~g $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG
+		fi
 		#THESEDCOMMAND="sed s~$THESTRINGTOREPLACE~$TERMINALRUNCOMMAND~g $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG"
 		#eval $THESEDCOMMAND
 		#echo $THESEDCOMMAND
@@ -821,6 +836,7 @@ sleep 5
 		COUNTERx=$((COUNTERx + 1))
 	done
 	#exit
+	if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
 	#sed -i 's~BLABLU~&&~g' $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG
 	#sed -i 's~BLU~&~g' $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG
 	sed -i -e 's~BLABLU~\&\&~g' $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG	
@@ -841,6 +857,7 @@ sleep 5
 	#sudo chown prathamos:prathamos /home/prathamos/.config/terminator/config
 	#sudo chmod -R u=rw,g=rw,o=r /home/prathamos/.config/terminator/config		
 	#cat $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG && exit
+	fi
 	
 	SPARKHACONF=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
 	sudo touch $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKHACONF	
@@ -869,7 +886,7 @@ spark.deploy.zookeeper.dir=/spark" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID
 				if [ "$THESPARKNODETYPE" == "M" ] ; then
 					if (( THESPARKNODENO == COUNTERx )) ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKHACONF vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 $SPARKHACONF && sudo mv $SPARKHACONF /opt/SparkHA.conf && sudo chown root:root /opt/SparkHA.conf && sudo chmod u=rwx,g=rwx,o=rwx /opt/SparkHA.conf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 $SPARKHACONF && sudo mv $SPARKHACONF /opt/SparkHA.conf && sudo chown root:root /opt/SparkHA.conf && sudo chmod u=rwx,g=rwx,o=rwx /opt/SparkHA.conf\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
 						
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"cd /opt/Spark && ./sbin/start-master.sh --properties-file /opt/SparkHA.conf && cd ~\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK3 > /dev/null
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"cd /opt/Spark && ./sbin/stop-master.sh && cd ~\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK4 > /dev/null										
@@ -880,7 +897,7 @@ spark.deploy.zookeeper.dir=/spark" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID
 					if (( THESPARKNODENO == COUNTERx )) ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEWORKERLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEJECLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEWORKERLIST /opt && sudo chmod 777 /opt/$THEWORKERLIST && sudo mv /opt/$THEWORKERLIST /opt/THEWORKERLIST && sudo mv /home/vagrant/$THEJECLIST /opt && sudo chmod 777 /opt/$THEJECLIST && sudo mv /opt/$THEJECLIST /opt/THEJECLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEWORKERLIST /opt && sudo chmod 777 /opt/$THEWORKERLIST && sudo mv /opt/$THEWORKERLIST /opt/THEWORKERLIST && sudo mv /home/vagrant/$THEJECLIST /opt && sudo chmod 777 /opt/$THEJECLIST && sudo mv /opt/$THEJECLIST /opt/THEJECLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "jec-nfsmount D && sg jec -c \"cd /opt/Spark && ./sbin/start-history-server.sh --properties-file /opt/SparkJobHistoryServerConf && cd ~\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK7 > /dev/null
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"cd /opt/Spark && ./sbin/stop-history-server.sh && cd ~\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK8 > /dev/null																		
@@ -890,9 +907,9 @@ spark.deploy.zookeeper.dir=/spark" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID
 				if [ "$THESPARKNODETYPE" == "w" ] || [ "$THESPARKNODETYPE" == "W" ] ; then
 					if (( THESPARKNODENO == COUNTERx )) ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEDRIVERLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEDRIVERLIST /opt && sudo chmod 777 /opt/$THEDRIVERLIST && sudo mv /opt/$THEDRIVERLIST /opt/THEDRIVERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEDRIVERLIST /opt && sudo chmod 777 /opt/$THEDRIVERLIST && sudo mv /opt/$THEDRIVERLIST /opt/THEDRIVERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEJECLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEJECLIST /opt && sudo chmod 777 /opt/$THEJECLIST && sudo mv /opt/$THEJECLIST /opt/THEJECLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEJECLIST /opt && sudo chmod 777 /opt/$THEJECLIST && sudo mv /opt/$THEJECLIST /opt/THEJECLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null						
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"cd /opt/Spark && ./sbin/start-worker.sh '"$THESPARKMASTERLIST"' && cd ~\" && sleep 10 && jec-nfsmount W"' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK5 > /dev/null
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"cd /opt/Spark && ./sbin/stop-worker.sh && cd ~\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK6 > /dev/null						
 					fi
@@ -901,9 +918,9 @@ spark.deploy.zookeeper.dir=/spark" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID
 				if [ "$THESPARKNODETYPE" == "s" ] || [ "$THESPARKNODETYPE" == "S" ] ; then
 					if (( THESPARKNODENO == COUNTERx )) ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEDRIVERLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEDRIVERLIST /opt && sudo chmod 777 /opt/$THEDRIVERLIST && sudo mv /opt/$THEDRIVERLIST /opt/THEDRIVERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEDRIVERLIST /opt && sudo chmod 777 /opt/$THEDRIVERLIST && sudo mv /opt/$THEDRIVERLIST /opt/THEDRIVERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$THEWORKERLIST vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEWORKERLIST /opt && sudo chmod 777 /opt/$THEWORKERLIST && sudo mv /opt/$THEWORKERLIST /opt/THEWORKERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"sudo mv /home/vagrant/$THEWORKERLIST /opt && sudo chmod 777 /opt/$THEWORKERLIST && sudo mv /opt/$THEWORKERLIST /opt/THEWORKERLIST\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "jec-nfsmount J"' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK0 > /dev/null						
 					fi
 				fi								
@@ -926,10 +943,10 @@ maxClientCnxns=0" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERCONF >
 						cat $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERCONF $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERQUOROM > $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERFINALCONF
 						sudo chmod 777 $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERFINALCONF
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERFINALCONF vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 $ZOOKEEPERFINALCONF && sudo mv $ZOOKEEPERFINALCONF zookeeper.properties\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 $ZOOKEEPERFINALCONF && sudo mv $ZOOKEEPERFINALCONF zookeeper.properties\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $ZKSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						#echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $JAVASETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null						
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 SetUpZooKeeper.sh && ./SetUpZooKeeper.sh '/home/vagrant/$FIREWALLFILE' '$ZOOKEEPERJAVA_' '$ZOOKEEPERSTACK_' && sudo rm -rf *\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 SetUpZooKeeper.sh && ./SetUpZooKeeper.sh '/home/vagrant/$FIREWALLFILE' '$ZOOKEEPERJAVA_' '$ZOOKEEPERSTACK_' && sudo rm -rf *\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null
 						
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"/opt/ZooKeeper/Core/bin/zkServer.sh start\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK1 > /dev/null
 						echo 'sudo ssh vagrant@'"$NEWIPADDR"' -p '"$RANDOMSSHPORT"'  -o "StrictHostKeyChecking=no" -i "'"$BASE"'/op-'"$CLUSTERNAME"'.pem" "sg jec -c \"/opt/ZooKeeper/Core/bin/zkServer.sh stop\""' | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$STARTSTOPSPARK2 > /dev/null																							
@@ -939,9 +956,9 @@ maxClientCnxns=0" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$ZOOKEEPERCONF >
 				if [ "$THESPARKNODETYPE" == "s" ] || [ "$THESPARKNODETYPE" == "S" ] ; then
 					if (( THESPARKNODENO == COUNTERx )) ; then
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $JECSETUPFILE vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
-						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/op-$CLUSTERNAME.pem vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
+						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/Output/Pem/op-$CLUSTERNAME.pem vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null
 						echo "sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT $BASE/tmp/$THEUNIQUETHISRUNGUID/$JECDRIVERACCESS vagrant@$NEWIPADDR:/home/vagrant &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$PSCPFILE > /dev/null					
-						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 SetUpJEC.sh && ./SetUpJEC.sh '/home/vagrant/$FIREWALLFILE' '$PEMFILENAME' '$NEWIPADDR' '$MATSYAPWD' '/home/vagrant/$JECDRIVERACCESS' && sudo rm -rf *\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
+						echo "sudo ssh vagrant@$NEWIPADDR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"cd ~ && sudo chmod 777 SetUpJEC.sh && ./SetUpJEC.sh '/home/vagrant/$FIREWALLFILE' '$PEMFILENAME' '$NEWIPADDR' '$MATSYAPWD' '/home/vagrant/$JECDRIVERACCESS' && sudo rm -rf *\" &" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKEXECUTEFILE > /dev/null	
 						
 						echo "" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
 						echo "-----------------------" | sudo tee -a $BASE/tmp/$THEUNIQUETHISRUNGUID/$SPARKSTACKDEPLOYINFO > /dev/null
@@ -1018,7 +1035,7 @@ sudo vagrant global-status --prune | grep $CLUSTERNAME | cut -f 1 -d ' ' | xargs
 sudo vagrant box list | grep $CLUSTERNAME | cut -f 1 -d ' ' | xargs -L 1 sudo vagrant box remove -f
 sudo $BASE/op-$CLUSTERNAME-stop-post.sh
 sudo rm -rf $BASE/VagVBox/$CLUSTERNAME
-sudo rm -rf $BASE/op-$CLUSTERNAME.pem
+sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
 sudo rm -rf $BASE/op-$CLUSTERNAME.ppk 
 sudo rm -rf $BASE/op-$CLUSTERNAME-start.sh
 sudo rm -rf $BASE/op-$CLUSTERNAME-start-pre.sh	
@@ -1035,7 +1052,7 @@ sudo rm -rf $BASE/op-$CLUSTERNAME-remove.sh
 	
 	DESTROYCLUSTER1SCRIPT=$(echo '#!/bin/bash'"	
 sudo $BASE/op-$CLUSTERNAME-stop-post.sh
-#sudo rm -rf $BASE/op-$CLUSTERNAME.pem
+#sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
 sudo rm -rf $BASE/op-$CLUSTERNAME.ppk 
 sudo rm -rf $BASE/op-$CLUSTERNAME-start.sh
 sudo rm -rf $BASE/op-$CLUSTERNAME-start-pre.sh	
@@ -1110,11 +1127,11 @@ sudo $BASE/op-$CLUSTERNAME-stop-post.sh
 	echo 'NEW SSH KEYS'
 	echo '-----------------------'
 	sudo -H -u root bash -c "cd $BASE/VagVBox/$CLUSTERNAME/Keys && echo -e  'y\n'|ssh-keygen -b 2048 -t rsa -P '' -f id_rsa && cat id_rsa.pub >> authorized_keys && cp id_rsa op-$CLUSTERNAME.pem && puttygen op-$CLUSTERNAME.pem -o op-$CLUSTERNAME.ppk && cd ~"
-	sudo rm -rf $BASE/op-$CLUSTERNAME.pem
+	sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
 	sudo rm -rf $BASE/op-$CLUSTERNAME.ppk
-	sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.pem $BASE
+	sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.pem $BASE/Output/Pem
 	sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.ppk $BASE
-	sudo chmod u=rwx,g=rx,o=rx $BASE/op-$CLUSTERNAME.pem
+	sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-$CLUSTERNAME.pem
 	sudo chmod u=rwx,g=rx,o=rx $BASE/op-$CLUSTERNAME.ppk
 	sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/authorized_keys
 	sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa	
@@ -1282,7 +1299,7 @@ Host op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2-$THENEWIDENTITYNAME-vvb
       vb.name = \"$THENAMEOFVBBOX\"
   end
   
-  #config.ssh.private_key_path = \"$BASE/op-$CLUSTERNAME.pem\"
+  #config.ssh.private_key_path = \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\"
   
   #config.ssh.port = $RANDOMSSHPORT
   
@@ -1571,25 +1588,25 @@ echo \"\"
 		
 		sudo -H -u root bash -c "pushd $BASE/VagVBox/$CLUSTERNAME/Configs/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN3-$THENEWIDENTITYNAME && sudo vagrant up && popd"
 		
-		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo '$ROOTPWD' | sudo passwd --stdin 'root'"				
-		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo '$VAGRANTPWD' | sudo passwd --stdin 'vagrant'"				
-		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo '$MATSYAPWD' | sudo passwd --stdin 'matsya'"
+		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo '$ROOTPWD' | sudo passwd --stdin 'root'"				
+		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo '$VAGRANTPWD' | sudo passwd --stdin 'vagrant'"				
+		#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo '$MATSYAPWD' | sudo passwd --stdin 'matsya'"
 
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$ROOTPWD\" | openssl passwd -1 -stdin) root"				
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$VAGRANTPWD\" | openssl passwd -1 -stdin) vagrant"				
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$MATSYAPWD\" | openssl passwd -1 -stdin) matsya"
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$UBUPWD\" | openssl passwd -1 -stdin) ubuntu"
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo touch /opt/ISVM && sudo chmod 777 /opt/ISVM"
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo \"$THISCURRENTMACHINEIP\" | sudo tee /opt/MYPARENT > /dev/null && sudo chmod 777 /opt/MYPARENT"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$ROOTPWD\" | openssl passwd -1 -stdin) root"				
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$VAGRANTPWD\" | openssl passwd -1 -stdin) vagrant"				
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$MATSYAPWD\" | openssl passwd -1 -stdin) matsya"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$UBUPWD\" | openssl passwd -1 -stdin) ubuntu"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo touch /opt/ISVM && sudo chmod 777 /opt/ISVM"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THISCURRENTMACHINEIP\" | sudo tee /opt/MYPARENT > /dev/null && sudo chmod 777 /opt/MYPARENT"
 		
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" 'sudo sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config && sudo systemctl restart sshd.service'
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" 'sudo sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config && sudo systemctl restart sshd.service'
 		
 		THEHOSTSFILE="$BASE/VagVBox/$CLUSTERNAME/Configs/hosts"
 		SSHRELATEDRPMS="$BASE/Repo/Stack/Bundle/policycoreutils-python.7z"
 		#https://www.tecmint.com/copy-files-to-multiple-linux-servers/
 		#https://stackoverflow.com/questions/28025147/how-to-copy-multiple-files-simultaneously-using-scp
 		sudo sshpass -p "$VAGRANTPWD" scp $THEHOSTSFILE vagrant@$VMIP:/home/vagrant
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo rm -f /etc/hosts && sudo mv /home/vagrant/hosts /etc"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo rm -f /etc/hosts && sudo mv /home/vagrant/hosts /etc"
 		
 		if [ "$STACKDEPLOY" == "0" ] || [ "$STACKDEPLOY" == "0" ] ; then
 			#sudo sshpass -p "$VAGRANTPWD" scp $SSHRELATEDRPMS vagrant@$VMIP:/home/vagrant
@@ -1623,8 +1640,8 @@ echo \"\"
 	done
 	SSHBYMASTER+="echo '-----------------------'"
 	#exit
-	sudo ssh vagrant@$COORDINATOR -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo -e  'y\n'|ssh-keygen -t rsa -P '' -f /home/vagrant/.ssh/id_rsa && cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys && eval \$(ssh-agent) > /dev/null && ssh-add && MATSYAPSWD=\$(sudo cat /usr/bin/.mtsypswd) && sshpass -p \"\$MATSYAPSWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$COORDINATOR"
-	sudo ssh vagrant@$COORDINATOR -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "$SSHBYCOORDINATOR"
+	sudo ssh vagrant@$COORDINATOR -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo -e  'y\n'|ssh-keygen -t rsa -P '' -f /home/vagrant/.ssh/id_rsa && cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys && eval \$(ssh-agent) > /dev/null && ssh-add && MATSYAPSWD=\$(sudo cat /usr/bin/.mtsypswd) && sshpass -p \"\$MATSYAPSWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$COORDINATOR"
+	sudo ssh vagrant@$COORDINATOR -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "$SSHBYCOORDINATOR"
 
 	#SSHBYMASTER="echo '-----------------------' && "
 	#COUNTER=0	
@@ -1650,19 +1667,19 @@ echo \"\"
 		
 		if [ "$STACKDEPLOY" == "0" ] || [ "$STACKDEPLOY" == "0" ] ; then
 			echo ""
-			#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
+			#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
 		fi
 		if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
 			if (( $COUNTER == 0 )) ; then
 				echo ""
-				#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
+				#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
 			fi
 		fi
 		if printf '%s\0' "${ZOOKEEPER_LIST[@]}" | grep -Fxqz -- $COUNTER; then		
 		#if (( $COUNTER == 1 )) ; then
 			if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
 				echo ""
-				#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
+				#sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo rm -rf policycoreutils-python && sudo 7z x policycoreutils-python.7z -o. && sudo yum install -y policycoreutils-python/lsof-4.87-6.el7.x86_64.rpm && sudo rm -rf policycoreutils-python && sudo rm -rf policycoreutils-python.7z"
 			fi									
 		fi
 				
@@ -1673,22 +1690,22 @@ echo \"\"
 				#https://unix.stackexchange.com/questions/10233/ssh-remote-server-on-some-port-other-than-22-without-password
 				#echo "came here $VMIP"
 				#echo "$SSHBYMASTER"
-				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "echo -e  'y\n'|ssh-keygen -t rsa -P '' -f /home/vagrant/.ssh/id_rsa && cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys && eval \$(ssh-agent) > /dev/null && ssh-add && MATSYAPSWD=\$(sudo cat /usr/bin/.mtsypswd) && sshpass -p \"\$MATSYAPSWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$VMIP"
+				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo -e  'y\n'|ssh-keygen -t rsa -P '' -f /home/vagrant/.ssh/id_rsa && cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys && eval \$(ssh-agent) > /dev/null && ssh-add && MATSYAPSWD=\$(sudo cat /usr/bin/.mtsypswd) && sshpass -p \"\$MATSYAPSWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$VMIP"
 				#echo "came here also $VMIP"
-				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo sshpass -p \"$VAGRANTPWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$VMIP"
-				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "$SSHBYMASTER"
+				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo sshpass -p \"$VAGRANTPWD\" ssh-copy-id -i /home/vagrant/.ssh/id_rsa.pub -o StrictHostKeyChecking=no -o IdentitiesOnly=yes vagrant@$VMIP"
+				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "$SSHBYMASTER"
 				#echo "came here also 2 $VMIP"		
-				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo mv $RANDOMCONFIGFILENAME /home/vagrant/.ssh/config && sudo chown vagrant:vagrant /home/vagrant/.ssh/config && sudo chmod 777 /home/vagrant/.ssh/config && chmod 600 ~/.ssh/config"
+				sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo mv $RANDOMCONFIGFILENAME /home/vagrant/.ssh/config && sudo chown vagrant:vagrant /home/vagrant/.ssh/config && sudo chmod 777 /home/vagrant/.ssh/config && chmod 600 ~/.ssh/config"
 			fi									
 		fi
 
 		if (( $COUNTER == 0 )) ; then
 			echo ''
 		else
-			sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "sudo rm -rf /usr/bin/.mtsypswd"									
+			sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo rm -rf /usr/bin/.mtsypswd"									
 		fi
 						
-		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" "SSHPORT=\"$RANDOMSSHPORT\" && sudo systemctl stop ufw && sudo systemctl disable ufw && sudo systemctl start firewalld && sudo systemctl enable firewalld && sudo sed -i -e s~\"Port\"~\"#Port\"~g /etc/ssh/sshd_config && echo \"Port \$SSHPORT\" | sudo tee -a /etc/ssh/sshd_config > /dev/null && sudo firewall-cmd --permanent --zone=public --add-port=\$SSHPORT/tcp && sudo firewall-cmd --reload && sudo systemctl restart sshd.service && echo '-----' && sudo lsof -nP -iTCP -sTCP:LISTEN | grep \"COMMAND\|IPv4\" && echo '-----' && sudo netstat -tnlp | grep -v tcp6 && echo '-----' && sudo route del default gw 10.0.2.2 && sudo route add default gw $GATEWAY"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "SSHPORT=\"$RANDOMSSHPORT\" && sudo systemctl stop ufw && sudo systemctl disable ufw && sudo systemctl start firewalld && sudo systemctl enable firewalld && sudo sed -i -e s~\"Port\"~\"#Port\"~g /etc/ssh/sshd_config && echo \"Port \$SSHPORT\" | sudo tee -a /etc/ssh/sshd_config > /dev/null && sudo firewall-cmd --permanent --zone=public --add-port=\$SSHPORT/tcp && sudo firewall-cmd --reload && sudo systemctl restart sshd.service && echo '-----' && sudo lsof -nP -iTCP -sTCP:LISTEN | grep \"COMMAND\|IPv4\" && echo '-----' && sudo netstat -tnlp | grep -v tcp6 && echo '-----' && sudo route del default gw 10.0.2.2 && sudo route add default gw $GATEWAY"
 		COUNTER=$((COUNTER + 1))						
 	done
 	COUNTER=0
@@ -1699,9 +1716,9 @@ echo \"\"
 	fi
 	
 	if [ "$FINALOUTPUTREQ" == "YES" ] ; then		
-		sudo touch "$FINALPROCESSOUTPUT.csv"
-		sudo chmod 777 "$FINALPROCESSOUTPUT.csv"
-		echo "Scope,IP,Parent,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $FINALPROCESSOUTPUT.csv
+		sudo touch "$FINALPROCESSOUTPUT"
+		sudo chmod 777 "$FINALPROCESSOUTPUT"
+		echo "Scope,IP,Parent,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $FINALPROCESSOUTPUT
 		
 		COUNTER=0		
 		for IP_ADDRESS_VALS_LIST in "${IP_ADDRESS_LIST[@]}"
@@ -1713,7 +1730,7 @@ echo \"\"
 			if (( $COUNTER == 0 )) ; then
 				ABC="XYZ"
 			else
-				ssh_info=$(sudo ssh vagrant@$VMIP -p $RANDOMSSHPORT  -o "StrictHostKeyChecking=no" -i "$BASE/op-$CLUSTERNAME.pem" 'os_type=$(if command -v apt-get &> /dev/null; then echo "Ubuntu"; elif command -v yum &> /dev/null; then echo "RedHat"; else echo "WinMac"; fi); \
+				ssh_info=$(sudo ssh vagrant@$VMIP -p $RANDOMSSHPORT  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" 'os_type=$(if command -v apt-get &> /dev/null; then echo "Ubuntu"; elif command -v yum &> /dev/null; then echo "RedHat"; else echo "WinMac"; fi); \
 	    hostname=$(hostname); \
 	    if command -v vagrant &> /dev/null && command -v virtualbox &> /dev/null; then vagrant_virtualbox_installed="Yes"; else vagrant_virtualbox_installed="No"; fi; \
 	    total_ram=$(free -h | awk '"'"'{if (NR==2) print $2}'"'"' | sed "s/Gi//"); \
@@ -1724,7 +1741,7 @@ echo \"\"
 	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists"')
 				
 				IFS='├' read -ra _gi <<< "$ssh_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}"                             		
-				echo ",$VMIP,$THISCURRENTMACHINEIP,$_gi7,op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,matysa,$RANDOMSSHPORT,$MATSYAPWD," >> $FINALPROCESSOUTPUT.csv 
+				echo ",$VMIP,$THISCURRENTMACHINEIP,$_gi7,op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,matysa,$RANDOMSSHPORT,$MATSYAPWD," >> $FINALPROCESSOUTPUT 
 			fi
 			
 			COUNTER=$((COUNTER + 1))						
@@ -1785,7 +1802,7 @@ echo \"\"
 	sudo chmod -R u=x,g=,o= $BASE/op-$CLUSTERNAME-remove.sh	
 	sudo chown -R root:root $BASE/VagVBox/$CLUSTERNAME/.ports
 	sudo chmod -R u=r,g=,o= $BASE/VagVBox/$CLUSTERNAME/.ports						
-	sudo chmod -R u=r,g=,o= $BASE/op-$CLUSTERNAME.pem
+	sudo chmod -R u=r,g=,o= $BASE/Output/Pem/op-$CLUSTERNAME.pem
 	sudo chmod -R u=r,g=,o= $BASE/op-$CLUSTERNAME.ppk
 	sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/hosts
 	
@@ -1817,14 +1834,14 @@ echo \"\"
 	echo -e "${RED}ubuntu  => $UBUPWD${NC}"
 	echo -e "${RED}matsya  => $MATSYAPWD${NC}"	
 	echo -e "${RED}-----------------------${NC}"	
-	echo "* $BASE/op-$CLUSTERNAME.pem
+	echo "* $BASE/Output/Pem/op-$CLUSTERNAME.pem
 * $BASE/op-$CLUSTERNAME.ppk"
 	echo '-----------------------'
 	echo "* PASSWORD LOGIN   => sudo sshpass -p \"$VAGRANTPWD\" ssh vagrant@$COORDINATOR -p $RANDOMSSHPORT"
-	echo "* SSH KEY LOGIN    => sudo ssh vagrant@$COORDINATOR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\""
+	echo "* SSH KEY LOGIN    => sudo ssh vagrant@$COORDINATOR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\""
 	echo "* FILE PUSH        => sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT File_Path_On_Current_System vagrant@$COORDINATOR:/home/vagrant"
 	echo "* FILE PULL        => sudo sshpass -p \"$VAGRANTPWD\" scp -P $RANDOMSSHPORT vagrant@$COORDINATOR:/home/vagrant/RequiredFile Location_On_Current_System"
-	echo "* EXECUTE          => sudo ssh vagrant@$COORDINATOR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/op-$CLUSTERNAME.pem\" \"echo 'Hello From '\$(hostname)\""		
+	echo "* EXECUTE          => sudo ssh vagrant@$COORDINATOR -p $RANDOMSSHPORT  -o \"StrictHostKeyChecking=no\" -i \"$BASE/Output/Pem/op-$CLUSTERNAME.pem\" \"echo 'Hello From '\$(hostname)\""		
 	echo "* START CLUSTER    => sudo $BASE/op-$CLUSTERNAME-start.sh"	
 	echo "* STOP CLUSTER     => sudo $BASE/op-$CLUSTERNAME-stop.sh"
 	echo "* ADD NODE         => sudo $BASE/op-$CLUSTERNAME-add.sh"	
@@ -1864,7 +1881,9 @@ echo \"\"
 		
 	if [ $OPENTERMINALS == "y" ] || [ $OPENTERMINALS == "Y" ] ; then
 		sudo rm -f /root/.config/terminator/config
+		if [ "$STACKDEPLOY" == "1" ] || [ "$STACKDEPLOY" == "1" ] ; then
 		sudo cp $BASE/tmp/$THEUNIQUETHISRUNGUID/$TERMINATORCONFIG /root/.config/terminator/config
+		fi
 		sudo chown root:root /root/.config/terminator/config
 		sudo chmod -R u=rw,g=rw,o=r /root/.config/terminator/config
 		sudo rm -rf $BASE/tmp/$THEUNIQUETHISRUNGUID		
@@ -1880,14 +1899,17 @@ echo \"\"
 		sudo $BASE/op-$CLUSTERNAME-kill-opvvb.sh
 		sudo rm -rf $BASE/op-$CLUSTERNAME-kill-opvvb.sh
 		sudo chmod -R 777 $BASE/VagVBox/$CLUSTERNAME
-		sudo chmod 400 $BASE/op-$CLUSTERNAME.pem
-		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/op-$CLUSTERNAME.pem
+		sudo chmod 400 $BASE/Output/Pem/op-$CLUSTERNAME.pem
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Output/Pem/op-$CLUSTERNAME.pem
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/.ports
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/$THEACTUALNAMEOFTHECOORDINATOR
 		sudo rm -rf $BASE/Output/$CLUSTERNAME-CDR
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG3.out
 		echo ""
-		$BASE/Scripts/BashTabularPrint.sh "$FINALPROCESSOUTPUT.csv■-1■,"
+		$BASE/Scripts/BashTabularPrint.sh "$FINALPROCESSOUTPUT■-1■,"
 		echo ""	
 	else
 		sudo rm -rf $BASE/op-$CLUSTERNAME-kill-opvvb.sh
