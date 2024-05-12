@@ -90,14 +90,18 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	declare -A PICRFCRONCOPY
 	declare -A PICRFCRONFILE
 	declare -A PICRFCRONRESFILE
-	
+	THEMACHINEFROMWHEREITALLSTARTED="NA"
+
 	ALLINCLUSIVEFINALCODETORUN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	echo '#!/bin/bash' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 	sudo chmod 777 	$BASE/tmp/$ALLINCLUSIVEFINALCODETORUN
 	echo '' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null	
 	echo 'declare -A PICRFCRONRESFILEOUTPUT' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 	echo 'declare -A PICRFCRONRESFILEAUTHOUTPUT' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
-	echo 'declare -A PICRFCRONRESFILELOCOUTPUT' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null		
+	echo 'declare -A PICRFCRONRESFILELOCOUTPUT' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+	echo 'declare -A PICRF1234' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+	echo 'declare -A PICRF5678' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null	
+	echo 'THEFILETOLOOKUP="'"$THESTACKFILE"'"' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null			
 	#echo 'PICRFCRFO="ERROR"' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 	echo '' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 		
@@ -109,14 +113,27 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	
 	ALLINCLUSIVE3FINALCODETORUN=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 				
-	#find . -type d -name 'op-Scope46-*-ID997'
-
 	header=$(head -n 1 $THESTACKFILE)
 	csv_data=$(tail -n +2 $THESTACKFILE)
 	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
 	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
 	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')
+	
+	# Input JSON data
+	filtered_json_2=$(echo "$filtered_json" | jq 'map(select(.IP != "TBD"))')
+	output__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	output_file="$BASE/tmp/$output__file"
+	header=$(echo "$filtered_json_2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$output_file"
+	echo "$filtered_json_2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$output_file"
+	done	
+	sudo chmod 777 $output_file
+	echo 'THEFILE2TOLOOKUP="'"$output_file"'"' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+	
 	grouped_json=$(echo "$filtered_json2" | jq 'group_by(.Parent) | map({"Parent":.[0].Parent, "Count": length})')
+	curdttm=$(date +"%d%m%y%H%M%S")
 	COUNTER=0
 	for row in $(echo "$grouped_json" | jq -r '.[] | @base64'); do
 		parent=$(echo "$row" | base64 -d | jq -r '.Parent')
@@ -130,6 +147,36 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		ppassword=$(jq -r '.PPassword' <<< "$first_line")
 		ppem=$(jq -r '.PPEM' <<< "$first_line")	   
 		scopeid=$(jq -r '.ScopeId' <<< "$first_line") 
+		scopeid="$scopeid-$curdttm"
+		THEPARENTAUTHDETAILS="$pusername,$pport,$ppassword,$ppem"
+		
+		if (( COUNTER == 0 )) ; then
+			sudo mkdir $BASE/tmp/"Scope$scopeid-WIP"
+			sudo chmod -R 777 $BASE/tmp/"Scope$scopeid-WIP"
+			sudo touch $BASE/tmp/"Scope$scopeid-WIP_"
+			sudo chmod 777 $BASE/tmp/"Scope$scopeid-WIP_"
+
+			sudo mkdir $BASE/tmp/"Scope$scopeid-SSH"
+			sudo chmod -R 777 $BASE/tmp/"Scope$scopeid-SSH"
+			
+			echo '-----------------------'
+			echo 'NEW SSH KEYS'
+			echo '-----------------------'
+			sudo -H -u root bash -c "cd $BASE/tmp/Scope$scopeid-SSH && echo -e  'y\n'|ssh-keygen -b 2048 -t rsa -P '' -f id_rsa && cat id_rsa.pub >> authorized_keys && cp id_rsa op-Scope$scopeid.pem && puttygen op-Scope$scopeid.pem -o op-Scope$scopeid.ppk && cd ~"
+			sudo rm -rf $BASE/Output/Pem/op-Scope$scopeid.pem
+			#sudo rm -rf $BASE/op-Scope$scopeid.ppk
+			sudo mv $BASE/tmp/"Scope$scopeid-SSH"/op-Scope$scopeid.pem $BASE/Output/Pem
+			#sudo mv $BASE/tmp/"Scope$scopeid-SSH"/op-Scope$scopeid.ppk $BASE
+			sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pem
+			#sudo chmod u=rwx,g=rx,o=rx $BASE/op-Scope$scopeid.ppk
+			#sudo rm -rf $BASE/VagVBox/Scope$scopeid/Keys/authorized_keys
+			#sudo rm -rf $BASE/VagVBox/Scope$scopeid/Keys/id_rsa
+			sudo mv $BASE/tmp/"Scope$scopeid-SSH"/id_rsa.pub $BASE/Output/Pem/op-Scope$scopeid.pub	
+			sudo chown -R root:root $BASE/Output/Pem/op-Scope$scopeid.pub
+			sudo chmod -R u=rx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pub	
+			sudo rm -rf $BASE/tmp/"Scope$scopeid-SSH"
+			echo '-----------------------'				
+		fi
 		 
 		__PICRFLOCATIONMAPPING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 		_PICRFLOCATIONMAPPING="$BASE/Output/$__PICRFLOCATIONMAPPING"
@@ -189,6 +236,14 @@ if [[ ! -d \"$BASE/Output/Pem\" ]]; then
 	sudo mkdir -p $BASE/Output/Pem
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
+if [ -f /home/$pusername/Downloads/op-Scope$scopeid.pem ]; then
+   sudo mv /home/$pusername/Downloads/op-Scope$scopeid.pem $BASE/Output/Pem/op-Scope$scopeid.pem
+   sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pem
+   sudo mv /home/$pusername/Downloads/op-Scope$scopeid.pub $BASE/Output/Pem/op-Scope$scopeid.pub
+   sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pub
+   sudo chown -R root:root $BASE/Output/Pem/op-Scope$scopeid.pub
+   sudo chmod -R u=rx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pub      
+fi
 GETMEUNIQUEOUTPUTFILEIPS=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 GETMEUNIQUEIPS \"\$TOTALNOOFIPSREQ\" \"$nic\" \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\"
 GETMEUNIQUEOUTPUTIPS=\$(head -n 1 \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\")
@@ -196,31 +251,35 @@ sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"
-nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├y├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity\" > $BASE/tmp/$scopeid-JOBLOG3.out 2>&1 &
+nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
 ")
 		CONSIDERTHISMACHINE="YES"
 		if [ -z "$only3from_filtered_json2_otherinfo" ] || [ -z "$the4thfrom_filtered_json2_otherinfo" ]; then
 		    CONSIDERTHISMACHINE="NO"
 		fi
 		
-		if [ "$CONSIDERTHISMACHINE" == "YES" ] ; then						
+		if [ "$CONSIDERTHISMACHINE" == "YES" ] ; then
+			ISTHISSAMEMACHINE="NO"
+			ip_addresses=$(ip addr show | grep -Po 'inet \K[\d.]+')
+			if echo "$ip_addresses" | grep -qw "$parent"; then
+			    	ISTHISSAMEMACHINE="YES"
+			    	THEMACHINEFROMWHEREITALLSTARTED="$parent"
+			    	THECODETORUNFORONPREMISEDEPLOY=$(echo "$THECODETORUNFORONPREMISEDEPLOY" | sed "s|ISSAMEASHOST|YES|")
+			else
+				THECODETORUNFORONPREMISEDEPLOY=$(echo "$THECODETORUNFORONPREMISEDEPLOY" | sed "s|ISSAMEASHOST|NO|")			
+			fi
+											
 			__PICRFSCRIPTMAPPING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			_PICRFSCRIPTMAPPING="$BASE/tmp/$__PICRFSCRIPTMAPPING"
 			echo "$THECODETORUNFORONPREMISEDEPLOY" | sudo tee $BASE/tmp/$__PICRFSCRIPTMAPPING > /dev/null		
 			sudo chmod 777 $BASE/tmp/$__PICRFSCRIPTMAPPING
 							
-			ISTHISSAMEMACHINE="NO"
-			ip_addresses=$(ip addr show | grep -Po 'inet \K[\d.]+')
-			if echo "$ip_addresses" | grep -qw "$parent"; then
-			    ISTHISSAMEMACHINE="YES"
-			fi		
-
 			__PICRFSCRIPTLOGGING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			THECODETORUNFORONPREMISECRON=$(echo '#!/bin/bash'"
 
 SCRIPT_PATH=\"THEACTUALSCRIPTFILEPATH\"
 sudo chmod 777 THEACTUALSCRIPTFILEPATH
-nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
+nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/Scope$scopeid-JOBLOG2.out 2>&1 &
 #echo \"THEACTUALSCRIPTFILEPATH\" > THEACTUALSCRIPTFILECRONRESPATH
 #SCHEDULE_TIME=\$(date -d \"+10 seconds\" +\"%H:%M %b %d %Y\")
 #OUTPUT=\$(echo \"\$SCRIPT_PATH\" | at \"\$SCHEDULE_TIME\" 2>&1)
@@ -258,6 +317,8 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 						sshpass -p "$ppassword" ssh -p "$pport" -o StrictHostKeyChecking=no "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at"
 						
 						sshpass -p "$ppassword" scp -o StrictHostKeyChecking=no -P $pport "$BASE/tmp/$__PICRFSCRIPTMAPPING" "$pusername@$parent:/home/$pusername/Downloads"
+						sshpass -p "$ppassword" scp -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pem" "$pusername@$parent:/home/$pusername/Downloads"
+						sshpass -p "$ppassword" scp -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pub" "$pusername@$parent:/home/$pusername/Downloads"
 
 						if [ $? -eq 0 ]; then
 						    PICRFSCRIPTCOPY[$parent]="YES"
@@ -270,7 +331,9 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 						ssh -p "$pport" -o StrictHostKeyChecking=no -i "$ppem" "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at"
 						
 						scp -i "$ppem" -o StrictHostKeyChecking=no -P $pport "$BASE/tmp/$__PICRFSCRIPTMAPPING" "$pusername@$parent:/home/$pusername/Downloads"
-
+						scp -i "$ppem" -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pem" "$pusername@$parent:/home/$pusername/Downloads"
+						scp -i "$ppem" -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pub" "$pusername@$parent:/home/$pusername/Downloads"
+						
 						if [ $? -eq 0 ]; then
 							PICRFSCRIPTCOPY[$parent]="YES"
 							sudo rm -rf $BASE/tmp/$__PICRFSCRIPTMAPPING
@@ -293,11 +356,14 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 								PICRFCRONFILE[$parent]="/home/$pusername/Downloads/$__PICRFSCRIPTCROND"
 								PICRFCRONCOPY[$parent]="YES"
 								PICRFCRONRESFILE[$parent]="/home/$pusername/Downloads/$__PICRFSCRIPTCRONRESD"		
-								echo "sshpass -p \"$ppassword\" ssh -p \"$pport\" -o StrictHostKeyChecking=no \"$pusername@$parent\" \"sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTMAPPING && sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup /home/$pusername/Downloads/$__PICRFSCRIPTCROND > $BASE/tmp/$scopeid-JOBLOG1.out 2>&1 &\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+								echo "sshpass -p \"$ppassword\" ssh -p \"$pport\" -o StrictHostKeyChecking=no \"$pusername@$parent\" \"sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTMAPPING && sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup /home/$pusername/Downloads/$__PICRFSCRIPTCROND > $BASE/tmp/Scope$scopeid-JOBLOG1.out 2>&1 &\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 								#echo "PICRFCRFO=\$(sshpass -p \"$ppassword\" ssh -p \"$pport\" -o StrictHostKeyChecking=no \"$pusername@$parent\" \"sed -n 2p /home/$pusername/Downloads/$__PICRFSCRIPTCRONRESD\")" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null	
-								echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/Scope$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
 								echo "PICRFCRONRESFILEAUTHOUTPUT[\"$parent\"]=\"UP■$pusername■$pport■$ppassword\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
-								echo "PICRFCRONRESFILELOCOUTPUT[\"$parent\"]=\"$_PICRFLOCATIONMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null				    
+								echo "PICRFCRONRESFILELOCOUTPUT[\"$parent\"]=\"$_PICRFLOCATIONMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRF1234[\"$parent\"]=\"/home/$pusername/Downloads/$__PICRFSCRIPTMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRF5678[\"$parent\"]=\"/home/$pusername/Downloads/$__PICRFSCRIPTCROND\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								IP_ADDRESS_HYPHEN_PARENT=${parent//./-} && echo "$IP_ADDRESS_HYPHEN_PARENT" | sudo tee -a $BASE/tmp/"Scope$scopeid-WIP_" > /dev/null				    
 							else
 							    	PICRFCRONCOPY[$parent]="NO"
 							fi					
@@ -309,11 +375,14 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 								PICRFCRONFILE[$parent]="/home/$pusername/Downloads/$__PICRFSCRIPTCROND"
 								PICRFCRONCOPY[$parent]="YES"
 								PICRFCRONRESFILE[$parent]="/home/$pusername/Downloads/$__PICRFSCRIPTCRONRESD"
-								echo "ssh -p \"$pport\" -o StrictHostKeyChecking=no -i \"$ppem\" \"$pusername@$parent\" \"sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTMAPPING && sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup /home/$pusername/Downloads/$__PICRFSCRIPTCROND > $BASE/tmp/$scopeid-JOBLOG1.out 2>&1 &\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+								echo "ssh -p \"$pport\" -o StrictHostKeyChecking=no -i \"$ppem\" \"$pusername@$parent\" \"sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTMAPPING && sudo chmod 777 /home/$pusername/Downloads/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup /home/$pusername/Downloads/$__PICRFSCRIPTCROND > $BASE/tmp/Scope$scopeid-JOBLOG1.out 2>&1 &\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 								#echo "PICRFCRFO=\$(ssh -p \"$pport\" -o StrictHostKeyChecking=no -i \"$ppem\" \"$pusername@$parent\" \"sed -n 2p /home/$pusername/Downloads/$__PICRFSCRIPTCRONRESD\")" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null	
-								echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/Scope$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
 								echo "PICRFCRONRESFILEAUTHOUTPUT[\"$parent\"]=\"PEM■$pusername■$pport■$ppem\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
 								echo "PICRFCRONRESFILELOCOUTPUT[\"$parent\"]=\"$_PICRFLOCATIONMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRF1234[\"$parent\"]=\"/home/$pusername/Downloads/$__PICRFSCRIPTMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								echo "PICRF5678[\"$parent\"]=\"/home/$pusername/Downloads/$__PICRFSCRIPTCROND\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+								IP_ADDRESS_HYPHEN_PARENT=${parent//./-} && echo "$IP_ADDRESS_HYPHEN_PARENT" | sudo tee -a $BASE/tmp/"Scope$scopeid-WIP_" > /dev/null
 							else
 								PICRFCRONCOPY[$parent]="NO"
 							fi					
@@ -331,15 +400,18 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 				PICRFCRONFILE[$parent]="$BASE/tmp/$__PICRFSCRIPTCROND"
 				PICRFCRONCOPY[$parent]="YES"
 				PICRFCRONRESFILE[$parent]="$BASE/tmp/$__PICRFSCRIPTCRONRESD"
-				echo "sudo chmod 777 $_PICRFSCRIPTMAPPING && sudo chmod 777 $BASE/tmp/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup $BASE/tmp/$__PICRFSCRIPTCROND > $BASE/tmp/$scopeid-JOBLOG1.out 2>&1 &" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+				echo "sudo chmod 777 $_PICRFSCRIPTMAPPING && sudo chmod 777 $BASE/tmp/$__PICRFSCRIPTCROND && sudo mkdir -p $BASE/tmp && sudo chmod -R 777 $BASE/tmp && nohup $BASE/tmp/$__PICRFSCRIPTCROND > $BASE/tmp/Scope$scopeid-JOBLOG1.out 2>&1 &" | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
 				#echo "PICRFCRFO=\$(sed -n 2p $BASE/tmp/$__PICRFSCRIPTCRONRESD)" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
-				echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+				echo "PICRFCRONRESFILEOUTPUT[\"$parent\"]=\"$BASE/tmp/Scope$scopeid-JOBLOG3.out\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
 				if [ "$ppem" == "NA" ] ; then
 					echo "PICRFCRONRESFILEAUTHOUTPUT[\"$parent\"]=\"UP■$pusername■$pport■$ppassword\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
 				else	
 					echo "PICRFCRONRESFILEAUTHOUTPUT[\"$parent\"]=\"PEM■$pusername■$pport■$ppem\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null	
 				fi
-				echo "PICRFCRONRESFILELOCOUTPUT[\"$parent\"]=\"$_PICRFLOCATIONMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null																	
+				echo "PICRFCRONRESFILELOCOUTPUT[\"$parent\"]=\"$_PICRFLOCATIONMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+				echo "PICRF1234[\"$parent\"]=\"$_PICRFSCRIPTMAPPING\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null	
+				echo "PICRF5678[\"$parent\"]=\"$BASE/tmp/$__PICRFSCRIPTCROND\"" | sudo tee -a $BASE/tmp/$ALLINCLUSIVE2FINALCODETORUN > /dev/null
+				IP_ADDRESS_HYPHEN_PARENT=${parent//./-} && echo "$IP_ADDRESS_HYPHEN_PARENT" | sudo tee -a $BASE/tmp/"Scope$scopeid-WIP_" > /dev/null																	
 			fi
 		fi
 		
@@ -368,6 +440,8 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/$scopeid-JOBLOG2.out 2>&1 &
 CURRENTUSER=$(whoami)
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
 sudo rm -rf /root/.ssh/known_hosts
+
+THEMACHINEFROMWHEREITALLSTARTED="'"$THEMACHINEFROMWHEREITALLSTARTED"'"
 	
 # Continuously check for file existence and execute local script
 while true; do
@@ -376,18 +450,21 @@ while true; do
         file="${PICRFCRONRESFILEOUTPUT[$server]}"
         auth_info="${PICRFCRONRESFILEAUTHOUTPUT[$server]}"
 	therealfile="${PICRFCRONRESFILELOCOUTPUT[$server]}"
+        thefilewhichran="${PICRF1234[$server]}"
+	thefilewhichrun="${PICRF5678[$server]}"	
         # Extract authentication details
         IFS='"■"' read -r auth_type user port password_pem <<< "$auth_info"
 
         # Execute SSH command with appropriate authentication method
         if [ "$auth_type" == "UP" ]; then
             # Password authentication
-            echo "sshpass -p \"$password_pem\" ssh -p \"$port\" -o StrictHostKeyChecking=no \"$user@$server\""
+            #echo "sshpass -p \"$password_pem\" ssh -p \"$port\" -o StrictHostKeyChecking=no \"$user@$server\""
             #if sshpass -p "$password_pem" ssh -o "StrictHostKeyChecking=no" -o "BatchMode yes" "$user@$server" "[ -f '"\$file"' ]"; then
             if sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$server" "[ -f '"\$file"' ]"; then
                 echo "File $file exists on server $server"
                 unset PICRFCRONRESFILEOUTPUT["$server"]  # Remove the item from the list
-                nohup /opt/Matsya/tmp/valueprinter.sh "$therealfile" > '"$BASE"'/tmp/JOBLOG4.out &
+                #nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" > '"$BASE"'/tmp/JOBLOG4.out &
+                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" 2>&1 &
             else
                 echo "File $file does not exist on server $server"
             fi
@@ -397,7 +474,8 @@ while true; do
             if ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$server" "[ -f '"\$file"' ]"; then
                 echo "File $file exists on server $server"
                 unset PICRFCRONRESFILEOUTPUT["$server"]  # Remove the item from the list
-                nohup /opt/Matsya/tmp/valueprinter.sh "$therealfile" > '"$BASE"'/tmp/JOBLOG4.out &
+                #nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" > '"$BASE"'/tmp/JOBLOG4.out &
+                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" 2>&1 &
             else
                 echo "File $file does not exist on server $server"
             fi
@@ -407,40 +485,44 @@ while true; do
     # Check if all tasks are completed
     if [ ${#PICRFCRONRESFILEOUTPUT[@]} -eq 0 ]; then
         echo "All tasks completed. Exiting..."
+        #sudo rm -rf /tmp/JOBLOG4.out
+        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" 2>&1 &
         break
     fi
 
     # Sleep for 1 minute before checking again
     sleep 10
 done
+
+sudo rm -rf '"$BASE/tmp/$ALLINCLUSIVE3FINALCODETORUN"'
 ' | sudo tee -a $BASE/tmp/$ALLINCLUSIVE3FINALCODETORUN > /dev/null
 	
-	echo "File To Run : $BASE/tmp/$ALLINCLUSIVE3FINALCODETORUN"
+	#echo "File To Run : $BASE/tmp/$ALLINCLUSIVE3FINALCODETORUN"
 		
-	echo "PICRFCRONCOPY"		
-	for key in "${!PICRFCRONCOPY[@]}"; do
-	    echo "Key: $key, Value: ${PICRFCRONCOPY[$key]}"
-	done
-	echo "PICRFCRONFILE"
-	for key in "${!PICRFCRONFILE[@]}"; do
-	    echo "Key: $key, Value: ${PICRFCRONFILE[$key]}"
-	done
-	echo "PICRFCRONRESFILE"
-	for key in "${!PICRFCRONRESFILE[@]}"; do
-	    echo "Key: $key, Value: ${PICRFCRONRESFILE[$key]}"
-	done
-	echo "PICRFSCRIPTCOPY"
-	for key in "${!PICRFSCRIPTCOPY[@]}"; do
-	    echo "Key: $key, Value: ${PICRFSCRIPTCOPY[$key]}"
-	done
-	echo "PICRFSCRIPTMAPPING"
-	for key in "${!PICRFSCRIPTMAPPING[@]}"; do
-	    echo "Key: $key, Value: ${PICRFSCRIPTMAPPING[$key]}"
-	done
-	echo "PICRFLOCATIONMAPPING"
-	for key in "${!PICRFLOCATIONMAPPING[@]}"; do
-	    echo "Key: $key, Value: ${PICRFLOCATIONMAPPING[$key]}"
-	done
+	#echo "PICRFCRONCOPY"		
+	#for key in "${!PICRFCRONCOPY[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFCRONCOPY[$key]}"
+	#done
+	#echo "PICRFCRONFILE"
+	#for key in "${!PICRFCRONFILE[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFCRONFILE[$key]}"
+	#done
+	#echo "PICRFCRONRESFILE"
+	#for key in "${!PICRFCRONRESFILE[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFCRONRESFILE[$key]}"
+	#done
+	#echo "PICRFSCRIPTCOPY"
+	#for key in "${!PICRFSCRIPTCOPY[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFSCRIPTCOPY[$key]}"
+	#done
+	#echo "PICRFSCRIPTMAPPING"
+	#for key in "${!PICRFSCRIPTMAPPING[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFSCRIPTMAPPING[$key]}"
+	#done
+	#echo "PICRFLOCATIONMAPPING"
+	#for key in "${!PICRFLOCATIONMAPPING[@]}"; do
+	#    echo "Key: $key, Value: ${PICRFLOCATIONMAPPING[$key]}"
+	#done
 	
 	$BASE/tmp/$ALLINCLUSIVE3FINALCODETORUN				
 fi

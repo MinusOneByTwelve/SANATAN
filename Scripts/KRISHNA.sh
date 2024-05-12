@@ -143,7 +143,7 @@ scan_network() {
 
 attempt_ssh() {
     echo "Attempting SSH connections..."
-    echo "ScopeId,Identity,InstanceType,OtherInfo,Secrets,SecretsKey,IP,Parent,NIC,Gateway,Netmask,PUserName,PPort,PPassword,PPEM,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $BASE/tmp/$NetworkScanResult.csv
+    echo "ScopeId,Identity,InstanceType,OtherInfo,Secrets,SecretsKey,IP,Parent,NIC,Gateway,Netmask,PUserName,PPort,PPassword,PPEM,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM,Encrypted,Deleted" >> $BASE/tmp/$NetworkScanResult.csv
     for _hostparts in "${Potentials[@]}"; do
         IFS='■' read -ra hostparts <<< "$_hostparts"
         host="${hostparts[0]}"
@@ -160,7 +160,7 @@ attempt_ssh() {
                 echo "Trying SSH with username: $username, password: $password, to host: $host..."
                 if output=$(sshpass -p "$password" ssh -p $thereqport -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$username@$host" exit 2>&1); then
                     ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
                     break          
                 elif [[ "$output" == *"Permission denied"* ]]; then
                     if [[ "$username" == "root" ]]; then
@@ -169,28 +169,28 @@ attempt_ssh() {
                         echo "Trying SSH with username: root, password: $password, to host: $host..."
                         if sshpass -p "$password" ssh -p $thereqport -o StrictHostKeyChecking=no -o ConnectTimeout=5 "root@$host" exit 2>&1 >/dev/null; then
                             ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "root¤$thereqport" "$password" "" "") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-                            echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+                            echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
                             break                           
                         else
                                 #echo "came here1 : sshpass -p \"$password\" ssh $username@$host -p $thereqport"
 				if output=$(sshpass -p "$password" ssh $username@$host -p $thereqport -o ConnectTimeout=5 exit 2>&1); then
 					ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "sudo") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
 					#echo "worked1"
 					break
 				elif output=$(sudo sshpass -p "$password" ssh $username@$host -p $thereqport -o ConnectTimeout=5 exit 2>&1); then
 					ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "sudo") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
 					#echo "worked2"
 					break
 				elif output=$(sudo sshpass -p "$password" ssh $username@$host -p $thereqport -o ConnectTimeout=5 -o StrictHostKeyChecking=no exit 2>&1); then
 					ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "sudo") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
 					#echo "worked3"
 					break
 				elif output=$(sshpass -p "$password" ssh $username@$host -p $thereqport -o ConnectTimeout=5 -o StrictHostKeyChecking=no exit 2>&1); then
 					ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "sudo") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+					echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
 					#echo "worked4"
 					break															
 				else                        
@@ -201,7 +201,7 @@ attempt_ssh() {
                 #elif output=$(sudo sshpass -p "$password" ssh -p $thereqport -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$username@$host" exit 2>&1); then
                 elif output=$(sudo sshpass -p "$password" ssh $username@$host -p $thereqport -o ConnectTimeout=5 -o StrictHostKeyChecking=no exit 2>&1); then
                     ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "$password" "" "sudo") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA" >> $BASE/tmp/$NetworkScanResult.csv 
+                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,$password,NA,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
                     break                    
                 else
                     echo "$host,,,$username,$password,,,NOSSH2,$output"
@@ -216,7 +216,7 @@ attempt_ssh() {
                 if output=$(ssh -p $thereqport -o StrictHostKeyChecking=no -i "$pem_path" -o ConnectTimeout=5 "$username@$host" exit 2>&1); then
                     #echo "camehere9"
                     ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "$username¤$thereqport" "" "$pem_path" "") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,,$pem_path" >> $BASE/tmp/$NetworkScanResult.csv
+                    echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,,$pem_path,N,N" >> $BASE/tmp/$NetworkScanResult.csv
                     break                    
                 elif [[ "$output" == *"Permission denied"* ]]; then
                     if [[ "$username" == "root" ]]; then
@@ -225,7 +225,7 @@ attempt_ssh() {
                         echo "Trying SSH with username: root, PEM path: $pem_path, to host: $host..."
                         if ssh -p $thereqport -o StrictHostKeyChecking=no -i "$pem_path" -o ConnectTimeout=5 "root@$host" exit 2>&1 >/dev/null; then
                             ssh_and_get_info=$(ssh_and_get_info "$themappednic" "$host" "root¤$thereqport" "" "$pem_path" "") && IFS='├' read -ra _gi <<< "$ssh_and_get_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}" && _gi10="${_gi[8]}" && _gi11="${_gi[9]}" && _gi12="${_gi[10]}" && _gi8="${_gi[7]}" && _gi9="" && { [[ -z "${_gi8}" ]] && _gi9="$host" || _gi9="${_gi8}"; }         
-                            echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,,$pem_path" >> $BASE/tmp/$NetworkScanResult.csv 
+                            echo ",,,,,,$host,$_gi9,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,$username,$thereqport,,$pem_path,N,N" >> $BASE/tmp/$NetworkScanResult.csv 
                             break                           
                         else
                             echo "$host,,,$username,,,$pem_path,NOSSH3,Permission denied"
@@ -262,8 +262,10 @@ ssh_and_get_info() {
 	    if [ -e "/opt/ISVM" ]; then isvm_exists="Yes"; fi; \
 	    THEMACHPARENT=""; \
 	    if [ -e "/opt/MYPARENT" ]; then THEMACHPARENT=$(head -n 1 "/opt/MYPARENT"); fi; \
-	    nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
-	    nic=${nic%:}; \
+	    #nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
+	    #nic=${nic%:}; \
+	    last_item=$(ip addr | grep -B 2 "'"$host"'" | tail -n 1); \
+	    nic=$(echo "$last_item" | awk '"'"'{print $NF}'"'"'); \
 	    gateway=$(ip route show dev "$nic" | grep -oP "^default via \K\S+"); \
 	    netmask=$(ifconfig "$nic" | awk '"'"'/inet / {print $4}'"'"'); \
 	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists├$THEMACHPARENT├$nic├$gateway├$netmask"'
@@ -281,8 +283,10 @@ ssh_and_get_info() {
 	    if [ -e "/opt/ISVM" ]; then isvm_exists="Yes"; fi; \
 	    THEMACHPARENT=""; \
 	    if [ -e "/opt/MYPARENT" ]; then THEMACHPARENT=$(head -n 1 "/opt/MYPARENT"); fi; \
-	    nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
-	    nic=${nic%:}; \
+	    #nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
+	    #nic=${nic%:}; \
+	    last_item=$(ip addr | grep -B 2 "'"$host"'" | tail -n 1); \
+	    nic=$(echo "$last_item" | awk '"'"'{print $NF}'"'"'); \
 	    gateway=$(ip route show dev "$nic" | grep -oP "^default via \K\S+"); \
 	    netmask=$(ifconfig "$nic" | awk '"'"'/inet / {print $4}'"'"'); \
 	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists├$THEMACHPARENT├$nic├$gateway├$netmask"'
@@ -299,8 +303,10 @@ ssh_and_get_info() {
 	    if [ -e "/opt/ISVM" ]; then isvm_exists="Yes"; fi; \
 	    THEMACHPARENT=""; \
 	    if [ -e "/opt/MYPARENT" ]; then THEMACHPARENT=$(head -n 1 "/opt/MYPARENT"); fi; \
-	    nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
-	    nic=${nic%:}; \
+	    #nic=$(ip addr | grep -B 2 "'"$host"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
+	    #nic=${nic%:}; \
+	    last_item=$(ip addr | grep -B 2 "'"$host"'" | tail -n 1); \
+	    nic=$(echo "$last_item" | awk '"'"'{print $NF}'"'"'); \
 	    gateway=$(ip route show dev "$nic" | grep -oP "^default via \K\S+"); \
 	    netmask=$(ifconfig "$nic" | awk '"'"'/inet / {print $4}'"'"'); \
 	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists├$THEMACHPARENT├$nic├$gateway├$netmask"'

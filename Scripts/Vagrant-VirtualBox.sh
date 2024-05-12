@@ -75,6 +75,9 @@ MAYADHICALL="NO"
 declare -A KEYVALIPS
 declare -A KEYVALIDENTITIES
 THENEWIDENTITYNAME=""
+SSHKEYCREATE="YES"
+ISSAMEASHOST="YES"
+THEPARENTAUTHDETAILS="NOTHING"
 
 if [ "$#" -ne 1 ]; then
 	USERVALS=""
@@ -124,7 +127,11 @@ else
 		for (( i=0; i<${#IPs2[@]}; i++ )); do
 			key=$((i+1))
 			KEYVALIDENTITIES[$key]=${IPs2[$i]}
-		done				
+		done
+		
+		SSHKEYCREATE="${USERLISTVALS[25]}"
+		ISSAMEASHOST="${USERLISTVALS[26]}"
+		THEPARENTAUTHDETAILS="${USERLISTVALS[27]}"				
 	fi					
 fi
 
@@ -1122,22 +1129,25 @@ sudo $BASE/op-$CLUSTERNAME-stop-post.sh
 		done
 		sudo -H -u root bash -c "echo \"#VagVBox => $CLUSTERNAME END \" >> /etc/hosts"
 		sudo -H -u root bash -c "echo \"\" >> /etc/hosts"											
-	fi		
-	echo '-----------------------'
-	echo 'NEW SSH KEYS'
-	echo '-----------------------'
-	sudo -H -u root bash -c "cd $BASE/VagVBox/$CLUSTERNAME/Keys && echo -e  'y\n'|ssh-keygen -b 2048 -t rsa -P '' -f id_rsa && cat id_rsa.pub >> authorized_keys && cp id_rsa op-$CLUSTERNAME.pem && puttygen op-$CLUSTERNAME.pem -o op-$CLUSTERNAME.ppk && cd ~"
-	sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
-	sudo rm -rf $BASE/op-$CLUSTERNAME.ppk
-	sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.pem $BASE/Output/Pem
-	sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.ppk $BASE
-	sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-$CLUSTERNAME.pem
-	sudo chmod u=rwx,g=rx,o=rx $BASE/op-$CLUSTERNAME.ppk
-	sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/authorized_keys
-	sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa	
-	sudo chown -R root:root $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
-	sudo chmod -R u=rx,g=,o= $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub	
-	echo '-----------------------'
+	fi
+	
+	if [ "$SSHKEYCREATE" == "YES" ] ; then		
+		echo '-----------------------'
+		echo 'NEW SSH KEYS'
+		echo '-----------------------'
+		sudo -H -u root bash -c "cd $BASE/VagVBox/$CLUSTERNAME/Keys && echo -e  'y\n'|ssh-keygen -b 2048 -t rsa -P '' -f id_rsa && cat id_rsa.pub >> authorized_keys && cp id_rsa op-$CLUSTERNAME.pem && puttygen op-$CLUSTERNAME.pem -o op-$CLUSTERNAME.ppk && cd ~"
+		sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
+		sudo rm -rf $BASE/op-$CLUSTERNAME.ppk
+		sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.pem $BASE/Output/Pem
+		sudo mv $BASE/VagVBox/$CLUSTERNAME/Keys/op-$CLUSTERNAME.ppk $BASE
+		sudo chmod u=rwx,g=rx,o=rx $BASE/Output/Pem/op-$CLUSTERNAME.pem
+		sudo chmod u=rwx,g=rx,o=rx $BASE/op-$CLUSTERNAME.ppk
+		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/authorized_keys
+		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa	
+		sudo chown -R root:root $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
+		sudo chmod -R u=rx,g=,o= $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub	
+		echo '-----------------------'
+	fi
 	COUNTER=0
 	COORDINATOR="NONE"
 
@@ -1185,7 +1195,8 @@ Host op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2-$THENEWIDENTITYNAME-vvb
 	do
 		IFS='¬' read -r -a IP_ADDRESS_VALS_LISTVals <<< $IP_ADDRESS_VALS_LIST
 		VMIP="${IP_ADDRESS_VALS_LISTVals[0]}"
-		THEFILEMOUNTLOCATION="${IP_ADDRESS_VALS_LISTVals[1]}"		
+		THEFILEMOUNTLOCATION="${IP_ADDRESS_VALS_LISTVals[1]}"
+		THEOTHERINFO2="${IP_ADDRESS_VALS_LISTVals[1]}"		
 		IP_ADDRESS_HYPHEN3=${VMIP//./-}
 		NAMEOFTHECLUSTERBOX="$CLUSTERNAME"
 		CLUSTERBOXURL="https://bit.ly/MatsyaKLM15VagVBox"
@@ -1210,10 +1221,12 @@ Host op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2-$THENEWIDENTITYNAME-vvb
 			IFS=','
 			read -ra DEFCONFG <<< "$DEFAULTCONFIG"
 		fi
+		THEOTHERINFO1=""
 		if [ $THECONFIGTYPE == "c" ] || [ $THECONFIGTYPE == "C" ] ; then				
 			IFS=','
 			read -ra DEFCONFG <<< "${DEFAULTCONFIGCUSTOM_LIST[$COUNTER]}"
 			#echo $DEFCONFG
+			THEOTHERINFO1="${DEFAULTCONFIGCUSTOM_LIST[$COUNTER]}"
 		fi		
 
 		DEFCONFGMEM=$(echo "${DEFCONFG[0]}")
@@ -1462,7 +1475,8 @@ echo \"\"
 	do
 		IFS='¬' read -r -a IP_ADDRESS_VALS_LISTVals <<< $IP_ADDRESS_VALS_LIST
 		VMIP="${IP_ADDRESS_VALS_LISTVals[0]}"
-		THEFILEMOUNTLOCATION="${IP_ADDRESS_VALS_LISTVals[1]}"		
+		THEFILEMOUNTLOCATION="${IP_ADDRESS_VALS_LISTVals[1]}"
+		THEOTHERINFO2="${IP_ADDRESS_VALS_LISTVals[1]}"		
 		IP_ADDRESS_HYPHEN3=${VMIP//./-}
 		NAMEOFTHECLUSTERBOX="$CLUSTERNAME"
 		CLUSTERBOXURL="https://bit.ly/MatsyaKLM15VagVBox"
@@ -1482,11 +1496,13 @@ echo \"\"
 			IFS=','
 			read -ra DEFCONFG <<< "$DEFAULTCONFIG"
 		fi
+		THEOTHERINFO1=""
 		if [ $THECONFIGTYPE == "c" ] || [ $THECONFIGTYPE == "C" ] ; then				
 			IFS=','
 			read -ra DEFCONFG <<< "${DEFAULTCONFIGCUSTOM_LIST[$COUNTER]}"
-		fi		
-
+			#echo $DEFCONFG
+			THEOTHERINFO1="${DEFAULTCONFIGCUSTOM_LIST[$COUNTER]}"
+		fi
 		if [ "$MAYADHICALL" == "YES" ] ; then
 			target_key=$((COUNTER + 1))
 			THENEWIDENTITYNAME="${KEYVALIDENTITIES[$target_key]}"
@@ -1560,8 +1576,12 @@ echo \"\"
 		echo '-----------------------'
 		echo "$THENAMETOSHOWONSCREEN"
 		echo '-----------------------'	
-							    
-		sudo cat $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub | sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/VagVBox/$CLUSTERNAME/Configs/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN3-$THENEWIDENTITYNAME/.vagrant/machines/default/virtualbox/private_key" 'cat >> $HOME/.ssh/authorized_keys'
+		
+		if [ "$SSHKEYCREATE" == "YES" ] ; then					    
+			sudo cat $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub | sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/VagVBox/$CLUSTERNAME/Configs/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN3-$THENEWIDENTITYNAME/.vagrant/machines/default/virtualbox/private_key" 'cat >> $HOME/.ssh/authorized_keys'
+		else
+			sudo cat $BASE/Output/Pem/op-$CLUSTERNAME.pub | sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/VagVBox/$CLUSTERNAME/Configs/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN3-$THENEWIDENTITYNAME/.vagrant/machines/default/virtualbox/private_key" 'cat >> $HOME/.ssh/authorized_keys'
+		fi
 		
 		WASFOUNDHERE=0
 		for EACHPARALLELENTRY in "${THEPARALLEL_LIST[@]}"
@@ -1599,6 +1619,15 @@ echo \"\"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo touch /opt/ISVM && sudo chmod 777 /opt/ISVM"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THISCURRENTMACHINEIP\" | sudo tee /opt/MYPARENT > /dev/null && sudo chmod 777 /opt/MYPARENT"
 		
+		THEOTHERINFOFINALVAL="${THEOTHERINFO1//,/'■'}■${THEOTHERINFO2}"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THEOTHERINFOFINALVAL\" | sudo tee /opt/THEOTHERINFO > /dev/null && sudo chmod 777 /opt/THEOTHERINFO"		
+		
+		if [ "$THEPARENTAUTHDETAILS" == "NOTHING" ] ; then
+			echo ""
+		else
+			sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THEPARENTAUTHDETAILS\" | sudo tee /opt/THEPARENTAUTHDETAILS > /dev/null && sudo chmod 777 /opt/THEPARENTAUTHDETAILS"
+		fi		
+				
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" 'sudo sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config && sudo systemctl restart sshd.service'
 		
 		THEHOSTSFILE="$BASE/VagVBox/$CLUSTERNAME/Configs/hosts"
@@ -1664,6 +1693,7 @@ echo \"\"
 		IFS='¬' read -r -a IP_ADDRESS_VALS_LISTVals <<< $IP_ADDRESS_VALS_LIST
 		VMIP="${IP_ADDRESS_VALS_LISTVals[0]}"
 		THEFILEMOUNTLOCATION="${IP_ADDRESS_VALS_LISTVals[1]}"
+		THEOTHERINFO2="${IP_ADDRESS_VALS_LISTVals[1]}"
 		
 		if [ "$STACKDEPLOY" == "0" ] || [ "$STACKDEPLOY" == "0" ] ; then
 			echo ""
@@ -1718,7 +1748,7 @@ echo \"\"
 	if [ "$FINALOUTPUTREQ" == "YES" ] ; then		
 		sudo touch "$FINALPROCESSOUTPUT"
 		sudo chmod 777 "$FINALPROCESSOUTPUT"
-		echo "Scope,IP,Parent,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $FINALPROCESSOUTPUT
+		#echo "ScopeId,Identity,InstanceType,OtherInfo,Secrets,SecretsKey,IP,Parent,NIC,Gateway,Netmask,PUserName,PPort,PPassword,PPEM,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $FINALPROCESSOUTPUT
 		
 		COUNTER=0		
 		for IP_ADDRESS_VALS_LIST in "${IP_ADDRESS_LIST[@]}"
@@ -1738,10 +1768,44 @@ echo \"\"
 	    cpu_cores=$(nproc); \
 	    isvm_exists="No"; \
 	    if [ -e "/opt/ISVM" ]; then isvm_exists="Yes"; fi; \
-	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists"')
+	    THEMACHPARENT=""; \
+	    if [ -e "/opt/MYPARENT" ]; then THEMACHPARENT=$(head -n 1 "/opt/MYPARENT"); fi; \
+	    THEMACHPARENTAUTH=""; \
+	    if [ -e "/opt/THEPARENTAUTHDETAILS" ]; then THEMACHPARENTAUTH=$(head -n 1 "/opt/THEPARENTAUTHDETAILS"); fi; \    
+	    #sudo rm -f /opt/THEPARENTAUTHDETAILS; \
+	    THEOTHERINFO=""; \
+	    if [ -e "/opt/THEOTHERINFO" ]; then THEOTHERINFO=$(head -n 1 "/opt/THEOTHERINFO"); fi; \	    	    
+	    nic=$(ip addr | grep -B 2 "'"$VMIP"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
+	    nic=${nic%:}; \
+	    gateway=$(ip route show dev "$nic" | grep -oP "^default via \K\S+"); \
+	    netmask=$(ifconfig "$nic" | awk '"'"'/inet / {print $4}'"'"'); \
+	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists├$THEMACHPARENT├$nic├$gateway├$netmask├$THEMACHPARENTAUTH├$THEOTHERINFO"')
 				
-				IFS='├' read -ra _gi <<< "$ssh_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}"                             		
-				echo ",$VMIP,$THISCURRENTMACHINEIP,$_gi7,op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,matysa,$RANDOMSSHPORT,$MATSYAPWD," >> $FINALPROCESSOUTPUT 
+				IFS='├' read -ra _gi <<< "$ssh_info"
+				_gi0="${_gi[0]}"				
+				_gi1="${_gi[1]}"
+				_gi2="${_gi[2]}"
+				_gi3="${_gi[3]}"
+				_gi4="${_gi[4]}"
+				_gi5="${_gi[5]}"
+				_gi6="${_gi[6]}"
+				_gi7="${_gi[7]}"				
+				_gi8="${_gi[8]}"
+				_gi9="${_gi[9]}"
+				_gi10="${_gi[10]}"
+				_gi11="${_gi[11]}"
+				_gi12="${_gi[12]}"
+				_gi12NEW="${_gi12//■/├}"
+				_gi13=$(echo "$CLUSTERNAME" | grep -oP '(?<=Scope)\d+')
+				_gi14=$(echo "$_gi1" | grep -oP '(?<=ID)\d+')
+				
+				echo "$_gi13,$_gi14,onprem,$_gi12NEW,,,$VMIP,$_gi7,$_gi8,$_gi9,$_gi10,$_gi11,$_gi6,$_gi1,Ubuntu,$_gi2,$_gi3,$_gi4,$_gi5,vagrant,$RANDOMSSHPORT,,$BASE/Output/Pem/op-$CLUSTERNAME.pem,N,N" >> $FINALPROCESSOUTPUT
+				#_gi9="" && 
+				#{ [[ -z "${_gi8}" ]] && _gi9="$VMIP" || _gi9="${_gi8}"; }
+				#IFS='├' read -ra _gi <<< "$ssh_info" && _gi1="${_gi[1]}" && _gi2="${_gi[0]}" && _gi3="${_gi[2]}" && _gi4="${_gi[3]}" && _gi5="${_gi[4]}" && _gi6="${_gi[5]}" && _gi7="${_gi[6]}"                             		
+				#echo ",$VMIP,$THISCURRENTMACHINEIP,$_gi7,op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,matysa,$RANDOMSSHPORT,$MATSYAPWD," >> $FINALPROCESSOUTPUT
+				#CLUSTERNAME2="${CLUSTERNAME#ScopeId}"
+				#echo "$CLUSTERNAME2,,onprem,,,,$VMIP,$_gi8,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,vagrant,$RANDOMSSHPORT,,$BASE/Output/Pem/op-$CLUSTERNAME.pem" >> $FINALPROCESSOUTPUT 
 			fi
 			
 			COUNTER=$((COUNTER + 1))						
@@ -1901,16 +1965,22 @@ echo \"\"
 		sudo chmod -R 777 $BASE/VagVBox/$CLUSTERNAME
 		sudo chmod 400 $BASE/Output/Pem/op-$CLUSTERNAME.pem
 		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Output/Pem/op-$CLUSTERNAME.pem
+		#IP_ADDRESS_HYPHEN9=${THISCURRENTMACHINEIP//./-}
+		#sudo mv $BASE/Output/Pem/op-$CLUSTERNAME.pem $BASE/Output/Pem/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN9.pem
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/.ports
-		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
+		#sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
+		sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pub
+		if [ "$ISSAMEASHOST" == "NO" ] ; then
+			sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
+		fi
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/$THEACTUALNAMEOFTHECOORDINATOR
 		sudo rm -rf $BASE/Output/$CLUSTERNAME-CDR
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG3.out
 		echo ""
 		$BASE/Scripts/BashTabularPrint.sh "$FINALPROCESSOUTPUT■-1■,"
 		echo ""	
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
+		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG3.out		
 	else
 		sudo rm -rf $BASE/op-$CLUSTERNAME-kill-opvvb.sh
 	fi	
