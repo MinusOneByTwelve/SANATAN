@@ -135,7 +135,7 @@ GetCodeForConfigAddition() {
 	
 	sudo rm -rf $BASE/tmp/$JKLHOSTT1RANDOM
 }
-
+: <<'END_COMMENT'
 NARASIMHA() {
     local action="$1"
     
@@ -153,6 +153,25 @@ NARASIMHA() {
         echo "$decrypted"    
     fi        
 }
+END_COMMENT
+NARASIMHA() {
+    local action="$1"
+    
+    if [ "$action" == "encrypt" ]; then
+        local plaintext="$2"
+        local key="$3"
+        local encrypted=$(echo -n "$plaintext" | openssl enc -aes-256-cbc -pbkdf2 -k "$key" | base64 -w 0)
+        echo "$encrypted"
+    fi
+    
+    if [ "$action" == "decrypt" ]; then
+        local encrypted="$2"
+        local key="$3"
+        local decrypted=$(echo "$encrypted" | base64 -d | openssl enc -aes-256-cbc -d -pbkdf2 -k "$key")
+        echo "$decrypted"    
+    fi        
+}
+
 
 GETMEUNIQUEIPS() {
 	final1ips=()
@@ -199,5 +218,93 @@ GETMEUNIQUEIPS() {
 	
 	#echo "$IPAs1String"
 	echo "$IPAs1String" | sudo tee $thenameofthefilewhereGETMEUNIQUEIPSwillwriteresult > /dev/null && sudo chmod 777 $thenameofthefilewhereGETMEUNIQUEIPSwillwriteresult
+}
+
+CSVFILE_ENC_DYC() {
+	FILE_PATH="$1"
+	reqcol="$2"
+	enccolstatus="$3"
+	enccolvalstatus="$4"
+	whattodo="$5"
+	thereqkey="$6"
+	isheader="$7"
+	encdeccol="$8"
+	TMP_FILE="$9"
+	#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "$FILE_PATH : $reqcol: $enccolstatus: $enccolvalstatus: $whattodo: $thereqkey: $isheader: $encdeccol $TMP_FILE:"
+	#echo "CSVFILE_ENC_DYC Progress" "$FILE_PATH : $reqcol : $enccolstatus : $enccolvalstatus : $whattodo : $thereqkey : $isheader : $encdeccol : $TMP_FILE:" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+	while IFS=, read -r line; do
+	    IFS=',' read -r -a columns <<< "$line"
+
+	    if [ "$isheader" -eq 1 ]; then
+		isheader=0
+	    else
+	    	    CHECKCURSTATUS=""
+		    if [ "$encdeccol" == "" ] ; then
+		    	CHECKCURSTATUS=""
+		    else
+		    	CHECKCURSTATUS="${columns[$((encdeccol-1))]}"
+		    fi	    
+		    #echo "CHECKCURSTATUS : $CHECKCURSTATUS"
+		    #notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "CHECKCURSTATUS : $CHECKCURSTATUS"
+		    #echo "CSVFILE_ENC_DYC Progress" "CHECKCURSTATUS : $CHECKCURSTATUS" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+		    for col in $(echo "$reqcol" | tr ',' ' '); do
+			col_value="${columns[$((col-1))]}"
+			#echo "col_value : $col_value"
+			#echo "CSVFILE_ENC_DYC Progress" "COL NO : $col  VAL : $col_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$col_value" == "" ] || [ "$col_value" == "\"\"" ] ; then
+				columns[$((col-1))]=$col_value
+				#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT1"
+				#echo "CSVFILE_ENC_DYC Progress" "POINT1" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			else
+			    if [ "$CHECKCURSTATUS" == "" ] ; then
+			        #echo "CSVFILE_ENC_DYC Progress" "CAME FOR SELECTION : '$CHECKCURSTATUS' : '$whattodo' : '$thereqkey'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	thereq_value=$(NARASIMHA "$whattodo" "$col_value" "$thereqkey")
+			    	columns[$((col-1))]=$thereq_value
+		    		#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT6"
+		    		#echo "CSVFILE_ENC_DYC Progress" "POINT6 $thereq_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null			    	
+			    else
+			    	#echo "CSVFILE_ENC_DYC Progress" "CAME FOR SELECTION2 : '$CHECKCURSTATUS' : '$whattodo' : '$thereqkey'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	if [ "$CHECKCURSTATUS" == "N" ] && [ "$whattodo" == "encrypt" ]; then
+			    		thereq_value=$(NARASIMHA "$whattodo" "$col_value" "$thereqkey")
+			    		columns[$((col-1))]=$thereq_value
+			    		#echo "whattodo : $whattodo  CHECKCURSTATUS : $CHECKCURSTATUS"
+			    		#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT2"
+			    		#echo "CSVFILE_ENC_DYC Progress" "POINT2 ::: NARASIMHA : $whattodo : $col_value : $thereqkey ::: $thereq_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	fi
+			    	if [ "$CHECKCURSTATUS" == "N" ] && [ "$whattodo" == "decrypt" ]; then
+			    		columns[$((col-1))]=$col_value
+			    		#echo "whattodo : $whattodo  CHECKCURSTATUS : $CHECKCURSTATUS"
+			    		#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT3"
+			    		#echo "CSVFILE_ENC_DYC Progress" "POINT3 $col_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	fi
+			    	if [ "$CHECKCURSTATUS" == "Y" ] && [ "$whattodo" == "encrypt" ]; then
+			    		columns[$((col-1))]=$col_value
+			    		#echo "whattodo : $whattodo  CHECKCURSTATUS : $CHECKCURSTATUS"
+			    		#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT4"
+			    		#echo "CSVFILE_ENC_DYC Progress" "POINT4 $col_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	fi
+			    	if [ "$CHECKCURSTATUS" == "Y" ] && [ "$whattodo" == "decrypt" ]; then
+			    		thereq_value=$(NARASIMHA "$whattodo" "$col_value" "$thereqkey")
+			    		columns[$((col-1))]=$thereq_value
+			    		#echo "whattodo : $whattodo  CHECKCURSTATUS : $CHECKCURSTATUS"
+			    		#notify-send -t 5000 "CSVFILE_ENC_DYC Progress" "POINT5"
+			    		#echo "CSVFILE_ENC_DYC Progress" "POINT5 $thereq_value" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			    	fi			    				    	
+			    fi
+			fi
+		    done
+		    if [ "$enccolstatus" == "" ] ; then
+		    	ABC="XYZ"
+		    else
+		    	columns[$((enccolstatus-1))]=$enccolvalstatus
+		    fi
+	    fi
+	    	
+	    modified_line=$(IFS=,; echo "${columns[*]}")
+	    echo "$modified_line" >> "$TMP_FILE"
+
+	done < "$FILE_PATH"
+
+	#mv "$TMP_FILE" "$FILE_PATH"
 }
 
