@@ -78,9 +78,19 @@ THENEWIDENTITYNAME=""
 SSHKEYCREATE="YES"
 ISSAMEASHOST="YES"
 THEPARENTAUTHDETAILS="NOTHING"
+THEUSERCHOICE="Z"
 
 if [ "$#" -ne 1 ]; then
 	USERVALS=""
+	
+	THEUSERCHOICE=$1
+	if [ "$THEUSERCHOICE" == "D" ] ; then
+		thedatafile=$2
+		visionkey=$3
+		scopemanyidy=$4
+		USERINTERACTION="NO"
+		BASE="/opt/Matsya"	
+	fi	
 else
 	USERVALS=$1
 	USERINTERACTION="NO"
@@ -146,7 +156,8 @@ function GetNewPort {
 }
 
 #xyz=$(GetNewPort) && echo $xyz && exit
-
+#echo "USERINTERACTION : $USERINTERACTION  THEUSERCHOICE : $THEUSERCHOICE"
+#exit
 if [ "$USERINTERACTION" == "YES" ] || [ "$USERINTERACTION" == "yes" ] ; then
 	read -p "Enter Base Location (If Missing, Will Be Created) > " -e -i "/opt/Matsya" BASE
 fi
@@ -168,6 +179,113 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 fi
 
 source $BASE/Resources/StackVersioningAndMisc
+
+if [ "$THEUSERCHOICE" == "D" ] ; then
+	IFS='|' read -ra items <<< "$scopemanyidy"
+	for scopeidy in "${items[@]}"; do
+		#scopeidy="656,8909"
+		#scopeidy="656,7788"
+		#scopeidy="454,454545"
+		#scopeid,identity,visionkey,filename
+		search_result=$(grep -n "^$scopeidy" $thedatafile)
+
+		if [ -n "$search_result" ]; then
+			line_number=$(echo "$search_result" | awk -F ':' 'NR==1 {print $1}')
+			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
+			IFS=',' read -ra contents <<< "$content"
+			filtered_content=$(IFS=',' && printf "%s," "${contents[@]:0:${#contents[@]}-1}")
+			filtered_content=${filtered_content%,} 
+			#echo "Line number: $line_number"
+			#echo "Content: $content"
+			#echo "FILTEREDContent: $filtered_content"	
+			IFS=',' read -r -a USERLISTVALS <<< $content
+			thehost="${USERLISTVALS[16]}"
+			isvm="${USERLISTVALS[15]}"
+			themachineip="${USERLISTVALS[6]}"
+			thecurrentdeleteflag="${USERLISTVALS[27]}"
+			#echo "isvm: $isvm"
+			#echo "themachineip: $themachineip"
+			#echo "thecurrentdeleteflag: $thecurrentdeleteflag"	
+			thenewdeleteflag=""
+			if [ "$thecurrentdeleteflag" == "Y" ] ; then
+				thenewdeleteflag="Y"
+			else
+				if [ "$isvm" == "Yes" ] ; then
+					IFS='-' read -ra parts <<< "$thehost"
+					filtered_partsthehost=$(IFS='-' && printf "%s-" "${parts[@]:0:${#parts[@]}-1}")
+					filtered_partsthehost=${filtered_partsthehost%-}  
+					#echo $filtered_partsthehost
+					VMParent="${USERLISTVALS[7]}"
+					PUserName="${USERLISTVALS[11]}"	
+					PPort="${USERLISTVALS[12]}"	
+					PPassword="${USERLISTVALS[13]}"	
+					PPEM="${USERLISTVALS[14]}"
+					MPPEM="${USERLISTVALS[25]}"
+					#echo "PUserNameO : $PUserName : PPortO : $PPort : PPasswordO : $PPassword : PPEMO : $PPEM : PPEMO : $MPPEM"
+					PUserName=$(NARASIMHA "decrypt" "$PUserName" "$visionkey")
+					PPort=$(NARASIMHA "decrypt" "$PPort" "$visionkey")
+					PPassword=$(NARASIMHA "decrypt" "$PPassword" "$visionkey")
+					PPEM=$(NARASIMHA "decrypt" "$PPEM" "$visionkey")
+					MPPEM=$(NARASIMHA "decrypt" "$MPPEM" "$visionkey")
+					MRPPEM="${MPPEM##*/}"
+					MRNPPPEM="/home/$PUserName/Downloads"					
+					#echo "PUserName : $PUserName : PPort : $PPort : PPassword : $PPassword : PPEM : $PPEM : MPPEM : $MPPEM : MRPPEM : $MRPPEM : MRNPPPEM : $MRNPPPEM filtered_partsthehost : $filtered_partsthehost"
+					#exit
+					if [ "$PPEM" == "NA" ] ; then
+						sshpass -p "$PPassword" scp -o StrictHostKeyChecking=no -P $PPort "$MPPEM" "$PUserName@$VMParent:$MRNPPPEM"
+						thenewdeleteflag=$(sshpass -p "$PPassword" ssh -p "$PPort" -o StrictHostKeyChecking=no "$PUserName@$VMParent" 'theconfigpath=$(sudo find '"$BASE"'/VagVBox -name '"$filtered_partsthehost"'); \
+sudo mv '"$MRNPPPEM"'/'"$MRPPEM"' '"$MPPEM"'; \
+sudo chmod 400 '"$MPPEM"'; \
+sudo chown '"$PUserName"':'"$PUserName"' '"$MPPEM"'; \
+sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"; \
+sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"; \
+sudo rm -rf $theconfigpath; \
+sudo rm -f '"$MPPEM"'; \
+count=0; \
+for ((i=1; i<=2; i++)); do if ping -c 1 "'"$themachineip"'" >/dev/null; then count=$((count + 1)); fi; done; \
+thenewdeleteflag=$(($count > 0 ? "N" : "Y")); \
+echo "$thenewdeleteflag"'
+)					
+					else
+						scp -i "$PPEM" -o StrictHostKeyChecking=no -P $PPort "$MPPEM" "$PUserName@$VMParent:$MRNPPPEM"
+						thenewdeleteflag=$(ssh -p "$PPort" -o StrictHostKeyChecking=no -i "$PPEM" "$PUserName@$VMParent" 'theconfigpath=$(sudo find '"$BASE"'/VagVBox -name '"$filtered_partsthehost"'); \
+sudo mv '"$MRNPPPEM"'/'"$MRPPEM"' '"$MPPEM"'; \
+sudo chmod 400 '"$MPPEM"'; \
+sudo chown '"$PUserName"':'"$PUserName"' '"$MPPEM"'; \
+sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"; \
+sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"; \
+sudo rm -rf $theconfigpath; \
+sudo rm -f '"$MPPEM"'; \
+count=0; \
+for ((i=1; i<=2; i++)); do if ping -c 1 "'"$themachineip"'" >/dev/null; then count=$((count + 1)); fi; done; \
+thenewdeleteflag=$(($count > 0 ? "N" : "Y")); \
+echo "$thenewdeleteflag"'
+)					
+					fi										
+					#theconfigpath=$(sudo find $BASE/VagVBox -name $filtered_partsthehost)
+					#sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"
+					#sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"
+					#sudo rm -rf $theconfigpath
+					#count=0
+					#for ((i=1; i<=2; i++)); do if ping -c 1 "$themachineip" >/dev/null; then count=$((count + 1)); fi; done
+					#thenewdeleteflag=$(($count > 0 ? "N" : "Y"))
+				else
+					echo "Physical Machine"
+					thenewdeleteflag="Y"
+				fi
+			fi
+			#echo "thenewdeleteflag: $thenewdeleteflag"
+			thenewcontent="$filtered_content,$thenewdeleteflag"
+			#echo "thenewcontent: $thenewcontent"
+			
+			sed -i "$line_number""s#.*#$thenewcontent#" "$thedatafile"		
+		else
+		    echo "Not Found"
+		fi
+	done
+
+	exit
+fi
 
 ISFA="$BASE/Stack/$VBOXGENERICSTACKUBUNTU"
 
@@ -1806,6 +1924,8 @@ echo \"\"
 				#echo ",$VMIP,$THISCURRENTMACHINEIP,$_gi7,op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN2,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,matysa,$RANDOMSSHPORT,$MATSYAPWD," >> $FINALPROCESSOUTPUT
 				#CLUSTERNAME2="${CLUSTERNAME#ScopeId}"
 				#echo "$CLUSTERNAME2,,onprem,,,,$VMIP,$_gi8,$_gi10,$_gi11,$_gi12,,,,,$_gi7,$_gi1,$_gi2,$_gi3,$_gi4,$_gi5,$_gi6,vagrant,$RANDOMSSHPORT,,$BASE/Output/Pem/op-$CLUSTERNAME.pem" >> $FINALPROCESSOUTPUT 
+				    #echo "$_gi13,$_gi14,onprem,$_gi12NEW,,,$VMIP,$_gi7,$_gi8,$_gi9,$_gi10,$_gi11,$_gi6,$_gi1,Ubuntu,$_gi2,$_gi3,$_gi4,$_gi5,vagrant,$RANDOMSSHPORT,,$BASE/Output/Pem/op-$CLUSTERNAME.pem,N,N" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				    #echo "" | sudo tee -a /home/prathamos/Downloads/log > /dev/null				
 			fi
 			
 			COUNTER=$((COUNTER + 1))						

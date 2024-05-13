@@ -118,8 +118,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
 	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
 	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')
-	
-	# Input JSON data
+
 	filtered_json_2=$(echo "$filtered_json" | jq 'map(select(.IP != "TBD"))')
 	output__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
 	output_file="$BASE/tmp/$output__file"
@@ -131,6 +130,42 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	done	
 	sudo chmod 777 $output_file
 	echo 'THEFILE2TOLOOKUP="'"$output_file"'"' | sudo tee -a $BASE/tmp/$ALLINCLUSIVEFINALCODETORUN > /dev/null
+	
+	sed -i 's/""//g' "$output_file"
+	sed -i 's/"//g' "$output_file"
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$output_file" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $output_file
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $output_file	
+	#exit
+	filtered1_json_2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')
+	output1__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	output1_file="$BASE/tmp/$output1__file"
+	echo "$filtered1_json_2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$output1_file"
+	done	
+	sudo chmod 777 $output1_file
+
+	sed -i 's/""//g' "$output1_file"
+	sed -i 's/"//g' "$output1_file"		
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$output1_file" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "0" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $output1_file
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $output1_file	
+		
+	output2__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+
+	cat $output_file $output1_file > $BASE/tmp/$output2__file
+	sudo chmod 777 $BASE/tmp/$output2__file
+	sudo rm -f $output1_file
+	
+	sudo rm -f $THESTACKFILE
+	sudo mv $BASE/tmp/$output2__file $THESTACKFILE
 	
 	grouped_json=$(echo "$filtered_json2" | jq 'group_by(.Parent) | map({"Parent":.[0].Parent, "Count": length})')
 	curdttm=$(date +"%d%m%y%H%M%S")
@@ -251,7 +286,7 @@ sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"
-nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
+nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
 ")
 		CONSIDERTHISMACHINE="YES"
 		if [ -z "$only3from_filtered_json2_otherinfo" ] || [ -z "$the4thfrom_filtered_json2_otherinfo" ]; then
@@ -464,7 +499,7 @@ while true; do
                 echo "File $file exists on server $server"
                 unset PICRFCRONRESFILEOUTPUT["$server"]  # Remove the item from the list
                 #nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" > '"$BASE"'/tmp/JOBLOG4.out &
-                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" 2>&1 &
+                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" "'"$THEVISIONKEY"'" 2>&1 &
             else
                 echo "File $file does not exist on server $server"
             fi
@@ -475,7 +510,7 @@ while true; do
                 echo "File $file exists on server $server"
                 unset PICRFCRONRESFILEOUTPUT["$server"]  # Remove the item from the list
                 #nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" > '"$BASE"'/tmp/JOBLOG4.out &
-                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" 2>&1 &
+                nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "A" "$THEFILETOLOOKUP" "$server" "$auth_info" "$therealfile" "'"Scope$scopeid"'" "$thefilewhichran" "$thefilewhichrun" "$THEMACHINEFROMWHEREITALLSTARTED" "'"$BASE/tmp/Scope$scopeid-WIP"'" "$THEFILE2TOLOOKUP" "'"$THEVISIONKEY"'" 2>&1 &
             else
                 echo "File $file does not exist on server $server"
             fi

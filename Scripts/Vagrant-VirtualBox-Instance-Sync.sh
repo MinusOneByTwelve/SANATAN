@@ -31,6 +31,10 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	THEFILEWHICHRANCRON=$8
 	THEMACHINEFROMWHEREITALLSTARTED=$9
 	ACKFOLDER="${10}"
+	THEREALFILE2_2="${11}"
+	THEVISION1KEY="${12}"
+	
+	source $BASE/Resources/StackVersioningAndMisc
 	
 	IP_ADDRESS_HYPHEN10=${THESERVER//./-}
 	THENEWPEM="$BASE/Output/Pem/op-$CLUSTERNAME-$IP_ADDRESS_HYPHEN10.pem"
@@ -43,7 +47,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 		if [ "$auth_type" == "UP" ]; then
 		    if sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
 			echo "File $THENEWFILE exists on THESERVER $THESERVER"
-			notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
+			#notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
 			break
 		    else
 			echo "File $THENEWFILE does not exist on THESERVER $THESERVER"
@@ -51,7 +55,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 		elif [ "$auth_type" == "PEM" ]; then
 		    if ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
 			echo "File $THENEWFILE exists on THESERVER $THESERVER"
-			notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
+			#notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
 			break
 		    else
 			echo "File $THENEWFILE does not exist on THESERVER $THESERVER"
@@ -67,6 +71,14 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 		#sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10
 		sudo mv $BASE/tmp/$THENEWLOCALFILE $ACKFOLDER/$IP_ADDRESS_HYPHEN10
 		sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+		
+		THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+		sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+		CSVFILE_ENC_DYC "$ACKFOLDER/$IP_ADDRESS_HYPHEN10" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISION1KEY" "0" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+		#echo "'$ACKFOLDER/$IP_ADDRESS_HYPHEN10:6,12,13,14,15,23,24,25,26:27:Y:encrypt:$THEVISION1KEY:0:27:$BASE/tmp/$THEFILEFORNEWVAL'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+		sudo rm -f $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+		sudo mv $BASE/tmp/$THEFILEFORNEWVAL $ACKFOLDER/$IP_ADDRESS_HYPHEN10		
 		#echo '#!/bin/bash' | sudo tee -a $ACKFOLDER/$IP_ADDRESS_HYPHEN10 > /dev/null
 		#echo "ls $THENEWPEM" | sudo tee -a $ACKFOLDER/$IP_ADDRESS_HYPHEN10 > /dev/null
 		#$ACKFOLDER/$IP_ADDRESS_HYPHEN10
@@ -76,24 +88,24 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 		while true; do
 			if [ "$auth_type" == "UP" ]; then
 			    if sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			    	notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
+			    	#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
 			    	#sudo rm -f $BASE/tmp/$THENEWLOCALFILE
 				sshpass -p "$password_pem" scp -o StrictHostKeyChecking=no -P $port "$user@$THESERVER:$THENEWFILE" "$BASE/tmp/$THENEWLOCALFILE"
 				sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "sudo rm -rf $THENEWFILE"	
 			    else
 				echo "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
-				notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
+				#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
 				break
 			    fi
 			elif [ "$auth_type" == "PEM" ]; then
 			    if ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			    	notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
+			    	#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
 			    	#sudo rm -f $BASE/tmp/$THENEWLOCALFILE
 				scp -i "$password_pem" -o StrictHostKeyChecking=no -P $port "$user@$THESERVER:$THENEWFILE" "$BASE/tmp/$THENEWLOCALFILE"
 				ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "sudo rm -rf $THENEWFILE"
 			    else
 				echo "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
-				notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
+				#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
 				break
 			    fi
 			fi
@@ -109,7 +121,15 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 			#echo "sshpass -p \"$password_pem\" scp -o StrictHostKeyChecking=no -P $port \"$user@$THESERVER:$THENEWPEM\" \"$BASE/tmp/$THENEWLOCALPEM\"" | sudo tee -a $ACKFOLDER/$IP_ADDRESS_HYPHEN10 > /dev/null
 			#$ACKFOLDER/$IP_ADDRESS_HYPHEN10
 			sudo mv $BASE/tmp/$THENEWLOCALFILE $ACKFOLDER/$IP_ADDRESS_HYPHEN10
-			sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10						
+			sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+			
+			THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+			sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+			CSVFILE_ENC_DYC "$ACKFOLDER/$IP_ADDRESS_HYPHEN10" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISION1KEY" "0" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+			sudo rm -f $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+			sudo mv $BASE/tmp/$THEFILEFORNEWVAL $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+			#echo "'$ACKFOLDER/$IP_ADDRESS_HYPHEN10:6,12,13,14,15,23,24,25,26:27:Y:encrypt:$THEVISION1KEY:0:27:$BASE/tmp/$THEFILEFORNEWVAL'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null									
 		elif [ "$auth_type" == "PEM" ]; then
 			ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "sudo rm -rf $THEFILEWHICHRANEVERYTHING && sudo rm -rf $THEFILEWHICHRANCRON"
 			#sudo touch $ACKFOLDER/$IP_ADDRESS_HYPHEN10
@@ -118,7 +138,14 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 			#echo "scp -i \"$password_pem\" -o StrictHostKeyChecking=no -P $port \"$user@$THESERVER:$THENEWPEM\" \"$BASE/tmp/$THENEWLOCALPEM\"" | sudo tee -a $ACKFOLDER/$IP_ADDRESS_HYPHEN10 > /dev/null
 			#$ACKFOLDER/$IP_ADDRESS_HYPHEN10
 			sudo mv $BASE/tmp/$THENEWLOCALFILE $ACKFOLDER/$IP_ADDRESS_HYPHEN10
-			sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10					
+			sudo chmod 777 $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+			
+			THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+			sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+			CSVFILE_ENC_DYC "$ACKFOLDER/$IP_ADDRESS_HYPHEN10" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISION1KEY" "0" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+			sudo rm -f $ACKFOLDER/$IP_ADDRESS_HYPHEN10
+			sudo mv $BASE/tmp/$THEFILEFORNEWVAL $ACKFOLDER/$IP_ADDRESS_HYPHEN10								
 		fi
 	fi
 fi
@@ -149,7 +176,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		    # Check if the file has already been processed
 		    if [[ ! " ${processed_files[@]} " =~ " $file " ]]; then
 		        echo "Processing file: $WIP_FOLDER/$file"
-		        notify-send -t 5000 "$CLUSTERNAME Progress" "Processing file: $WIP_FOLDER/$file"
+		        #notify-send -t 5000 "$CLUSTERNAME Progress" "Processing file: $WIP_FOLDER/$file"
 		        
 		        while IFS= read -r line; do
 				IFS=',' read -ra fields <<< "$line"
@@ -157,19 +184,21 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 				    echo "Data is invalid"
 				else
 				    echo "Data is OK"
-				    notify-send -t 5000 "$CLUSTERNAME Progress" "Data is OK : $line"
+				    #notify-send -t 5000 "$CLUSTERNAME Progress" "Data is OK : $line"
 				    echo "$line" >> "$thereal2file"
+				    #echo "$WIP_FOLDER/$file : '$line'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				    #echo "" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 				fi		        				    	
 			done < "$WIP_FOLDER/$file"
-					        
+								        
 		        processed_files+=("$file")
 		    else
 		        echo "file already done $WIP_FOLDER/$file"
-		        notify-send -t 5000 "$CLUSTERNAME Progress" "file already done $WIP_FOLDER/$file"
+		        #notify-send -t 5000 "$CLUSTERNAME Progress" "file already done $WIP_FOLDER/$file"
 		    fi
 		else
 		    echo "file not found $WIP_FOLDER/$file"
-		    notify-send -t 5000 "$CLUSTERNAME Progress" "file not found $WIP_FOLDER/$file"
+		    #notify-send -t 5000 "$CLUSTERNAME Progress" "file not found $WIP_FOLDER/$file"
 		fi
 	    done
 
@@ -182,6 +211,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		sudo rm -f $therealfile
 		sudo mv $thereal2file $therealfile
 		sudo chmod 777 $therealfile
+				
 		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" 2>&1 &
 		break
 	    fi
@@ -197,7 +227,7 @@ if [ "$THEMODEOFEXECUTION" == "C" ]; then
 	thenew1file=$2
 	theoldfile=$3
 	thevisionkey=$4	
-	notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync C Function.GOT FILE $thenew1file and  $theoldfile and VisionKey = $thevisionkey"	
+	#notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync C Function.GOT FILE $thenew1file and  $theoldfile and VisionKey = $thevisionkey"	
 	cat $thenew1file >> $theoldfile
 	#sudo rm -f $thenew1file
 fi
@@ -206,7 +236,7 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	thefiletodelete=$2
 	thefoldertocheck=$3
 	thefile2todelete=$4
-	notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync D Function.GOT $thefiletodelete and  $thefoldertocheck and  $thefile2todelete"	
+	#notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync D Function.GOT $thefiletodelete and  $thefoldertocheck and  $thefile2todelete"	
 	sudo rm -f $thefiletodelete
 	sudo rm -rf $thefoldertocheck
 	sudo rm -f $thefile2todelete		
