@@ -66,6 +66,59 @@ fi
 
 TASKIDENTIFIER=$1
 
+if [ "$TASKIDENTIFIER" == "NARASIMHA" ] ; then
+	THETASK=$2
+	
+	if [ "$THETASK" == "NewVisionKey" ] ; then
+		NewVisionKey=$(NARASIMHA "newkey")
+		echo "$NewVisionKey"
+	fi
+fi
+
+if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
+	THEJSON=$2
+
+	ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")	
+	Node=""
+	while IFS= read -r line; do
+	    Node+="|$line"
+	done < <(jq -r '.Node[] | "\(.ScopeId),\(.IdentityId)"' <<< "$THEJSON")
+	ScpIdy=${Node#|}
+	
+	declare -A DiffInstanceTypes
+	processed_combinations=()
+	IFS='|' read -ra ScpIdyArray <<< "$ScpIdy"
+	for item in "${ScpIdyArray[@]}"; do
+	    if [[ " ${processed_combinations[@]} " =~ " $item " ]]; then
+		continue
+	    fi
+	    
+	    processed_combinations+=("$item")
+	    
+	    ScopeId=$(echo "$item" | cut -d ',' -f1)
+	    Identity=$(echo "$item" | cut -d ',' -f2)
+	    
+	    InstanceType=$(grep "^$ScopeId,$Identity" "$ScopeFile" | cut -d ',' -f3)
+	    
+	    if [ -n "$InstanceType" ]; then
+		if [[ -v DiffInstanceTypes["$InstanceType"] ]]; then
+		    DiffInstanceTypes["$InstanceType"]+="|$item"
+		else
+		    DiffInstanceTypes["$InstanceType"]="$item"
+		fi
+	    fi
+	done
+
+	for key in "${!DiffInstanceTypes[@]}"; do
+	    	#echo "InstanceType: $key, ScpIdy items: ${DiffInstanceTypes["$key"]}"
+		if [ "$key" == "onprem" ] ; then
+			#echo "sudo $BASE/Scripts/Vagrant-VirtualBox.sh \"D\" \"$ScopeFile\" \"$VisionKey\" \"${DiffInstanceTypes["$key"]}\""
+			sudo $BASE/Scripts/Vagrant-VirtualBox.sh "D" "$ScopeFile" "$VisionKey" "${DiffInstanceTypes["$key"]}"
+		fi	    
+	done	
+fi
+
 if [ "$TASKIDENTIFIER" == "KRISHNA" ] ; then
 	THEJSON=$2
 
@@ -82,8 +135,12 @@ if [ "$TASKIDENTIFIER" == "KRISHNA" ] ; then
 fi
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
-	THESTACKFILE="$2"
-	THEVISIONKEY="$3"
+	THEJSON=$2
+
+	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	#THESTACKFILE="$2"
+	#THEVISIONKEY="$3"
 	declare -A PICRFLOCATIONMAPPING
 	declare -A PICRFSCRIPTMAPPING
 	declare -A PICRFSCRIPTCOPY
@@ -286,7 +343,7 @@ sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"
-nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
+nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS├$THEVISIONKEY\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
 ")
 		CONSIDERTHISMACHINE="YES"
 		if [ -z "$only3from_filtered_json2_otherinfo" ] || [ -z "$the4thfrom_filtered_json2_otherinfo" ]; then

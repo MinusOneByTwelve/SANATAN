@@ -80,7 +80,7 @@ ISSAMEASHOST="YES"
 THEPARENTAUTHDETAILS="NOTHING"
 THEUSERCHOICE="Z"
 
-if [ "$#" -ne 1 ]; then
+if [ "$#" -ne 2 ]; then
 	USERVALS=""
 	
 	THEUSERCHOICE=$1
@@ -92,56 +92,60 @@ if [ "$#" -ne 1 ]; then
 		BASE="/opt/Matsya"	
 	fi	
 else
-	USERVALS=$1
-	USERINTERACTION="NO"
-	IFS='├' read -r -a USERLISTVALS <<< $USERVALS
-	BASE="${USERLISTVALS[0]}"
-	CLUSTERNAME="${USERLISTVALS[1]}"
-	CONFIRMPROCEED="${USERLISTVALS[2]}"
-	STACKDEPLOY="${USERLISTVALS[3]}"
-	NODESNUMBER="${USERLISTVALS[4]}"
-	THESETUPMODE="${USERLISTVALS[5]}"
-	THECONFIGTYPE="${USERLISTVALS[6]}"
-	DEFAULTCONFIG="${USERLISTVALS[7]}"
-	LANTYPE="${USERLISTVALS[8]}"
-	NIC="${USERLISTVALS[9]}"
-	THISCURRENTMACHINEIP=$(ip addr show $NIC | grep 'inet ' | awk '{print $2}' | awk -F'/' '{print $1}')
-	GATEWAY="${USERLISTVALS[10]}"
-	NETMASK="${USERLISTVALS[11]}"
-	STARTRANDOMIP="${USERLISTVALS[12]}"
-	FILEMOUNTOPTION="${USERLISTVALS[13]}"	
-	REALFILEMOUNT="${USERLISTVALS[14]}"	
-	ADDTOHOSTSFILE="${USERLISTVALS[15]}"
-	USERINPUTCOUNT=${#USERLISTVALS[@]}
-	if (( $USERINPUTCOUNT > 16 )) ; then
-		ROOTPWD="${USERLISTVALS[16]}"	
-		MATSYAPWD="${USERLISTVALS[17]}"	
-		VAGRANTPWD="${USERLISTVALS[18]}"
-		CONFIRMFILETOCREATE="${USERLISTVALS[19]}"
-		RANDOMSSHPORT="${USERLISTVALS[20]}"
-	fi
-	if (( $USERINPUTCOUNT > 21 )) ; then
-		FINALOUTPUTREQ="${USERLISTVALS[21]}"
-		FINALPROCESSOUTPUT="${USERLISTVALS[22]}"
-		LISTOFRANDOMIPS="${USERLISTVALS[23]}"
-		LISTOFRANDOMIDENTITIES="${USERLISTVALS[24]}"
-		MAYADHICALL="YES"
+	THEUSERCHOICE=$1
+	if [ "$THEUSERCHOICE" == "C" ] ; then
+		USERVALS=$2
+		USERINTERACTION="NO"
+		IFS='├' read -r -a USERLISTVALS <<< $USERVALS
+		BASE="${USERLISTVALS[0]}"
+		CLUSTERNAME="${USERLISTVALS[1]}"
+		CONFIRMPROCEED="${USERLISTVALS[2]}"
+		STACKDEPLOY="${USERLISTVALS[3]}"
+		NODESNUMBER="${USERLISTVALS[4]}"
+		THESETUPMODE="${USERLISTVALS[5]}"
+		THECONFIGTYPE="${USERLISTVALS[6]}"
+		DEFAULTCONFIG="${USERLISTVALS[7]}"
+		LANTYPE="${USERLISTVALS[8]}"
+		NIC="${USERLISTVALS[9]}"
+		THISCURRENTMACHINEIP=$(ip addr show $NIC | grep 'inet ' | awk '{print $2}' | awk -F'/' '{print $1}')
+		GATEWAY="${USERLISTVALS[10]}"
+		NETMASK="${USERLISTVALS[11]}"
+		STARTRANDOMIP="${USERLISTVALS[12]}"
+		FILEMOUNTOPTION="${USERLISTVALS[13]}"	
+		REALFILEMOUNT="${USERLISTVALS[14]}"	
+		ADDTOHOSTSFILE="${USERLISTVALS[15]}"
+		USERINPUTCOUNT=${#USERLISTVALS[@]}
+		if (( $USERINPUTCOUNT > 16 )) ; then
+			ROOTPWD="${USERLISTVALS[16]}"	
+			MATSYAPWD="${USERLISTVALS[17]}"	
+			VAGRANTPWD="${USERLISTVALS[18]}"
+			CONFIRMFILETOCREATE="${USERLISTVALS[19]}"
+			RANDOMSSHPORT="${USERLISTVALS[20]}"
+		fi
+		if (( $USERINPUTCOUNT > 21 )) ; then
+			FINALOUTPUTREQ="${USERLISTVALS[21]}"
+			FINALPROCESSOUTPUT="${USERLISTVALS[22]}"
+			LISTOFRANDOMIPS="${USERLISTVALS[23]}"
+			LISTOFRANDOMIDENTITIES="${USERLISTVALS[24]}"
+			MAYADHICALL="YES"
 
-		IFS=',' read -ra IPs <<< "$LISTOFRANDOMIPS"		
-		for (( i=0; i<${#IPs[@]}; i++ )); do
-			key=$((i+1))
-			KEYVALIPS[$key]=${IPs[$i]}
-		done
-		
-		IFS=',' read -ra IPs2 <<< "$LISTOFRANDOMIDENTITIES"		
-		for (( i=0; i<${#IPs2[@]}; i++ )); do
-			key=$((i+1))
-			KEYVALIDENTITIES[$key]=${IPs2[$i]}
-		done
-		
-		SSHKEYCREATE="${USERLISTVALS[25]}"
-		ISSAMEASHOST="${USERLISTVALS[26]}"
-		THEPARENTAUTHDETAILS="${USERLISTVALS[27]}"				
+			IFS=',' read -ra IPs <<< "$LISTOFRANDOMIPS"		
+			for (( i=0; i<${#IPs[@]}; i++ )); do
+				key=$((i+1))
+				KEYVALIPS[$key]=${IPs[$i]}
+			done
+			
+			IFS=',' read -ra IPs2 <<< "$LISTOFRANDOMIDENTITIES"		
+			for (( i=0; i<${#IPs2[@]}; i++ )); do
+				key=$((i+1))
+				KEYVALIDENTITIES[$key]=${IPs2[$i]}
+			done
+			
+			SSHKEYCREATE="${USERLISTVALS[25]}"
+			ISSAMEASHOST="${USERLISTVALS[26]}"
+			THEPARENTAUTHDETAILS="${USERLISTVALS[27]}"
+			THEREALVISIONKEY="${USERLISTVALS[28]}"				
+		fi
 	fi					
 fi
 
@@ -181,12 +185,9 @@ fi
 source $BASE/Resources/StackVersioningAndMisc
 
 if [ "$THEUSERCHOICE" == "D" ] ; then
+	# RESULTS COULD BE N Y P A H D
 	IFS='|' read -ra items <<< "$scopemanyidy"
 	for scopeidy in "${items[@]}"; do
-		#scopeidy="656,8909"
-		#scopeidy="656,7788"
-		#scopeidy="454,454545"
-		#scopeid,identity,visionkey,filename
 		search_result=$(grep -n "^$scopeidy" $thedatafile)
 
 		if [ -n "$search_result" ]; then
@@ -194,89 +195,73 @@ if [ "$THEUSERCHOICE" == "D" ] ; then
 			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
 			IFS=',' read -ra contents <<< "$content"
 			filtered_content=$(IFS=',' && printf "%s," "${contents[@]:0:${#contents[@]}-1}")
-			filtered_content=${filtered_content%,} 
-			#echo "Line number: $line_number"
-			#echo "Content: $content"
-			#echo "FILTEREDContent: $filtered_content"	
+			filtered_content=${filtered_content%,}	
 			IFS=',' read -r -a USERLISTVALS <<< $content
 			thehost="${USERLISTVALS[16]}"
 			isvm="${USERLISTVALS[15]}"
 			themachineip="${USERLISTVALS[6]}"
-			thecurrentdeleteflag="${USERLISTVALS[27]}"
-			#echo "isvm: $isvm"
-			#echo "themachineip: $themachineip"
-			#echo "thecurrentdeleteflag: $thecurrentdeleteflag"	
+			thecurrentdeleteflag="${USERLISTVALS[27]}"	
 			thenewdeleteflag=""
 			if [ "$thecurrentdeleteflag" == "Y" ] ; then
 				thenewdeleteflag="Y"
 			else
-				if [ "$isvm" == "Yes" ] ; then
+				if [ "$isvm" == "Yes" ] ; then				
 					IFS='-' read -ra parts <<< "$thehost"
 					filtered_partsthehost=$(IFS='-' && printf "%s-" "${parts[@]:0:${#parts[@]}-1}")
-					filtered_partsthehost=${filtered_partsthehost%-}  
-					#echo $filtered_partsthehost
-					VMParent="${USERLISTVALS[7]}"
-					PUserName="${USERLISTVALS[11]}"	
-					PPort="${USERLISTVALS[12]}"	
-					PPassword="${USERLISTVALS[13]}"	
-					PPEM="${USERLISTVALS[14]}"
-					MPPEM="${USERLISTVALS[25]}"
-					#echo "PUserNameO : $PUserName : PPortO : $PPort : PPasswordO : $PPassword : PPEMO : $PPEM : PPEMO : $MPPEM"
-					PUserName=$(NARASIMHA "decrypt" "$PUserName" "$visionkey")
-					PPort=$(NARASIMHA "decrypt" "$PPort" "$visionkey")
-					PPassword=$(NARASIMHA "decrypt" "$PPassword" "$visionkey")
-					PPEM=$(NARASIMHA "decrypt" "$PPEM" "$visionkey")
-					MPPEM=$(NARASIMHA "decrypt" "$MPPEM" "$visionkey")
-					MRPPEM="${MPPEM##*/}"
-					MRNPPPEM="/home/$PUserName/Downloads"					
-					#echo "PUserName : $PUserName : PPort : $PPort : PPassword : $PPassword : PPEM : $PPEM : MPPEM : $MPPEM : MRPPEM : $MRPPEM : MRNPPPEM : $MRNPPPEM filtered_partsthehost : $filtered_partsthehost"
-					#exit
-					if [ "$PPEM" == "NA" ] ; then
-						sshpass -p "$PPassword" scp -o StrictHostKeyChecking=no -P $PPort "$MPPEM" "$PUserName@$VMParent:$MRNPPPEM"
-						thenewdeleteflag=$(sshpass -p "$PPassword" ssh -p "$PPort" -o StrictHostKeyChecking=no "$PUserName@$VMParent" 'theconfigpath=$(sudo find '"$BASE"'/VagVBox -name '"$filtered_partsthehost"'); \
-sudo mv '"$MRNPPPEM"'/'"$MRPPEM"' '"$MPPEM"'; \
-sudo chmod 400 '"$MPPEM"'; \
-sudo chown '"$PUserName"':'"$PUserName"' '"$MPPEM"'; \
-sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"; \
-sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"; \
-sudo rm -rf $theconfigpath; \
-sudo rm -f '"$MPPEM"'; \
-count=0; \
-for ((i=1; i<=2; i++)); do if ping -c 1 "'"$themachineip"'" >/dev/null; then count=$((count + 1)); fi; done; \
-thenewdeleteflag=$(($count > 0 ? "N" : "Y")); \
-echo "$thenewdeleteflag"'
-)					
+					filtered_partsthehost=${filtered_partsthehost%-}
+					VMParent1="${USERLISTVALS[7]}"
+					pingcount=0
+					for ((i=1; i<=2; i++)); do
+						if ping -c 1 "$VMParent1" >/dev/null; then
+						pingcount=$((pingcount + 1))
+					fi
+					done
+					if [ $pingcount -gt 0 ]; then
+						P1UserName="${USERLISTVALS[11]}"	
+						P1Port="${USERLISTVALS[12]}"	
+						P1Password="${USERLISTVALS[13]}"	
+						P1PEM="${USERLISTVALS[14]}"
+						M1PPEM="${USERLISTVALS[25]}"
+						P1UserName=$(NARASIMHA "decrypt" "$P1UserName" "$visionkey")
+						P1Port=$(NARASIMHA "decrypt" "$P1Port" "$visionkey")
+						P1Password=$(NARASIMHA "decrypt" "$P1Password" "$visionkey")
+						P1PEM=$(NARASIMHA "decrypt" "$P1PEM" "$visionkey")
+						M1PPEM=$(NARASIMHA "decrypt" "$M1PPEM" "$visionkey")
+						M1RPPEM="${M1PPEM##*/}"
+						M1RNPPPEM="/home/$P1UserName/Downloads"	
+					
+						CANCONNECT="NO"
+						
+						if [ "$P1PEM" == "NA" ] ; then
+							if output=$(sshpass -p "$P1Password" ssh -p $P1Port -o StrictHostKeyChecking=no -o ConnectTimeout=5 "$P1UserName@$VMParent1" exit 2>&1); then
+								CANCONNECT="YES"
+							fi						
+						else
+							if output=$(ssh -p $P1Port -o StrictHostKeyChecking=no -i "$P1PEM" -o ConnectTimeout=5 "$P1UserName@$VMParent1" exit 2>&1); then
+								CANCONNECT="YES"
+							fi
+						fi
+						#echo "PARASHURAMA \"VVBD\" \"$VMParent1\" \"$P1UserName\" \"$P1Port\" \"$P1Password\" \"$P1PEM\" \"$M1PPEM\" \"$M1RPPEM\" \"$M1RNPPPEM\" \"$filtered_partsthehost\" \"$themachineip\" \"$visionkey\""
+						#exit
+						if [ "$CANCONNECT" == "YES" ] ; then
+							thenewdeleteflag=$(PARASHURAMA "VVBD" "$VMParent1" "$P1UserName" "$P1Port" "$P1Password" "$P1PEM" "$M1PPEM" "$M1RPPEM" "$M1RNPPPEM" "$filtered_partsthehost" "$themachineip" "$visionkey" "$BASE" "$CURRENTUSER")
+							#echo $thenewdeleteflag
+							#exit
+						else
+							echo "Host Machine Access Denied"
+							thenewdeleteflag="D"						
+						fi
 					else
-						scp -i "$PPEM" -o StrictHostKeyChecking=no -P $PPort "$MPPEM" "$PUserName@$VMParent:$MRNPPPEM"
-						thenewdeleteflag=$(ssh -p "$PPort" -o StrictHostKeyChecking=no -i "$PPEM" "$PUserName@$VMParent" 'theconfigpath=$(sudo find '"$BASE"'/VagVBox -name '"$filtered_partsthehost"'); \
-sudo mv '"$MRNPPPEM"'/'"$MRPPEM"' '"$MPPEM"'; \
-sudo chmod 400 '"$MPPEM"'; \
-sudo chown '"$PUserName"':'"$PUserName"' '"$MPPEM"'; \
-sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"; \
-sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"; \
-sudo rm -rf $theconfigpath; \
-sudo rm -f '"$MPPEM"'; \
-count=0; \
-for ((i=1; i<=2; i++)); do if ping -c 1 "'"$themachineip"'" >/dev/null; then count=$((count + 1)); fi; done; \
-thenewdeleteflag=$(($count > 0 ? "N" : "Y")); \
-echo "$thenewdeleteflag"'
-)					
-					fi										
-					#theconfigpath=$(sudo find $BASE/VagVBox -name $filtered_partsthehost)
-					#sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd"
-					#sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd"
-					#sudo rm -rf $theconfigpath
-					#count=0
-					#for ((i=1; i<=2; i++)); do if ping -c 1 "$themachineip" >/dev/null; then count=$((count + 1)); fi; done
-					#thenewdeleteflag=$(($count > 0 ? "N" : "Y"))
+						echo "Host Machine Down"
+						thenewdeleteflag="H"
+					fi
 				else
 					echo "Physical Machine"
-					thenewdeleteflag="Y"
+					thenewdeleteflag="P"
 				fi
 			fi
-			#echo "thenewdeleteflag: $thenewdeleteflag"
+			
 			thenewcontent="$filtered_content,$thenewdeleteflag"
-			#echo "thenewcontent: $thenewcontent"
 			
 			sed -i "$line_number""s#.*#$thenewcontent#" "$thedatafile"		
 		else
@@ -1866,7 +1851,6 @@ echo \"\"
 	if [ "$FINALOUTPUTREQ" == "YES" ] ; then		
 		sudo touch "$FINALPROCESSOUTPUT"
 		sudo chmod 777 "$FINALPROCESSOUTPUT"
-		#echo "ScopeId,Identity,InstanceType,OtherInfo,Secrets,SecretsKey,IP,Parent,NIC,Gateway,Netmask,PUserName,PPort,PPassword,PPEM,ISVM,HostName,OS,VVBoxStatus,TotalRAM,FreeRAM,CPUCores,UserName,Port,Password,PEM" >> $FINALPROCESSOUTPUT
 		
 		COUNTER=0		
 		for IP_ADDRESS_VALS_LIST in "${IP_ADDRESS_LIST[@]}"
@@ -2091,6 +2075,21 @@ echo \"\"
 		#sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Keys/id_rsa.pub
 		sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pub
 		if [ "$ISSAMEASHOST" == "NO" ] ; then
+			sudo chmod -R 777 $BASE/Secrets
+			RANDOMFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)				
+			sudo cp $BASE/Output/Pem/op-$CLUSTERNAME.pem $BASE/Secrets/$RANDOMFILENAME
+			sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/$RANDOMFILENAME
+			sudo chmod u=rwx,g=rwx,o=rwx $BASE/Secrets/$RANDOMFILENAME
+			ITER=${THEREALVISIONKEY:7:6}
+			openssl enc -a -aes-256-cbc -pbkdf2 -iter $ITER -in $BASE/Secrets/$RANDOMFILENAME -out $BASE/Secrets/".$RANDOMFILENAME" -k $THEREALVISIONKEY
+			sudo chown $CURRENTUSER:$CURRENTUSER $BASE/Secrets/".$RANDOMFILENAME"
+			sudo chmod u=rwx,g=rwx,o=rwx $BASE/Secrets/".$RANDOMFILENAME"
+			sudo rm -rf $BASE/Secrets/$RANDOMFILENAME
+			sudo mv $BASE/Secrets/".$RANDOMFILENAME" $BASE/Output/Pem/op-$CLUSTERNAME.peme
+			sudo chmod u=rwx,g=rwx,o=rwx $BASE/Output/Pem/op-$CLUSTERNAME.peme								
+			sudo rm -rf /root/.bash_history
+			sudo rm -rf /home/$CURRENTUSER/.bash_history
+						
 			sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
 		fi
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/$THEACTUALNAMEOFTHECOORDINATOR

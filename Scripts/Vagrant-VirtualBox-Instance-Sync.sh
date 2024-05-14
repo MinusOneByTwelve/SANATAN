@@ -211,6 +211,9 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		sudo rm -f $therealfile
 		sudo mv $thereal2file $therealfile
 		sudo chmod 777 $therealfile
+		
+		pattern=$(echo "$WIP_FOLDER" | awk -F'/' '{print $NF}' | sed 's/-WIP//')
+		sudo rm -f $BASE/Output/Pem/op-$pattern.pub
 				
 		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" 2>&1 &
 		break
