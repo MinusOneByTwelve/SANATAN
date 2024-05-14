@@ -135,6 +135,7 @@ GetCodeForConfigAddition() {
 	
 	sudo rm -rf $BASE/tmp/$JKLHOSTT1RANDOM
 }
+
 : <<'END_COMMENT'
 NARASIMHA() {
     local action="$1"
@@ -154,6 +155,8 @@ NARASIMHA() {
     fi        
 }
 END_COMMENT
+
+# [NARASIMHA : Network Access Restricted Augmented Security Infrastructure Mitigating Hazardous Attacks]
 NARASIMHA() {
     local action="$1"
     
@@ -169,9 +172,18 @@ NARASIMHA() {
         local key="$3"
         local decrypted=$(echo "$encrypted" | base64 -d | openssl enc -aes-256-cbc -d -pbkdf2 -k "$key")
         echo "$decrypted"    
-    fi        
+    fi 
+    
+    if [ "$action" == "newkey" ]; then
+	DIFF=$((600000-500000+1))
+	R=$(($(($RANDOM%$DIFF))+500000))
+	RANDOMKEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	RKEY1=${RANDOMKEY:0:7}
+	RKEY2=${RANDOMKEY:7:8}
+	RANDOMKEY="$RKEY1$R$RKEY2"
+        echo "$RANDOMKEY"    
+    fi           
 }
-
 
 GETMEUNIQUEIPS() {
 	final1ips=()
@@ -306,5 +318,102 @@ CSVFILE_ENC_DYC() {
 	done < "$FILE_PATH"
 
 	#mv "$TMP_FILE" "$FILE_PATH"
+}
+
+# [PARASHURAMA : Purge Alter Reallocate Any System Hardware Utility Resource Asset Machine Attribute]
+PARASHURAMA() {
+	local theaction="$1"
+
+	if [ "$theaction" == "VVBDR" ]; then
+		#thevisionkey="qtofCcq519714UdVnqd0j"
+		#thepemfile="/opt/Matsya/Output/Pem/op-Scope656-140524185243.pem"
+		#scopeconfig="op-Scope656-140524185243-192-168-0-226-ID204"
+		#machineip="192.168.0.226"
+		#thebase="/opt/Matsya"
+		#thecurrent1user="prathamos"
+		thevisionkey="$2"
+		thepemfile="$3"
+		scopeconfig="$4"
+		machineip="$5"
+		thebase="$6"
+		thecurrent1user="$7"
+		
+		pemeexists="No"
+		pemexists="No"
+		thepemefile="$thepemfile""e"
+		theconfigpath=$(sudo find /opt/Matsya/VagVBox -name $scopeconfig)
+
+		if [ -e "$thepemfile" ]; then pemexists="Yes"; fi
+		if [ -e "$thepemefile" ]; then pemeexists="Yes"; fi
+
+		if [ "$pemeexists" == "Yes" ] ; then
+			sudo rm -f $thepemfile
+			ITER=${thevisionkey:7:6}
+			RANDOMSECFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo cp $thepemefile $thebase/tmp/$RANDOMSECFILENAME
+			sudo chown $thecurrent1user:$thecurrent1user $thebase/tmp/$RANDOMSECFILENAME
+			sudo chmod u=rwx,g=rwx,o=rwx $thebase/tmp/$RANDOMSECFILENAME
+			REALSECRETSFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			openssl enc -a -d -aes-256-cbc -pbkdf2 -iter $ITER -k $thevisionkey -in $thebase/tmp/$RANDOMSECFILENAME -out $thebase/tmp/$REALSECRETSFILENAME
+			sudo chown $thecurrent1user:$thecurrent1user $thebase/tmp/$REALSECRETSFILENAME
+			sudo chmod u=rwx,g=rwx,o=rwx $thebase/tmp/$REALSECRETSFILENAME
+			sudo mv $thebase/tmp/$REALSECRETSFILENAME $thepemfile
+			sudo rm -rf $thebase/tmp/$RANDOMSECFILENAME
+			sudo rm -rf /root/.bash_history
+			sudo rm -rf /home/$thecurrent1user/.bash_history		
+		fi
+
+		sudo chmod 400 $thepemfile
+		sudo chown $thecurrent1user:$thecurrent1user $thepemfile
+		sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant halt && popd" >/dev/null 2>&1
+		sudo -H -u root bash -c "pushd $theconfigpath && sudo vagrant destroy -f && popd" >/dev/null 2>&1
+		sudo rm -rf $theconfigpath
+		if [ "$pemexists" == "No" ] ; then
+			sudo rm -f $thepemfile
+		fi
+		count=0
+		TNDF1=""
+		for ((i=1; i<=2; i++)); do
+		    if ping -c 1 "$machineip" >/dev/null; then
+			count=$((count + 1))
+		    fi
+		done
+		if [ $count -gt 0 ]; then
+		    TNDF1="A"
+		else
+		    TNDF1="Y"
+		fi
+		echo "$TNDF1"			
+	fi
+		
+	if [ "$theaction" == "VVBD" ]; then
+		local VMParent="$2"
+		local PUserName="$3"
+		local PPort="$4"
+		local PPassword="$5"
+		local PPEM="$6"
+		local MPPEM="$7"
+		local MRPPEM="$8"
+		local MRNPPPEM="$9"
+		local FPTH="${10}"
+		local TMCHIP="${11}"
+		local THE1VISION1KEY="${12}"
+		local thecurrentbase1="${13}"
+		local thecurrentuser1="${14}"
+		#PARASHURAMA "VVBD" "192.168.0.102" "prathamos" "22" "130513" "NA" "/opt/Matsya/Output/Pem/op-Scope656-140524185243.pem" "op-Scope656-140524185243.pem" "/home/prathamos/Downloads" "op-Scope656-140524185243-192-168-0-226-ID204" "192.168.0.226" "qtofCcq519714UdVnqd0j"					
+		if [ "$PPEM" == "NA" ] ; then
+			TNDF=$(sshpass -p "$PPassword" ssh -p "$PPort" -o StrictHostKeyChecking=no "$PUserName@$VMParent" 'source '"$thecurrentbase1"'/Resources/StackVersioningAndMisc; \
+TNDF1=$(PARASHURAMA "VVBDR" "'"$THE1VISION1KEY"'" "'"$MPPEM"'" "'"$FPTH"'" "'"$TMCHIP"'" "'"$thecurrentbase1"'" "'"$thecurrentuser1"'"); \
+echo "$TNDF1"'
+			)					
+		else
+			TNDF=$(ssh -p "$PPort" -o StrictHostKeyChecking=no -i "$PPEM" "$PUserName@$VMParent" 'source '"$thecurrentbase1"'/Resources/StackVersioningAndMisc; \
+TNDF1=$(PARASHURAMA "VVBDR" "'"$THE1VISION1KEY"'" "'"$MPPEM"'" "'"$FPTH"'" "'"$TMCHIP"'" "'"$thecurrentbase1"'" "'"$thecurrentuser1"'"); \
+echo "$TNDF1"'
+			)					
+		fi
+		 
+		echo "$TNDF" 
+	fi     
 }
 
