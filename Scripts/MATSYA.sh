@@ -41,16 +41,11 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo mkdir -p $BASE/Output/Pem
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
-#if [[ ! -d "$BASE/Output/Terraform/Default" ]]; then
-#    sudo mkdir -p $BASE/Output/Terraform/Default
-#    sudo cp $BASE/Resources/sample_aws.tf $BASE/Output/Terraform/Default
-#    sudo cp $BASE/Resources/sample_azure.tf $BASE/Output/Terraform/Default
-#    sudo cp $BASE/Resources/sample_gcp.tf $BASE/Output/Terraform/Default
-#    sudo chmod -R 777 $BASE/Output/Terraform/Default
-#    pushd $BASE/Output/Terraform/Default
-#    terraform init
-#    popd    
-#fi
+
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
 
 source $BASE/Resources/StackVersioningAndMisc
 SSKEYGENSH="$BASE/Scripts/KeyGeneratorSSH.sh"
@@ -314,6 +309,7 @@ deploy_instances() {
     local num_instances=$1
     local cloud_provider=$2
     local terraform_file=$3
+    local THEREALTERRAFORMFILE=""
     local VAR1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
     local guid="$4""_""$VAR1"
     local parallel=$5
@@ -321,8 +317,15 @@ deploy_instances() {
     local flnmofcldpres=$7
     local thevar1=$8
     local thevar2=$9
-    local thevar3="${10}"    
+    local thevar3="${10}" 
+    local THE1VAL1HASH="${11}"   
     createnewtf="NA"
+    if [ "$terraform_file" == "NA" ] ; then
+    	THEREALTERRAFORMFILE="NA"
+    else
+    	THEREALTERRAFORMFILE=$3
+    	terraform_file="NA"
+    fi
         
 	if [ "$terraform_file" == "NA" ] ; then
 		createnewtf="YES"
@@ -391,7 +394,18 @@ deploy_instances() {
 				
 		if [ "$cloud_provider" == "aws" ] ; then
 			RANDOMINSTANCENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-			sudo cp $BASE/Resources/TerraformTemplateAWS.tf $BASE/tmp/$RANDOMINSTANCENAME.tf
+			THETFFILEISREPEAT="NO"
+			
+			if [ "$THEREALTERRAFORMFILE" == "NA" ] ; then
+				sudo cp $BASE/Resources/TerraformTemplateAWS.tf $BASE/tmp/$RANDOMINSTANCENAME.tf
+			else
+				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCENAME.tf
+				last_four="${THEREALTERRAFORMFILE: -4}"
+				if [[ "$last_four" == "r.tf" ]]; then
+				    THETFFILEISREPEAT="YES"
+				fi				
+			fi
+			
 			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCENAME.tf 
 			
 			terraform_file="$BASE/tmp/$RANDOMINSTANCENAME.tf"
@@ -494,8 +508,11 @@ deploy_instances() {
 			source_file="$BASE/tmp/$SECPORTFILE"
 			target_file="$terraform_file"
 			line_number=81
-			sed -i "${line_number}r ${source_file}" "${target_file}"
-			sed -i -e s~"THEAWSFIREWALLSETTINGS"~""~g $terraform_file
+			
+			if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+				sed -i "${line_number}r ${source_file}" "${target_file}"
+				sed -i -e s~"THEAWSFIREWALLSETTINGS"~""~g $terraform_file
+			fi
 																	
 			sudo rm -rf $BASE/tmp/$SECPORTFILE
 			
@@ -507,6 +524,7 @@ deploy_instances() {
 			sed -i -e s~"THEREQUIREDLOCPEMKEY"~"$THEREQUIREDLOCPEMKEY"~g $terraform_file
 			sed -i -e s~"THEREQUIREDINSTNUM"~"$THEREQUIREDINSTNUM"~g $terraform_file
 			sed -i -e s~"THEREQUIREDINSTANCE"~"$THEREQUIREDINSTANCE"~g $terraform_file
+			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $terraform_file
 			sed -i -e s~"THEREQUIREDREGION"~"$THEREQUIREDREGION"~g $terraform_file
 			sed -i -e s~"THEREQUIREDACCESSKEY"~"$THEREQUIREDACCESSKEY"~g $terraform_file
 			sed -i -e s~"THEREQUIREDSECRETKEY"~"$THEREQUIREDSECRETKEY"~g $terraform_file
@@ -528,6 +546,7 @@ deploy_instances() {
     	echo "    sudo mv $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     fi
     echo "    cd $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
+    #echo "    export TF_PLUGIN_CACHE_DIR=$BASE/Resources/Terraform" | sudo tee -a $flnmofcldp > /dev/null   
     echo "    terraform init" | sudo tee -a $flnmofcldp > /dev/null
     echo "    terraform plan" | sudo tee -a $flnmofcldp > /dev/null
     echo "    if [ \$? -eq 0 ]; then" | sudo tee -a $flnmofcldp > /dev/null            
@@ -787,6 +806,10 @@ THEVISIONKEY="$RKEY1$R$RKEY2"
 AUTOMATEDRUN=$3
 GLOBALPARALLEL=$4
 GLOBALNAPARALLEL="NO"
+if [ "$AUTOMATEDRUN" == "YES" ] ; then
+	THEVISIONKEY=$5
+	THEVAL1HASH=$6
+fi
 if [ ! -z "$GLOBALPARALLEL" ]; then
 	if [[ ! "$GLOBALPARALLEL" =~ ^[0-9]+$ ]]; then
     		echo "Error: Parallelism parameter must be a number."
@@ -844,7 +867,7 @@ for block in "${blocks[@]}"; do
         fi
     done
 
-    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST"
+    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST" "$THEVAL1HASH"
 done
 
 THEORIGINALFOLDERLOC=$(pwd)
@@ -902,6 +925,8 @@ printf "\n" >> "$BASE/tmp/$ALLDIFFCLDLIST"
 
 if [ "$AUTOMATEDRUN" == "YES" ] ; then
 	$BASE/tmp/$ALLDIFFCLDLIST
+	#echo "FILE READY : $BASE/tmp/$ALLDIFFCLDLIST"
+	#exit
 else
 	read -p "
 Script File Ready !!

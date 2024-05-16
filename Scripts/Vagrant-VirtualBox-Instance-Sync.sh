@@ -242,6 +242,7 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	#notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync D Function.GOT $thefiletodelete and  $thefoldertocheck and  $thefile2todelete"	
 	sudo rm -f $thefiletodelete
 	sudo rm -rf $thefoldertocheck
-	sudo rm -f $thefile2todelete		
+	sudo rm -f $thefile2todelete
+	sudo rm -rf /home/$CURRENTUSER/nohup.out	
 fi
 

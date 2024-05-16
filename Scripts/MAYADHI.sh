@@ -42,6 +42,16 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
 
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
+if [[ ! -d "$BASE/Output/Vision" ]]; then
+	sudo mkdir -p $BASE/Output/Vision
+	sudo chmod -R 777 $BASE/Output/Vision
+fi
+
 source $BASE/Resources/StackVersioningAndMisc
 SSKEYGENSH="$BASE/Scripts/KeyGeneratorSSH.sh"
 
@@ -114,7 +124,7 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 	    	#echo "InstanceType: $key, ScpIdy items: ${DiffInstanceTypes["$key"]}"
 		if [ "$key" == "onprem" ] ; then
 			#echo "sudo $BASE/Scripts/Vagrant-VirtualBox.sh \"D\" \"$ScopeFile\" \"$VisionKey\" \"${DiffInstanceTypes["$key"]}\""
-			sudo $BASE/Scripts/Vagrant-VirtualBox.sh "D" "$ScopeFile" "$VisionKey" "${DiffInstanceTypes["$key"]}"
+			nohup sudo $BASE/Scripts/Vagrant-VirtualBox.sh "D" "$ScopeFile" "$VisionKey" "${DiffInstanceTypes["$key"]}" 2>&1 &
 		fi	    
 	done	
 fi
@@ -135,6 +145,333 @@ if [ "$TASKIDENTIFIER" == "KRISHNA" ] ; then
 fi
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
+	THEJSON=$2
+
+	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")
+		
+	ALLWORKFOLDER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo mkdir $BASE/tmp/$ALLWORKFOLDER
+	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER
+	sudo cp $THESTACKFILE $BASE/tmp/$ALLWORKFOLDER
+	THESTACK1_FILE=$(basename $THESTACKFILE)
+	THESTACK1FILE="$BASE/tmp/$ALLWORKFOLDER/$THESTACK1_FILE"
+	sudo chmod 777 $THESTACK1FILE	
+	
+	# SANITIZE ORIGINAL FILE
+	header=$(head -n 1 $THESTACK1FILE)
+	csv_data=$(tail -n +2 $THESTACK1FILE)
+	json1_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	filter1ed_json=$(echo "$json1_data" | jq 'map(select(.IP != null and .IP != ""))')
+	# SANITIZE ORIGINAL FILE
+	
+	# CREATE FILE WHERE IP IS NOT TBD
+	filter1ed_json_2=$(echo "$filter1ed_json" | jq 'map(select(.IP != "TBD"))')
+	out1put__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	out1put_file="$BASE/tmp/$ALLWORKFOLDER/$out1put__file"
+	header=$(echo "$filter1ed_json_2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$out1put_file"
+	echo "$filter1ed_json_2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$out1put_file"
+	done	
+	sudo chmod 777 $out1put_file
+	sed -i 's/""//g' "$out1put_file"
+	sed -i 's/"//g' "$out1put_file"	
+	# CREATE FILE WHERE IP IS NOT TBD
+	
+	# CREATE FILE WHERE IP IS TBD
+	filter1ed1_json_2=$(echo "$filter1ed_json" | jq 'map(select(.IP == "TBD"))')
+	out1put1__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	out1put1_file="$BASE/tmp/$ALLWORKFOLDER/$out1put1__file"
+	echo "$header" > "$out1put1_file"
+	echo "$filter1ed1_json_2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$out1put1_file"
+	done	
+	sudo chmod 777 $out1put1_file
+	sed -i 's/""//g' "$out1put1_file"
+	sed -i 's/"//g' "$out1put1_file"	
+	# CREATE FILE WHERE IP IS TBD
+	
+	# INSTANCE TYPE BASED FILE CREATION
+	Scp1Idy=""
+	Scp1Idy=$(awk -F ',' 'NR > 1 { Scp1Idy = Scp1Idy $1 "," $2 "|" } END { print Scp1Idy }' "$out1put1_file")
+	Scp1Idy=${Scp1Idy%|}
+	declare -A DiffInstanceTypes
+	declare -A DiffFILESInstanceTypes
+	processed_combinations=()
+	read -r header < "$out1put1_file"
+	IFS='|' read -ra Scp1IdyArray <<< "$Scp1Idy"
+	for item in "${Scp1IdyArray[@]}"; do
+	    if [[ " ${processed_combinations[@]} " =~ " $item " ]]; then
+		continue
+	    fi
+	    processed_combinations+=("$item")
+	    ScopeId=$(echo "$item" | cut -d ',' -f1)
+	    Identity=$(echo "$item" | cut -d ',' -f2)
+	    line=$(grep "^$ScopeId,$Identity" "$out1put1_file")
+	    if [ -n "$line" ]; then
+		InstanceType=$(echo "$line" | cut -d ',' -f3)
+		if [[ -v DiffInstanceTypes["$InstanceType"] ]]; then
+		    DiffInstanceTypes["$InstanceType"]+="|$line"
+		else
+		    DiffInstanceTypes["$InstanceType"]="$line"
+		fi
+	    fi
+	done
+	for key in "${!DiffInstanceTypes[@]}"; do
+	    out1put1_file_inst=$(basename $out1put1_file)
+	    file_name="${key}_${out1put1_file_inst}"
+	    out1put1_dir_inst=$(dirname "$out1put1_file")
+	    file_name="$out1put1_dir_inst/$file_name.csv"
+	    DiffFILESInstanceTypes["$key"]="$file_name"
+	    if [ "$key" != "onprem" ] ; then
+	    	echo "$header" > "$file_name"
+	    fi
+	    echo "${DiffInstanceTypes["$key"]}" | tr '|' '\n' >> "$file_name"	    
+	    #echo "Created file: $file_name"
+	    if [ "$key" == "onprem" ] ; then
+	    	temp_file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    	cat "$out1put_file" "$file_name" > $BASE/tmp/$ALLWORKFOLDER/$temp_file
+	    	sudo chmod 777 $BASE/tmp/$ALLWORKFOLDER/$temp_file
+	    	sudo rm -f $file_name
+	    	sudo mv "$BASE/tmp/$ALLWORKFOLDER/$temp_file" "$file_name"
+	    fi	    
+	done
+	sudo rm -f $THESTACK1FILE
+	sudo rm -f $out1put_file
+	sudo rm -f $out1put1_file
+	# INSTANCE TYPE BASED FILE CREATION
+	
+	# INSTANCE TYPE BASED FILE ACTION
+	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER
+	
+	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
+		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
+		
+		if [ "$THEWORK_FILE" == "onprem" ] ; then
+			echo "onprem : $THEWORKFILE"
+			#nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'"}' 2>&1 &
+		fi
+				
+		if [ "$THEWORK_FILE" == "gcp" ] ; then
+			echo "gcp : $THEWORKFILE"
+		fi
+		
+		if [ "$THEWORK_FILE" == "aws" ] ; then
+			echo "aws : $THEWORKFILE"
+			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'"}'
+		fi
+		
+		if [ "$THEWORK_FILE" == "azure" ] ; then
+			echo "azure : $THEWORKFILE"
+		fi
+		
+		if [ "$THEWORK_FILE" == "e2e" ] ; then
+			echo "e2e : $THEWORKFILE"
+		fi		
+	done	
+	# INSTANCE TYPE BASED FILE ACTION		
+fi
+
+if [ "$TASKIDENTIFIER" == "aws" ] ; then
+	THEJSON=$2
+
+	THESTACKAWSFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
+	
+	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+	fi
+	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+		
+	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	
+	header=$(head -n 1 $THESTACKAWSFILE)
+	csv_data=$(tail -n +2 $THESTACKAWSFILE)
+	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
+	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')	
+	newfiltered_json2_json=$(echo "$filtered_json2" | jq 'map((.OtherInfo | split("├")) as $info | .OtherInfo = ($info[0:2] + [.UserName, .OS] + $info[2:5] | join("├")))')
+	
+	declare -A RegionSeg
+	while read -r line; do
+		region=$(echo "$line" | jq -r '.OtherInfo | split("├")[4]')
+		if [[ -z "${RegionSeg[$region]}" ]]; then
+			RegionSeg[$region]="[$line"
+		else
+			RegionSeg[$region]+=", $line"
+		fi
+	done < <(echo "$newfiltered_json2_json" | jq -c '.[]')
+	for key in "${!RegionSeg[@]}"; do
+		RegionSeg[$key]+="]"
+	done
+	declare -A InstanceTFChoice
+	for key in "${!RegionSeg[@]}"; do
+		Instance1TFChoice=()
+		#echo "Region: $key"
+		regjson=$(echo "${RegionSeg[$key]}" | jq .)
+		#echo "Items:"
+		#echo "$regjson"
+		while read -r line2; do	
+			#echo "$line2"
+			#other_info=$(echo $line2 | jq -r '.OtherInfo | split("├") | "\(.[0])├\(.[1])├\(.[4])├\(.[5])"')
+			other_info=$(echo $line2 | jq -r '.OtherInfo')
+			IFS='├' read -ra other1_info <<< "$other_info"
+			the1region="${other1_info[4]}"
+			#echo "other_info : $other_info     -------    the1region : $the1region"
+			secrets_key=$(echo $line2 | jq -r '.SecretsKey')
+			secrets_file=$(echo $line2 | jq -r '.Secrets')
+			Scope1Id=$(echo $line2 | jq -r '.ScopeId')
+			Identity1Id=$(echo $line2 | jq -r '.Identity')			
+			#line2reqval="${THEVISIONID}├${other_info}├${secrets_file}├${secrets_key}"
+			#thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')
+			line2reqval="${THEVISIONID}├${the1region}"
+			thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')			
+			CHOICEDONE="Z"
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-c.tf" ]]; then
+				Aexists="NO"
+				for element in "${Instance1TFChoice[@]}"; do
+					if [[ "$element" == "A" ]]; then
+						Aexists="YES"
+						break
+					fi
+				done
+				if [ "$Aexists" == "NO" ] ; then			
+					sudo cp $BASE/Resources/TerraformTemplateAWS.tf $THEVISIONFOLDER/$thevalhash-c.tf
+					CHOICEDONE="A"
+					Instance1TFChoice+=("$CHOICEDONE")
+				fi
+			else
+				thecopycandidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-c*" -print -quit)
+				if [ -n "$thecopycandidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] ; then				    
+						CHOICEDONE="B"
+						Instance1TFChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] ; then
+						Aexists="NO"
+						for element in "${Instance1TFChoice[@]}"; do
+							if [[ "$element" == "A" ]]; then
+								Aexists="YES"
+								break
+							fi
+						done
+						Cexists="NO"
+						for element in "${Instance1TFChoice[@]}"; do
+							if [[ "$element" == "C" ]]; then
+								Cexists="YES"
+								break
+							fi
+						done						
+						if [ "$Aexists" == "NO" ] ; then
+							if [ "$Cexists" == "NO" ] ; then		
+								CHOICEDONE="C"
+								Instance1TFChoice+=("$CHOICEDONE")
+							fi
+						fi									    
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE1 : $CHOICEDONE"			
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-r.tf" ]]; then
+				sudo cp $BASE/Resources/TerraformTemplateRepeatAWS.tf $THEVISIONFOLDER/$thevalhash-r.tf
+				if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+					CHOICEDONE="D"
+					Instance1TFChoice+=("$CHOICEDONE")
+				fi
+			else
+				thecopy1candidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-r*" -print -quit)
+				if [ -n "$thecopy1candidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="E"
+						Instance1TFChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="F"
+						Instance1TFChoice+=("$CHOICEDONE")
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE2 : $CHOICEDONE"
+			if [ "$CHOICEDONE" == "A" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "B" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "C" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "D" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "E" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "F" ] ; then
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi															
+		done < <(echo "$regjson" | jq -c '.[]')	
+		unset Instance1TFChoice		
+	done
+	
+	AIFCTR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo '#!/bin/bash' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	sudo chmod 777 	$BASE/tmp/$AIFCTR
+	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+	
+	THEREPEATITEMS=""
+	TERRAVFILETRACKING=()
+	for key in "${!InstanceTFChoice[@]}"; do
+		#echo "$key  :::::::: ${InstanceTFChoice[$key]}"	
+		THEFULL_VALUE="${InstanceTFChoice[$key]}"
+		IFS='■' read -ra THEFULLVALUE <<< "$THEFULL_VALUE"
+		THEVAL1="${THEFULLVALUE[0]}"
+		THEVAL2="${THEFULLVALUE[1]}"
+		THEVAL3="${THEFULLVALUE[2]}"
+		THEVAL4="${THEFULLVALUE[3]}"
+		THEVAL4=$(echo "$THEVAL4" | sed 's/├/¬/g')
+		THEVAL5="${THEFULLVALUE[4]}"
+		THEVAL6="${THEFULLVALUE[5]}"
+		THEVAL7="${THEFULLVALUE[6]}"												
+		THEREQMODE="${THEFULLVALUE[7]}"
+		THEVAL1HASH="${THEFULLVALUE[8]}"
+				
+		if [ "$THEREQMODE" == "NEW" ] ; then
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
+		fi
+		
+		if [ "$THEREQMODE" == "REPEAT" ] ; then
+			THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+		fi
+	done
+	
+	THEREPEATITEMS="${THEREPEATITEMS%├}"
+	RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	TERRAVFILETRACKING+=("$RNDM1")
+
+	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#for item in "${TERRAVFILETRACKING[@]}"; do
+	#	echo "$item"
+	#done
+	
+	#cat $BASE/tmp/$AIFCTR
+	$BASE/tmp/$AIFCTR			
+fi	
+
+if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 	THEJSON=$2
 
 	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
@@ -385,19 +722,33 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/Scope$scopeid-JOBLOG2.out 2>&1 &
 #    echo \"ERROR\" > THEACTUALSCRIPTFILECRONRESPATH
 #fi
 ")
-			
+			#echo "I CAME HERE0"
 			__PICRFSCRIPTCROND=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			_PICRFSCRIPTCROND="$BASE/tmp/$__PICRFSCRIPTCROND"			
 
 			__PICRFSCRIPTCRONRESD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-						
+			#echo "I CAME HERE1"			
 			if [ "$ISTHISSAMEMACHINE" == "NO" ] ; then
+				#echo "I CAME HERE2 $parent"
 				ISREMOTEMACHINEPINGING="NO"
-				ping -c 3 $parent > /dev/null
-				if [ $? -eq 0 ]; then
-					ISREMOTEMACHINEPINGING="YES"
-				fi
-				
+				#echo "I CAME HERE3"
+				#ping -c 3 $parent > /dev/null
+				#echo "I CAME HERE4"
+				#if [ $? -eq 0 ]; then
+				#	ISREMOTEMACHINEPINGING="YES"
+				#	echo "I CAME HERE5"
+				#fi
+				if ping -c 3 "$parent" > /dev/null; then
+				    ISREMOTEMACHINEPINGING="YES"
+				    #echo "I CAME HERE5"
+				else
+				    ISREMOTEMACHINEPINGING="NO"
+				    sudo rm -f $BASE/tmp/$__PICRFSCRIPTMAPPING
+				    #echo "I CAME HERE6"
+				fi				
+				#echo "I CAME HERE7"
+				#echo "ISREMOTEMACHINEPINGING : $ISREMOTEMACHINEPINGING  $parent"
+				#exit
 				if [ "$ISREMOTEMACHINEPINGING" == "YES" ] ; then
 					$BASE/Scripts/Vagrant-VirtualBox-Prerequisites-Sync.sh $parent■$pusername■$pport■$ppassword■$ppem■$BASE
 					

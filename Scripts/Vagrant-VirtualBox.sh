@@ -182,6 +182,11 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
 
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
 source $BASE/Resources/StackVersioningAndMisc
 
 if [ "$THEUSERCHOICE" == "D" ] ; then
@@ -268,7 +273,9 @@ if [ "$THEUSERCHOICE" == "D" ] ; then
 		    echo "Not Found"
 		fi
 	done
-
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	
 	exit
 fi
 
