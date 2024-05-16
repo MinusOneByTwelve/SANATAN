@@ -29,11 +29,10 @@ variable "num_instances" {
   default     = THEREQUIREDINSTNUM
 }
 
-resource "aws_vpc" "THE1VAL1HASH_vpc" {
-  cidr_block = "10.0.0.0/16"
+data "aws_vpcs" "THE1VAL1HASH_svpc" {
   tags = {
     Name = "THE1VAL1HASH_vpc"
-  }   
+  }
 }
 
 variable "availability_zone" {
@@ -42,72 +41,40 @@ variable "availability_zone" {
   THESUBREGIONSUBSTITUTE
 }
 
-resource "aws_subnet" "THE1VAL1HASH_subnet" {
-  vpc_id     = aws_vpc.THE1VAL1HASH_vpc.id
-  cidr_block = "10.0.1.0/24"
-  availability_zone = var.availability_zone 
+data "aws_subnet" "THE1VAL1HASH_ssubnet" {
   tags = {
     Name = "THE1VAL1HASH_subnet"
-  }   
+  }
 }
 
-resource "aws_internet_gateway" "THE1VAL1HASH_igy" {
-  vpc_id = aws_vpc.THE1VAL1HASH_vpc.id
+data "aws_internet_gateway" "THE1VAL1HASH_sigy" {
   tags = {
     Name = "THE1VAL1HASH_igy"
-  }  
+  }
 }
 
-resource "aws_route_table" "THE1VAL1HASH_rt" {
-  vpc_id = aws_vpc.THE1VAL1HASH_vpc.id
+data "aws_route_table" "THE1VAL1HASH_srt" {
   tags = {
     Name = "THE1VAL1HASH_rt"
-  }    
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.THE1VAL1HASH_igy.id
   }
 }
 
 resource "aws_route_table_association" "THE1VAL1HASH_rta" {
-  subnet_id      = aws_subnet.THE1VAL1HASH_subnet.id
-  route_table_id = aws_route_table.THE1VAL1HASH_rt.id
+  subnet_id = data.aws_subnet.THE1VAL1HASH_ssubnet.id
+  route_table_id = data.aws_route_table.THE1VAL1HASH_srt.id
 }
 
-resource "aws_security_group" "THE1VAL1HASH_sg" {
-  vpc_id      = aws_vpc.THE1VAL1HASH_vpc.id
-  name        = "THE1VAL1HASH_sg"
-  description = "Security group for SSH, HTTP, HTTPS, ICMP, and custom range"
-THEAWSFIREWALLSETTINGS
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  ingress {
-    from_port   = -1
-    to_port     = -1
-    protocol    = "icmp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+data "aws_security_group" "THE1VAL1HASH_ssg" {
+  name = "THE1VAL1HASH_sg"
 }
 
 resource "aws_instance" "THEREQUIREDINSTANCE" {
   count                       = var.num_instances
   ami                         = "THEREQUIREDAMI"
   instance_type               = "THEREQUIREDTYPE"
-  subnet_id                   = aws_subnet.THE1VAL1HASH_subnet.id
+  subnet_id                   = data.aws_subnet.THE1VAL1HASH_ssubnet.id
   key_name                    = aws_key_pair.deployer.key_name
-  vpc_security_group_ids      = [aws_security_group.THE1VAL1HASH_sg.id]
+  vpc_security_group_ids      = [data.aws_security_group.THE1VAL1HASH_ssg.id]
   associate_public_ip_address = true
   availability_zone           = var.availability_zone  
 
