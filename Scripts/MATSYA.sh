@@ -326,6 +326,7 @@ deploy_instances() {
     	THEREALTERRAFORMFILE=$3
     	terraform_file="NA"
     fi
+    THETERRACACHEFOLDER=""
         
 	if [ "$terraform_file" == "NA" ] ; then
 		createnewtf="YES"
@@ -395,17 +396,41 @@ deploy_instances() {
 		if [ "$cloud_provider" == "aws" ] ; then
 			RANDOMINSTANCENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			THETFFILEISREPEAT="NO"
-			
+			THETFFILEISCORE="NO"
+			THETFFILEISZONE="NO"
 			if [ "$THEREALTERRAFORMFILE" == "NA" ] ; then
 				sudo cp $BASE/Resources/TerraformTemplateAWS.tf $BASE/tmp/$RANDOMINSTANCENAME.tf
 			else
+				RANDOMINSTANCE1NAME=$(basename "$THEREALTERRAFORMFILE")
+				RANDOMINSTANCE2NAME="${RANDOMINSTANCE1NAME%.*}"
+				RANDOMINSTANCENAME="$RANDOMINSTANCENAME""_""$RANDOMINSTANCE2NAME"
+				
 				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCENAME.tf
 				last_four="${THEREALTERRAFORMFILE: -4}"
 				if [[ "$last_four" == "r.tf" ]]; then
 				    THETFFILEISREPEAT="YES"
-				fi				
+				fi
+				if [[ "$last_four" == "c.tf" ]]; then
+				    THETFFILEISCORE="YES"
+				fi
+				if [[ "$last_four" == "z.tf" ]]; then
+				    THETFFILEISZONE="YES"
+				fi												
 			fi
 			
+			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
+				THETERRACACHEFOLDER="$BASE/Resources/Terraform/awsr"
+			fi
+			if [ "$THETFFILEISCORE" == "YES" ] ; then
+				THETERRACACHEFOLDER="$BASE/Resources/Terraform/awsc"
+			fi
+			if [ "$THETFFILEISZONE" == "YES" ] ; then
+				THETERRACACHEFOLDER="$BASE/Resources/Terraform/awsz"
+			fi
+			
+			sudo mkdir -p $THETERRACACHEFOLDER
+			sudo chmod -R 777 $THETERRACACHEFOLDER
+									
 			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCENAME.tf 
 			
 			terraform_file="$BASE/tmp/$RANDOMINSTANCENAME.tf"
@@ -443,6 +468,11 @@ deploy_instances() {
 			if [ "$THEREQUIREDSUBREGION" == "NA" ] ; then
 				THEREQUIREDSUBREQUIREDREGION="NO"
 			fi
+			
+			THEVAL3HASH="${CHOICEVALS[6]}"
+			THE1VAL1HASH="${CHOICEVALS[7]}"
+			THESTACKFOLDERSYNC="${CHOICEVALS[8]}"
+			RNDXM="${CHOICEVALS[9]}"
 					
 			THEREQUIREDPEMKEY="$guid"
 			THEREQUIREDLOCPEMKEY="$BASE/Output/Pem"
@@ -507,11 +537,14 @@ deploy_instances() {
 			done
 			source_file="$BASE/tmp/$SECPORTFILE"
 			target_file="$terraform_file"
-			line_number=81
+			#line_number=81
+			line_number=36
 			
 			if [ "$THETFFILEISREPEAT" == "NO" ] ; then
-				sed -i "${line_number}r ${source_file}" "${target_file}"
-				sed -i -e s~"THEAWSFIREWALLSETTINGS"~""~g $terraform_file
+				if [ "$THETFFILEISCORE" == "YES" ] ; then
+					sed -i "${line_number}r ${source_file}" "${target_file}"
+					sed -i -e s~"THEAWSFIREWALLSETTINGS"~""~g $terraform_file
+				fi
 			fi
 																	
 			sudo rm -rf $BASE/tmp/$SECPORTFILE
@@ -525,6 +558,7 @@ deploy_instances() {
 			sed -i -e s~"THEREQUIREDINSTNUM"~"$THEREQUIREDINSTNUM"~g $terraform_file
 			sed -i -e s~"THEREQUIREDINSTANCE"~"$THEREQUIREDINSTANCE"~g $terraform_file
 			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $terraform_file
+			sed -i -e s~"THE1VAL2HASH"~"$THEVAL3HASH"~g $terraform_file
 			sed -i -e s~"THEREQUIREDREGION"~"$THEREQUIREDREGION"~g $terraform_file
 			sed -i -e s~"THEREQUIREDACCESSKEY"~"$THEREQUIREDACCESSKEY"~g $terraform_file
 			sed -i -e s~"THEREQUIREDSECRETKEY"~"$THEREQUIREDSECRETKEY"~g $terraform_file
@@ -532,7 +566,16 @@ deploy_instances() {
 			sed -i -e s~"THEREQUIREDUSER"~"$THEREQUIREDUSER"~g $terraform_file
 			sed -i -e s~"THESUBREGIONSUBSTITUTE"~"$THESUBREGIONSUBSTITUTE"~g $terraform_file			
 			#sed -i -e s~"THEREQUIREDSUBNET"~"$THEREQUIREDSUBNET"~g $terraform_file
-			#sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file												
+			#sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file	
+
+			THESYNCCONTENT=""
+			
+			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
+				THESCOPEID="${CHOICEVALS[10]}"
+				THEIDENTITYID="${CHOICEVALS[11]}"
+				
+				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,aws,$THEREQUIREDAMI├$THEREQUIREDTYPE├$THEREQUIREDREGION├$THEREQUIREDSUBREGION,$SECRETSTHEFILE,$SECRETTHEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,$THEBASEOSCHOICE,No,TBD,TBD,TBD,$THEBASEOSUSER,22,,$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem,N,N"
+			fi														
 		fi
 	fi
             
@@ -546,7 +589,9 @@ deploy_instances() {
     	echo "    sudo mv $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     fi
     echo "    cd $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
-    #echo "    export TF_PLUGIN_CACHE_DIR=$BASE/Resources/Terraform" | sudo tee -a $flnmofcldp > /dev/null   
+    if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+    	echo "    export TF_PLUGIN_CACHE_DIR=$THETERRACACHEFOLDER" | sudo tee -a $flnmofcldp > /dev/null  
+    fi 
     echo "    terraform init" | sudo tee -a $flnmofcldp > /dev/null
     echo "    terraform plan" | sudo tee -a $flnmofcldp > /dev/null
     echo "    if [ \$? -eq 0 ]; then" | sudo tee -a $flnmofcldp > /dev/null            
@@ -609,6 +654,15 @@ deploy_instances() {
         ips_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.public_ips.value[]'))
         totcnt_$guid=\${#names_$guid[@]}
         for i in \"\${"'!'"names_$guid[@]}\"; do
+            THETFFILEISREPEAT=\"$THETFFILEISREPEAT\"
+            if [ \"\$THETFFILEISREPEAT\" == \"YES\" ] ; then
+                sudo touch $THESTACKFOLDERSYNC/$RNDXM
+                THESYNC1CONTENT=\"$THESYNCCONTENT\"
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDIP/\${ips_$guid[\$i]}/g\")
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDNAME/\${names_$guid[\$i]}/g\")
+	        echo \"\$THESYNC1CONTENT\" | sudo tee -a $THESTACKFOLDERSYNC/$RNDXM > /dev/null
+	        sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM 
+	    fi           
             echo \"\${ips_$guid[\$i]}¬\${names_$guid[\$i]}¬$THEREQUIREDUSER¬$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem\" >> \"$BASE/tmp/$cp_guid.matsya\"
             #echo \"CURRENTUSER=\$(whoami) && sudo rm -rf /home/\$CURRENTUSER/.ssh/known_hosts && sudo rm -rf /root/.ssh/known_hosts && ssh -o StrictHostKeyChecking=no -i $THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem $THEREQUIREDUSER@\${ips_$guid[\$i]}\"
             echo '          {
@@ -984,6 +1038,10 @@ sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
 sudo mv $BASE/Secrets/".$VISIONSAFEGUARD" $BASE/Output/$THEVISIONNAME
 sudo chmod 777 $BASE/Output/$THEVISIONNAME
+
+if [ "$AUTOMATEDRUN" == "YES" ] ; then
+	sudo rm -f $BASE/Output/$THEVISIONNAME
+fi
 
 FILESTOBEDELETED+=("$BASE/tmp/$ALLDIFFCLDLIST")
 FILESTOBEDELETED+=("$BASE/tmp/$ALLDIFFCLDCOLLECTLIST")

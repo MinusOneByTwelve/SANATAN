@@ -52,6 +52,11 @@ if [[ ! -d "$BASE/Output/Vision" ]]; then
 	sudo chmod -R 777 $BASE/Output/Vision
 fi
 
+if [[ ! -d "$BASE/Resources/Terraform" ]]; then
+	sudo mkdir -p $BASE/Resources/Terraform
+	sudo chmod -R 777 $BASE/Resources/Terraform
+fi
+
 source $BASE/Resources/StackVersioningAndMisc
 SSKEYGENSH="$BASE/Scripts/KeyGeneratorSSH.sh"
 
@@ -262,7 +267,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		
 		if [ "$THEWORK_FILE" == "aws" ] ; then
 			echo "aws : $THEWORKFILE"
-			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'"}'
+			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'"}'
 		fi
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
@@ -282,6 +287,15 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	THESTACKAWSFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
+	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
+	
+	THESTACKFOLDERAWS=$(dirname "$THESTACKAWSFILE")
+	sudo mkdir $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP"
+	sudo chmod -R 777 $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP"
+	sudo touch $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP_"
+	sudo chmod 777 $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP_"
+	THESTACKFOLDERSYNC="$THESTACKFOLDERAWS/$TASKIDENTIFIER-WIP"
+	THESTACKFILESYNC="$THESTACKFOLDERAWS/$TASKIDENTIFIER-WIP_"
 	
 	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -324,6 +338,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 			other_info=$(echo $line2 | jq -r '.OtherInfo')
 			IFS='├' read -ra other1_info <<< "$other_info"
 			the1region="${other1_info[4]}"
+			the1zone="${other1_info[5]}"
 			#echo "other_info : $other_info     -------    the1region : $the1region"
 			secrets_key=$(echo $line2 | jq -r '.SecretsKey')
 			secrets_file=$(echo $line2 | jq -r '.Secrets')
@@ -332,8 +347,25 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 			#line2reqval="${THEVISIONID}├${other_info}├${secrets_file}├${secrets_key}"
 			#thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')
 			line2reqval="${THEVISIONID}├${the1region}"
-			thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')			
+			line2req2val="${THEVISIONID}├${the1region}├${the1zone}"
+			thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')
+			theval2hash=$(echo -n "$line2req2val" | md5sum | awk '{print $1}')
+			thevalhash="$TASKIDENTIFIER""$thevalhash"
+			theval2hash="$TASKIDENTIFIER""$theval2hash"
+			if [[ ! -f "$THEVISIONFOLDER/$theval2hash-z.tf" ]]; then
+				sudo cp $BASE/Resources/TerraformTemplateSubnetAWS.tf $THEVISIONFOLDER/$theval2hash-z.tf
+				InstanceTFChoice["$theval2hash"]="$theval2hash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$theval2hash-z.tf■ZONE■$thevalhash■$theval2hash"
+			else
+				thecopy1candidate=$(find $BASE/Output/Terraform -type f -name "*$theval2hash-z*" -print -quit)
+				if [ -n "$thecopy1candidate" ]; then
+					ABC="XYZ"
+				else
+					InstanceTFChoice["$theval2hash"]="$theval2hash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$theval2hash-z.tf■ZONE■$thevalhash■$theval2hash"
+				fi			
+			fi			
+						
 			CHOICEDONE="Z"
+			
 			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-c.tf" ]]; then
 				Aexists="NO"
 				for element in "${Instance1TFChoice[@]}"; do
@@ -343,9 +375,11 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 					fi
 				done
 				if [ "$Aexists" == "NO" ] ; then			
-					sudo cp $BASE/Resources/TerraformTemplateAWS.tf $THEVISIONFOLDER/$thevalhash-c.tf
+					sudo cp $BASE/Resources/TerraformTemplateCoreAWS.tf $THEVISIONFOLDER/$thevalhash-c.tf
 					CHOICEDONE="A"
 					Instance1TFChoice+=("$CHOICEDONE")
+					InstanceTFChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash■$theval2hash"
+					CHOICEDONE="Z"
 				fi
 			else
 				thecopycandidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-c*" -print -quit)
@@ -374,6 +408,8 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 							if [ "$Cexists" == "NO" ] ; then		
 								CHOICEDONE="C"
 								Instance1TFChoice+=("$CHOICEDONE")
+								InstanceTFChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash■$theval2hash"
+								CHOICEDONE="Z"
 							fi
 						fi									    
 					fi
@@ -402,22 +438,22 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 			fi
 			#echo "CHOICEDONE2 : $CHOICEDONE"
 			if [ "$CHOICEDONE" == "A" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash■$theval2hash"
 			fi
 			if [ "$CHOICEDONE" == "B" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash■$theval2hash"
 			fi
 			if [ "$CHOICEDONE" == "C" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash■$theval2hash"
 			fi
 			if [ "$CHOICEDONE" == "D" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash■$theval2hash"
 			fi
 			if [ "$CHOICEDONE" == "E" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash■$theval2hash"
 			fi
 			if [ "$CHOICEDONE" == "F" ] ; then
-				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+				InstanceTFChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash■$theval2hash"
 			fi															
 		done < <(echo "$regjson" | jq -c '.[]')	
 		unset Instance1TFChoice		
@@ -429,7 +465,9 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 	
 	THEREPEATITEMS=""
+	THEZONEITEMS=""
 	TERRAVFILETRACKING=()
+	THEFIRSTTIME="YES"
 	for key in "${!InstanceTFChoice[@]}"; do
 		#echo "$key  :::::::: ${InstanceTFChoice[$key]}"	
 		THEFULL_VALUE="${InstanceTFChoice[$key]}"
@@ -444,31 +482,71 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 		THEVAL7="${THEFULLVALUE[6]}"												
 		THEREQMODE="${THEFULLVALUE[7]}"
 		THEVAL1HASH="${THEFULLVALUE[8]}"
-				
+		THEVAL3HASH="${THEFULLVALUE[9]}"
+		
+		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+						
 		if [ "$THEREQMODE" == "NEW" ] ; then
-			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
 		fi
 		
 		if [ "$THEREQMODE" == "REPEAT" ] ; then
-			THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+			#if [ "$THEFIRSTTIME" == "YES" ] ; then
+				#THEFIRSTTIME="NO"
+				#RND2M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+				#THEREPEAT1ITEMS='1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+				#echo "$BASE/Scripts/MATSYA.sh \"$THEREPEAT1ITEMS\" \"$RND2M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+				#echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null				
+				#TERRAVFILETRACKING+=("$RND2M1")				
+			#else
+				THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+			#fi
+			echo "$THESTACKFOLDERSYNC/$RNDXM" | sudo tee -a $THESTACKFILESYNC > /dev/null
 		fi
+		
+		if [ "$THEREQMODE" == "ZONE" ] ; then
+			THEZONEITEMS="$THEZONEITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+		fi		
 	done
+
+	THEZONEITEMS="${THEZONEITEMS%├}"
+	if [ "$THEZONEITEMS" != "" ] ; then
+		RND1M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		echo "$BASE/Scripts/MATSYA.sh \"$THEZONEITEMS\" \"$RND1M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+		TERRAVFILETRACKING+=("$RND1M1")
+	fi
 	
 	THEREPEATITEMS="${THEREPEATITEMS%├}"
-	RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
-	TERRAVFILETRACKING+=("$RNDM1")
-
-	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
+	#if [ "$THEREPEAT1ITEMS" != "" ] ; then
+	#	RND2M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	#	echo "$BASE/Scripts/MATSYA.sh \"$THEREPEAT1ITEMS\" \"$RND2M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+	#	TERRAVFILETRACKING+=("$RND2M1")	
+	#fi
+	
+	if [ "$THEREPEATITEMS" != "" ] ; then	
+		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+		TERRAVFILETRACKING+=("$RNDM1")
+	fi
+	
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
 	#for item in "${TERRAVFILETRACKING[@]}"; do
 	#	echo "$item"
 	#done
 	
 	#cat $BASE/tmp/$AIFCTR
-	$BASE/tmp/$AIFCTR			
+	#$BASE/tmp/$AIFCTR
+	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
+	nohup $BASE/Scripts/AWS-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
