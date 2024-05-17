@@ -41,9 +41,9 @@ variable "availability_zone" {
   THESUBREGIONSUBSTITUTE
 }
 
-data "aws_subnet" "THE1VAL1HASH_ssubnet" {
+data "aws_subnet" "THE1VAL2HASH_ssubnet" {
   tags = {
-    Name = "THE1VAL1HASH_subnet"
+    Name = "THE1VAL2HASH_subnet"
   }
 }
 
@@ -59,11 +59,6 @@ data "aws_route_table" "THE1VAL1HASH_srt" {
   }
 }
 
-resource "aws_route_table_association" "THE1VAL1HASH_rta" {
-  subnet_id = data.aws_subnet.THE1VAL1HASH_ssubnet.id
-  route_table_id = data.aws_route_table.THE1VAL1HASH_srt.id
-}
-
 data "aws_security_group" "THE1VAL1HASH_ssg" {
   name = "THE1VAL1HASH_sg"
 }
@@ -72,7 +67,7 @@ resource "aws_instance" "THEREQUIREDINSTANCE" {
   count                       = var.num_instances
   ami                         = "THEREQUIREDAMI"
   instance_type               = "THEREQUIREDTYPE"
-  subnet_id                   = data.aws_subnet.THE1VAL1HASH_ssubnet.id
+  subnet_id                   = data.aws_subnet.THE1VAL2HASH_ssubnet.id
   key_name                    = aws_key_pair.deployer.key_name
   vpc_security_group_ids      = [data.aws_security_group.THE1VAL1HASH_ssg.id]
   associate_public_ip_address = true
