@@ -127,10 +127,27 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 
 	for key in "${!DiffInstanceTypes[@]}"; do
 	    	#echo "InstanceType: $key, ScpIdy items: ${DiffInstanceTypes["$key"]}"
-		if [ "$key" == "onprem" ] ; then
+		if [ "$key" == "onprem1" ] ; then
 			#echo "sudo $BASE/Scripts/Vagrant-VirtualBox.sh \"D\" \"$ScopeFile\" \"$VisionKey\" \"${DiffInstanceTypes["$key"]}\""
 			nohup sudo $BASE/Scripts/Vagrant-VirtualBox.sh "D" "$ScopeFile" "$VisionKey" "${DiffInstanceTypes["$key"]}" 2>&1 &
-		fi	    
+		fi
+		
+		if [ "$key" == "gcp" ] ; then
+			echo "gcp : ${DiffInstanceTypes["$key"]}"
+		fi
+		
+		if [ "$key" == "aws" ] ; then
+			#echo "aws : ${DiffInstanceTypes["$key"]}"
+			$BASE/Scripts/ActionRUN.sh "AWS_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey"
+		fi
+		
+		if [ "$key" == "azure" ] ; then
+			echo "azure : ${DiffInstanceTypes["$key"]}"
+		fi
+		
+		if [ "$key" == "e2e" ] ; then
+			echo "e2e : ${DiffInstanceTypes["$key"]}"
+		fi			    
 	done	
 fi
 

@@ -41,6 +41,21 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
 
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
+if [[ ! -d "$BASE/Output/Vision" ]]; then
+	sudo mkdir -p $BASE/Output/Vision
+	sudo chmod -R 777 $BASE/Output/Vision
+fi
+
+if [[ ! -d "$BASE/Resources/Terraform" ]]; then
+	sudo mkdir -p $BASE/Resources/Terraform
+	sudo chmod -R 777 $BASE/Resources/Terraform
+fi
+
 source $BASE/Resources/StackVersioningAndMisc
 
 FILESTOBEDELETED=()
@@ -191,6 +206,125 @@ Vision_DELETE() {
 	fi	
 }
 
+AWS_IDENTITY_DELETE() {
+	AID1=$1
+	AID2=$2
+	AID3=$3
+	
+	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3"
+	IFS='|' read -ra items <<< "$AID1"
+	for scopeidy in "${items[@]}"; do
+		search_result=$(grep -n "^$scopeidy" $AID2)
+		
+		IFS=',' read -ra scid <<< "$scopeidy"
+		sc1id="${scid[0]}"
+		sc2id="${scid[1]}"
+		sc3id="s""$sc1id""i""$sc2id"
+		
+		if [ -n "$search_result" ]; then
+			line_number=$(echo "$search_result" | awk -F ':' 'NR==1 {print $1}')
+			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
+			IFS=',' read -ra contents <<< "$content"
+			filtered_content=$(IFS=',' && printf "%s," "${contents[@]:0:${#contents[@]}-1}")
+			filtered_content=${filtered_content%,}	
+			IFS=',' read -r -a USERLISTVALS <<< $content
+			thecurrentdeleteflag="${USERLISTVALS[27]}"
+			TheVMPemFile="${USERLISTVALS[25]}"
+			TheVMPemFile=$(NARASIMHA "decrypt" "$TheVMPemFile" "$AID3")				
+			thenewdeleteflag=""
+			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile"
+			if [ "$thecurrentdeleteflag" == "Y" ] ; then
+				thenewdeleteflag="Y"
+				#echo "came here1: $thenewdeleteflag"
+			else
+				Secret1Key="${USERLISTVALS[5]}"
+				Secret1Key=$(NARASIMHA "decrypt" "$Secret1Key" "$AID3")	
+				THEFOLDERINQ=$(find $BASE/Output/Terraform -type d -name "*$sc3id*" | head -n 1)
+				
+				if [ -f "$THEFOLDERINQ/ISDELETED" ]; then
+				    	thenewdeleteflag="Y"
+				    	#echo "came here2: $thenewdeleteflag"
+				else				    
+					tf_file=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.tf" | head -n 1)
+					tf_filename=$(basename "$tf_file")
+					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"					
+					RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+					RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+							
+					sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/$RANDOM2VAL 		
+					sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$RANDOM3VAL
+					
+					$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM2VAL├1├1├$THEFOLDERINQ/terraform.tfstate├$Secret1Key"
+					$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM3VAL├1├1├$THEFOLDERINQ/$tf_filename├$Secret1Key"
+					
+					sudo chmod 777 $THEFOLDERINQ/terraform.tfstate
+					sudo chmod 777 $THEFOLDERINQ/$tf_filename
+					
+					(
+					set -Ee
+					function _catch {
+						echo "ERROR"
+						cd $CURDIR
+						sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+						thenewdeleteflag="A"		
+						exit 0
+					}
+					function _finally {
+						ABC="XYZ"
+					}
+					trap _catch ERR
+					trap _finally EXIT
+					CURDIR=$(pwd)
+					cd $THEFOLDERINQ
+					terraform destroy --auto-approve
+					if [ $? -eq 0 ]; then
+						cd $CURDIR
+						sudo rm -rf $THEFOLDERINQ/.terraform
+						sudo touch $THEFOLDERINQ/ISDELETED
+						sudo chmod 777 $THEFOLDERINQ/ISDELETED
+						sudo rm -f $TheVMPemFile	
+						sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+						thenewdeleteflag="Y"									
+					else
+						cd $CURDIR
+						sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+						thenewdeleteflag="A"													
+					fi			
+					cd $CURDIR					
+					)
+					
+					sudo rm -rf $THEFOLDERINQ/$RANDOM2VAL
+					sudo rm -rf $THEFOLDERINQ/$RANDOM3VAL
+							
+					FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM2VAL")
+					FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM3VAL")
+				fi							
+			fi
+			#echo "came here3: $thenewdeleteflag"
+			thenewcontent="$filtered_content,$thenewdeleteflag"
+			#echo "thenewcontent : $thenewcontent"
+			sed -i "$line_number""s#.*#$thenewcontent#" "$AID2"		
+		else
+		    echo "Not Found"
+		fi
+	done	
+}
+
 THECHOICE=$1
 THEVALUES=$2
 #echo $THECHOICE
@@ -198,6 +332,12 @@ THEVALUES=$2
 #exit
 if [ "$THECHOICE" == "Vision_DELETE" ] ; then
 	Vision_DELETE "$THEVALUES"
+fi
+
+if [ "$THECHOICE" == "AWS_IDENTITY_DELETE" ] ; then
+	THE3VALUES=$3
+	THE4VALUES=$4
+	AWS_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES"
 fi
 
 for FILE in "${FILESTOBEDELETED[@]}"; do
