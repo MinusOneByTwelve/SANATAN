@@ -169,8 +169,22 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	csv_data=$(tail -n +2 $THESTACK1FILE)
 	json1_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
 	filter1ed_json=$(echo "$json1_data" | jq 'map(select(.IP != null and .IP != ""))')
+
+	THESANITIZEDREALFILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESANITIZEDREALFILE_file="$BASE/tmp/$ALLWORKFOLDER/$THESANITIZEDREALFILE__file"
+	header=$(echo "$filter1ed_json" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESANITIZEDREALFILE_file"
+	echo "$filter1ed_json" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESANITIZEDREALFILE_file"
+	done	
+	sudo chmod 777 $THESANITIZEDREALFILE_file
+	sed -i 's/""//g' "$THESANITIZEDREALFILE_file"
+	sed -i 's/"//g' "$THESANITIZEDREALFILE_file"
+	sudo rm -f $THESTACKFILE
+	sudo mv $THESANITIZEDREALFILE_file $THESTACKFILE
 	# SANITIZE ORIGINAL FILE
-	
+		
 	# CREATE FILE WHERE IP IS NOT TBD
 	filter1ed_json_2=$(echo "$filter1ed_json" | jq 'map(select(.IP != "TBD"))')
 	out1put__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
@@ -248,10 +262,25 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	sudo rm -f $THESTACK1FILE
 	sudo rm -f $out1put_file
 	sudo rm -f $out1put1_file
+	
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$THESTACKFILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $THESTACKFILE
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKFILE	
 	# INSTANCE TYPE BASED FILE CREATION
 	
 	# INSTANCE TYPE BASED FILE ACTION
 	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER
+
+	ALL1WORK=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo mkdir $BASE/tmp/$ALLWORKFOLDER/"$ALL1WORK-WIP"
+	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER/"$ALL1WORK-WIP"
+	sudo touch $BASE/tmp/$ALLWORKFOLDER/"$ALL1WORK-WIP_"
+	sudo chmod 777 $BASE/tmp/$ALLWORKFOLDER/"$ALL1WORK-WIP_"
+	ALLWORKFOLDERSYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP"
+	ALLWORKFILESYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP_"
 	
 	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
 		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
@@ -267,7 +296,9 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		
 		if [ "$THEWORK_FILE" == "aws" ] ; then
 			echo "aws : $THEWORKFILE"
-			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'"}'
+			RNDAWSXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo "$ALLWORKFOLDERSYNC/$RNDAWSXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
+			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}'
 		fi
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
@@ -278,7 +309,9 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "e2e : $THEWORKFILE"
 		fi		
 	done	
-	# INSTANCE TYPE BASED FILE ACTION		
+	# INSTANCE TYPE BASED FILE ACTION
+	
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" 2>&1 &		
 fi
 
 if [ "$TASKIDENTIFIER" == "aws" ] ; then
@@ -288,7 +321,9 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
-	
+	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
+	RNDAWS1XM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
+		
 	THESTACKFOLDERAWS=$(dirname "$THESTACKAWSFILE")
 	sudo mkdir $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP"
 	sudo chmod -R 777 $THESTACKFOLDERAWS/"$TASKIDENTIFIER-WIP"
@@ -312,6 +347,27 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
 	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')	
 	newfiltered_json2_json=$(echo "$filtered_json2" | jq 'map((.OtherInfo | split("├")) as $info | .OtherInfo = ($info[0:2] + [.UserName, .OS] + $info[2:5] | join("├")))')
+
+	THESANITIZEDREAL2FILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESANITIZEDREAL2FILE_file="$BASE/tmp/$THESANITIZEDREAL2FILE__file"
+	header=$(echo "$filtered_json2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESANITIZEDREAL2FILE_file"
+	echo "$filtered_json2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESANITIZEDREAL2FILE_file"
+	done	
+	sudo chmod 777 $THESANITIZEDREAL2FILE_file
+	sed -i 's/""//g' "$THESANITIZEDREAL2FILE_file"
+	sed -i 's/"//g' "$THESANITIZEDREAL2FILE_file"
+	sudo rm -f $THESTACKAWSFILE
+	sudo mv $THESANITIZEDREAL2FILE_file $THESTACKAWSFILE
+
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$THESTACKAWSFILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $THESTACKAWSFILE
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKAWSFILE
 	
 	declare -A RegionSeg
 	while read -r line; do
@@ -544,9 +600,10 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	#done
 	
 	#cat $BASE/tmp/$AIFCTR
+	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/AWS-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAWS1XM" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then

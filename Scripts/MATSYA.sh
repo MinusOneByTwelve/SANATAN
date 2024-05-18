@@ -318,7 +318,8 @@ deploy_instances() {
     local thevar1=$8
     local thevar2=$9
     local thevar3="${10}" 
-    local THE1VAL1HASH="${11}"   
+    local THE1VAL1HASH="${11}" 
+    local THEVISIONXKEY="${12}"  
     createnewtf="NA"
     if [ "$terraform_file" == "NA" ] ; then
     	THEREALTERRAFORMFILE="NA"
@@ -589,9 +590,9 @@ deploy_instances() {
     	echo "    sudo mv $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     fi
     echo "    cd $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
-    if [ "$THETFFILEISREPEAT" == "NO" ] ; then
-    	echo "    export TF_PLUGIN_CACHE_DIR=$THETERRACACHEFOLDER" | sudo tee -a $flnmofcldp > /dev/null  
-    fi 
+    #if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+    #	echo "    export TF_PLUGIN_CACHE_DIR=$THETERRACACHEFOLDER" | sudo tee -a $flnmofcldp > /dev/null  
+    #fi 
     echo "    terraform init" | sudo tee -a $flnmofcldp > /dev/null
     echo "    terraform plan" | sudo tee -a $flnmofcldp > /dev/null
     echo "    if [ \$? -eq 0 ]; then" | sudo tee -a $flnmofcldp > /dev/null            
@@ -661,7 +662,14 @@ deploy_instances() {
                 THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDIP/\${ips_$guid[\$i]}/g\")
                 THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDNAME/\${names_$guid[\$i]}/g\")
 	        echo \"\$THESYNC1CONTENT\" | sudo tee -a $THESTACKFOLDERSYNC/$RNDXM > /dev/null
-	        sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM 
+	        sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM
+		THEFILEFORNEWVAL_$guid=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/\$THEFILEFORNEWVAL_$guid
+		sudo chmod 777 $BASE/tmp/\$THEFILEFORNEWVAL_$guid 
+		source $BASE/Resources/StackVersioningAndMisc	
+		CSVFILE_ENC_DYC \"$THESTACKFOLDERSYNC/$RNDXM\" \"6,12,13,14,15,23,24,25,26\" \"27\" \"Y\" \"encrypt\" \"$THEVISIONXKEY\" \"0\" \"27\" \"$BASE/tmp/\$THEFILEFORNEWVAL_$guid\"
+		sudo rm -f $THESTACKFOLDERSYNC/$RNDXM
+		sudo mv $BASE/tmp/\$THEFILEFORNEWVAL_$guid $THESTACKFOLDERSYNC/$RNDXM	         
 	    fi           
             echo \"\${ips_$guid[\$i]}¬\${names_$guid[\$i]}¬$THEREQUIREDUSER¬$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem\" >> \"$BASE/tmp/$cp_guid.matsya\"
             #echo \"CURRENTUSER=\$(whoami) && sudo rm -rf /home/\$CURRENTUSER/.ssh/known_hosts && sudo rm -rf /root/.ssh/known_hosts && ssh -o StrictHostKeyChecking=no -i $THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem $THEREQUIREDUSER@\${ips_$guid[\$i]}\"
@@ -921,7 +929,7 @@ for block in "${blocks[@]}"; do
         fi
     done
 
-    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST" "$THEVAL1HASH"
+    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST" "$THEVAL1HASH" "$THEVISIONKEY"
 done
 
 THEORIGINALFOLDERLOC=$(pwd)
