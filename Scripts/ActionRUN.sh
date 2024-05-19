@@ -322,7 +322,153 @@ AWS_IDENTITY_DELETE() {
 		else
 		    echo "Not Found"
 		fi
-	done	
+	done
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out	
+}
+
+VISION_TERRAFORM_DELETE() {
+	THEFOLDERINQ=$1
+	VISKEY=$2
+	if [ -f "$THEFOLDERINQ/ISDELETED" ]; then
+		ABC="XYZ"
+	else
+		tf_file=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.tf" | head -n 1)
+		tf_filename=$(basename "$tf_file")
+							
+		RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+		RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+				
+		sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/$RANDOM2VAL 		
+		sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$RANDOM3VAL
+		
+		$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM2VAL├1├1├$THEFOLDERINQ/terraform.tfstate├$VISKEY"
+		$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM3VAL├1├1├$THEFOLDERINQ/$tf_filename├$VISKEY"
+		
+		sudo chmod 777 $THEFOLDERINQ/terraform.tfstate
+		sudo chmod 777 $THEFOLDERINQ/$tf_filename
+		
+		(
+		set -Ee
+		function _catch {
+			echo "ERROR"
+			cd $CURDIR
+			sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2		
+			exit 0
+		}
+		function _finally {
+			ABC="XYZ"
+		}
+		trap _catch ERR
+		trap _finally EXIT
+		CURDIR=$(pwd)
+		cd $THEFOLDERINQ
+		terraform destroy --auto-approve
+		if [ $? -eq 0 ]; then
+			cd $CURDIR
+			sudo rm -rf $THEFOLDERINQ/.terraform
+			sudo touch $THEFOLDERINQ/ISDELETED
+			sudo chmod 777 $THEFOLDERINQ/ISDELETED	
+			sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2									
+		else
+			cd $CURDIR
+			sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
+			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
+			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
+			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2													
+		fi			
+		cd $CURDIR					
+		)
+		
+		sudo rm -rf $THEFOLDERINQ/$RANDOM2VAL
+		sudo rm -rf $THEFOLDERINQ/$RANDOM3VAL
+				
+		FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM2VAL")
+		FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM3VAL")
+	fi		
+}
+
+AWS_VPC_DELETE() {
+	The1Vision1ID=$1
+	Vision1Key=$2
+	TheScope1File=$3
+	
+	vision_dir="$BASE/Output/Vision/V$The1Vision1ID/aws"
+	terraform_dir="$BASE/Output/Terraform/"
+
+	MatchingTF=()
+
+	for vision_file in "$vision_dir"/*; do
+	    vision_filename=$(basename "$vision_file")
+	    while IFS= read -r terraform_file; do
+		terraform_filename=$(basename "$terraform_file")
+		if [[ $terraform_filename == *"$vision_filename"* ]]; then
+		    MatchingTF+=("$terraform_file")
+		fi
+	    done < <(find "$terraform_dir" -type f -name "*.tf")
+	done
+
+	r_files=()
+	z_files=()
+	c_files=()
+
+	for file in "${MatchingTF[@]}"; do
+	    if [[ $file == *"-r.tf" ]]; then
+		r_files+=("$file")
+	    elif [[ $file == *"-z.tf" ]]; then
+		z_files+=("$file")
+	    elif [[ $file == *"-c.tf" ]]; then
+		c_files+=("$file")
+	    fi
+	done
+
+	sorted_files=("${r_files[@]}" "${z_files[@]}" "${c_files[@]}")
+	
+	#printf '%s\n' "${MatchingTF[@]}"
+	#echo ""
+	#printf '%s\n' "${sorted_files[@]}"
+
+	SCPIDYMULTIPLE=""
+
+	for file in "${r_files[@]}"; do
+	    folder_name=$(basename "$(dirname "$file")")
+	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
+		SCPIDYMULTIPLE+="|$scpid"
+	    else
+		SCPIDYMULTIPLE="$scpid"
+	    fi
+	done
+	
+	#echo ""
+	#echo "$SCPIDYMULTIPLE"
+	
+	AWS_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key"	
+	
+	for file in "${z_files[@]}"; do
+		folder_name=$(dirname "$file")
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key"
+	done
+	
+	for file in "${c_files[@]}"; do
+		folder_name=$(dirname "$file")
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key"
+	done
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	sudo rm -rf $vision_dir			
 }
 
 THECHOICE=$1
@@ -338,6 +484,13 @@ if [ "$THECHOICE" == "AWS_IDENTITY_DELETE" ] ; then
 	THE3VALUES=$3
 	THE4VALUES=$4
 	AWS_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES"
+fi
+
+if [ "$THECHOICE" == "AWS_VPC_DELETE" ] ; then
+	TheVision1ID=$2
+	VisionKey=$3
+	THE4VALUES=$4
+	AWS_VPC_DELETE "$TheVision1ID" "$VisionKey" "$THE4VALUES"
 fi
 
 for FILE in "${FILESTOBEDELETED[@]}"; do

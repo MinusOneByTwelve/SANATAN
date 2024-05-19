@@ -93,8 +93,32 @@ fi
 if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 	THEJSON=$2
 
-	ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
-	VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")	
+	VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
+	ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")	
+	TheVision1ID=$(echo "$THEJSON" | jq -r 'if has("VisionId") then .VisionId else "NA" end')
+	
+	if [ "$TheVision1ID" != "NA" ] ; then
+		key1=$(echo "$THEJSON" | jq -r 'if has("Cloud") then .Cloud else "NA" end')
+		
+		if [ "$key1" == "gcp" ] ; then
+			nohup $BASE/Scripts/ActionRUN.sh "GCP_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+		fi
+		
+		if [ "$key1" == "aws" ] ; then
+			nohup $BASE/Scripts/ActionRUN.sh "AWS_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+		fi
+		
+		if [ "$key1" == "azure" ] ; then
+			nohup $BASE/Scripts/ActionRUN.sh "AZURE_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+		fi
+		
+		if [ "$key1" == "e2e" ] ; then
+			nohup $BASE/Scripts/ActionRUN.sh "E2E_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+		fi		
+		
+		exit
+	fi
+		
 	Node=""
 	while IFS= read -r line; do
 	    Node+="|$line"
@@ -138,7 +162,7 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 		
 		if [ "$key" == "aws" ] ; then
 			#echo "aws : ${DiffInstanceTypes["$key"]}"
-			$BASE/Scripts/ActionRUN.sh "AWS_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey"
+			nohup $BASE/Scripts/ActionRUN.sh "AWS_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" 2>&1 &
 		fi
 		
 		if [ "$key" == "azure" ] ; then
@@ -302,9 +326,12 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
 		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
 		
-		if [ "$THEWORK_FILE" == "onprem" ] ; then
+		if [ "$THEWORK_FILE" == "onprem1" ] ; then
 			echo "onprem : $THEWORKFILE"
+			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
 			#nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' 2>&1 &
 		fi
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
@@ -315,7 +342,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "aws : $THEWORKFILE"
 			RNDAWSXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDAWSXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
-			$BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}'
+			nohup $BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}' 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
@@ -628,6 +655,9 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 
 	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
+	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
+	RNDOPRMXM=$(jq -r '.AllWorkFile' <<< "$THEJSON")	
 	#THESTACKFILE="$2"
 	#THEVISIONKEY="$3"
 	declare -A PICRFLOCATIONMAPPING
@@ -1081,7 +1111,7 @@ while true; do
     if [ ${#PICRFCRONRESFILEOUTPUT[@]} -eq 0 ]; then
         echo "All tasks completed. Exiting..."
         #sudo rm -rf /tmp/JOBLOG4.out
-        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" 2>&1 &
+        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" "'"$THESTACKREALFILE"'" "'"$ALLWORKFOLDER1SYNC"'" "'"$RNDOPRMXM"'" 2>&1 &
         break
     fi
 

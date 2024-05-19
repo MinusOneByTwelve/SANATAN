@@ -239,7 +239,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THE1STACK1FILE
 			
 		echo "All files processed. Exiting."
-		notify-send -t 5000 "Progress" "All files processed. Exiting.AWS-Instance-Sync B Function"
+		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync B Function"
 				
 		break
 	    fi

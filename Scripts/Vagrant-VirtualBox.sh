@@ -1728,6 +1728,7 @@ echo \"\"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo usermod -p \$(echo \"$UBUPWD\" | openssl passwd -1 -stdin) ubuntu"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "sudo touch /opt/ISVM && sudo chmod 777 /opt/ISVM"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THISCURRENTMACHINEIP\" | sudo tee /opt/MYPARENT > /dev/null && sudo chmod 777 /opt/MYPARENT"
+		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$VMIP\" | sudo tee /opt/WHOAMI > /dev/null && sudo chmod 777 /opt/WHOAMI"
 		
 		THEOTHERINFOFINALVAL="${THEOTHERINFO1//,/'■'}■${THEOTHERINFO2}"
 		sudo ssh vagrant@$VMIP -p 22  -o "StrictHostKeyChecking=no" -i "$BASE/Output/Pem/op-$CLUSTERNAME.pem" "echo \"$THEOTHERINFOFINALVAL\" | sudo tee /opt/THEOTHERINFO > /dev/null && sudo chmod 777 /opt/THEOTHERINFO"		

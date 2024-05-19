@@ -399,6 +399,13 @@ deploy_instances() {
 			THETFFILEISREPEAT="NO"
 			THETFFILEISCORE="NO"
 			THETFFILEISZONE="NO"
+			
+			IFS='¬' read -r -a CHOICEVALS2 <<< $thevar2
+			SECRETSTHEFILE="${CHOICEVALS2[0]}"
+			SECRETTHEKEY="${CHOICEVALS2[1]}"			
+			
+			#SECKEYVIS=$(NARASIMHA "encrypt" "$SECRETTHEKEY" "$visionkey")
+			
 			if [ "$THEREALTERRAFORMFILE" == "NA" ] ; then
 				sudo cp $BASE/Resources/TerraformTemplateAWS.tf $BASE/tmp/$RANDOMINSTANCENAME.tf
 			else
@@ -406,17 +413,20 @@ deploy_instances() {
 				RANDOMINSTANCE2NAME="${RANDOMINSTANCE1NAME%.*}"
 				RANDOMINSTANCENAME="$RANDOMINSTANCENAME""_""$RANDOMINSTANCE2NAME"
 				
-				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCENAME.tf
 				last_four="${THEREALTERRAFORMFILE: -4}"
 				if [[ "$last_four" == "r.tf" ]]; then
 				    THETFFILEISREPEAT="YES"
 				fi
 				if [[ "$last_four" == "c.tf" ]]; then
 				    THETFFILEISCORE="YES"
+				    RANDOMINSTANCENAME="$RANDOMINSTANCENAME""_""$RANDOMINSTANCE2NAME"
 				fi
 				if [[ "$last_four" == "z.tf" ]]; then
 				    THETFFILEISZONE="YES"
-				fi												
+				    RANDOMINSTANCENAME="$RANDOMINSTANCENAME""_""$RANDOMINSTANCE2NAME"
+				fi
+				
+				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCENAME.tf																
 			fi
 			
 			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
@@ -480,9 +490,6 @@ deploy_instances() {
 			THEREQUIREDINSTNUM="$num_instances"
 			THEREQUIREDINSTANCE="$guid"
 			
-			IFS='¬' read -r -a CHOICEVALS2 <<< $thevar2
-			SECRETSTHEFILE="${CHOICEVALS2[0]}"
-			SECRETTHEKEY="${CHOICEVALS2[1]}"
 			ITER=${SECRETTHEKEY:7:6}
 			RANDOMSECFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			sudo cp $SECRETSTHEFILE $BASE/tmp/$RANDOMSECFILENAME
@@ -576,6 +583,11 @@ deploy_instances() {
 				THEIDENTITYID="${CHOICEVALS[11]}"
 				
 				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,aws,$THEREQUIREDAMI├$THEREQUIREDTYPE├$THEREQUIREDREGION├$THEREQUIREDSUBREGION,$SECRETSTHEFILE,$SECRETTHEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,$THEBASEOSCHOICE,No,TBD,TBD,TBD,$THEBASEOSUSER,22,,$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem,N,N"
+			fi
+			
+			if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+				SECRETTHEKEY="$THEVISIONXKEY"
+				ITER=${SECRETTHEKEY:7:6}	
 			fi														
 		fi
 	fi

@@ -156,6 +156,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	visionkey=$4
 	therealfile=$5	
 	thereal2file=$6
+	THESTACKREALFILE=$7
+	ALLWORKFOLDER1SYNC=$8
+	RNDOPRMXM=$9
+	
 	source $BASE/Resources/StackVersioningAndMisc
 	# Function to check if file exists
 	file_exists() {
@@ -215,7 +219,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		pattern=$(echo "$WIP_FOLDER" | awk -F'/' '{print $NF}' | sed 's/-WIP//')
 		sudo rm -f $BASE/Output/Pem/op-$pattern.pub
 				
-		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" 2>&1 &
+		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" "$THESTACKREALFILE" "$ALLWORKFOLDER1SYNC" "$RNDOPRMXM" "$therealfile" 2>&1 &
 		break
 	    fi
 
@@ -239,10 +243,51 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	thefiletodelete=$2
 	thefoldertocheck=$3
 	thefile2todelete=$4
-	#notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync D Function.GOT $thefiletodelete and  $thefoldertocheck and  $thefile2todelete"	
-	sudo rm -f $thefiletodelete
-	sudo rm -rf $thefoldertocheck
-	sudo rm -f $thefile2todelete
+	THE1STACKREALFILE=$5
+	AL1LWORKFOLDER1SYNC=$6
+	RND1OPRMXM=$7
+	THEREPLACEMENT=$8
+	#notify-send -t 5000 "$CLUSTERNAME Progress" "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT"
+	#echo "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT :::: $thefile2todelete :::: $thefoldertocheck :::: $thefiletodelete" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+        while IFS= read -r line; do
+        	IFS=',' read -ra fields <<< "$line"
+        	tv0="${fields[0]}"
+        	tv1="${fields[1]}"     			      		        	
+        	tv28="$tv0,$tv1"
+        	
+        	if [ "$tv28" != "," ]; then
+			tv29=$(grep -n "^$tv28" $THE1STACKREALFILE)
+									
+			if [ -n "$tv29" ]; then
+				line_number=$(echo "$tv29" | awk -F ':' 'NR==1 {print $1}')
+				content=$(echo "$tv29" | awk -F ':' 'NR==1 {print $2}')
+				#notify-send -t 5000 "$CLUSTERNAME Progress" "line_number : $line_number   ::::::::::  content : $content"
+				#echo "line_number : $line_number   ::::::::::  content : $content   ::::::::::  line : $line" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				while true; do
+				    (
+					flock -x -w 10 200 || exit 1
+					sed -i "$line_number""s#.*#$line#" "$THE1STACKREALFILE"
+					echo "File updated successfully!"
+					exit 0
+				    ) 200<>"$THE1STACKREALFILE"
+				    if [[ $? -eq 0 ]]; then
+					break
+				    else
+					sleep 1
+				    fi
+				done					
+			fi
+		fi		        				    	
+	done < "$THEREPLACEMENT"	
+	
+	DELETESTUFFSCRIPT=$(echo '#!/bin/bash'"
+		
+sudo rm -f \"$thefiletodelete\"
+sudo rm -rf \"$thefoldertocheck\"
+sudo rm -rf \"$thefile2todelete\"
+")
+	echo "$DELETESTUFFSCRIPT" | sudo tee $AL1LWORKFOLDER1SYNC/$RND1OPRMXM > /dev/null
+	sudo chmod 777 $AL1LWORKFOLDER1SYNC/$RND1OPRMXM	
 	sudo rm -rf /home/$CURRENTUSER/nohup.out	
 fi
 
