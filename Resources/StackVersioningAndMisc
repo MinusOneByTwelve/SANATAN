@@ -13,8 +13,11 @@ VBOXGENERICSTACKUBUNTU="minus1by12-vagrant-virtualbox-generic-ubuntu-2204-v1-0-0
 
 ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├35000-65000├1004")
 
-AZUREOSCHOICE=("almalinux├almalinux-x86_64├9-gen2├latest" "Canonical├UbuntuServer├22_04-lts├latest")
+#https://documentation.ubuntu.com/azure/en/latest/azure-how-to/instances/find-ubuntu-images/
+AZUREOSCHOICE=("almalinux├almalinux-x86_64├9-gen2├latest" "Canonical├0001-com-ubuntu-server-jammy├22_04-lts-gen2├latest")
 AWSOSCHOICE=("UBU├ubuntu" "AZL├ec2-user" "ALMA├ec2-user")
+#https://cloud.google.com/compute/docs/machine-resource
+#https://cloud.google.com/compute/docs/regions-zones
 GCPOSCHOICE=("ROCKY├projects/rocky-linux-cloud/global/images/rocky-linux-9-optimized-gcp-v20240415" "ALMA├projects/almalinux-cloud/global/images/almalinux-9-v20221206" "UBU├projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20240319")
 
 ALLSTACKITEMSLIST="Eg: 1,3|3,6|6,3|4,7,8,9|7,8,9,4|8,9,4,7|9,4,7,8
