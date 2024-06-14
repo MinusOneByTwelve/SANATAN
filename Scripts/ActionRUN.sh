@@ -51,10 +51,10 @@ if [[ ! -d "$BASE/Output/Vision" ]]; then
 	sudo chmod -R 777 $BASE/Output/Vision
 fi
 
-if [[ ! -d "$BASE/Resources/Terraform" ]]; then
-	sudo mkdir -p $BASE/Resources/Terraform
-	sudo chmod -R 777 $BASE/Resources/Terraform
-fi
+#if [[ ! -d "$BASE/Resources/Terraform" ]]; then
+#	sudo mkdir -p $BASE/Resources/Terraform
+#	sudo chmod -R 777 $BASE/Resources/Terraform
+#fi
 
 source $BASE/Resources/StackVersioningAndMisc
 
@@ -206,12 +206,13 @@ Vision_DELETE() {
 	fi	
 }
 
-AWS_IDENTITY_DELETE() {
+CLD_IDENTITY_DELETE() {
 	AID1=$1
 	AID2=$2
 	AID3=$3
-	
-	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3"
+	AID4=$4
+		
+	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 	IFS='|' read -ra items <<< "$AID1"
 	for scopeidy in "${items[@]}"; do
 		search_result=$(grep -n "^$scopeidy" $AID2)
@@ -231,11 +232,11 @@ AWS_IDENTITY_DELETE() {
 			thecurrentdeleteflag="${USERLISTVALS[27]}"
 			TheVMPemFile="${USERLISTVALS[25]}"
 			TheVMPemFile=$(NARASIMHA "decrypt" "$TheVMPemFile" "$AID3")				
-			thenewdeleteflag=""
-			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile"
+			thenewdeleteflag="N"
+			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 			if [ "$thecurrentdeleteflag" == "Y" ] ; then
 				thenewdeleteflag="Y"
-				#echo "came here1: $thenewdeleteflag"
+				#echo "came here1: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 			else
 				Secret1Key="${USERLISTVALS[5]}"
 				Secret1Key=$(NARASIMHA "decrypt" "$Secret1Key" "$AID3")	
@@ -243,22 +244,42 @@ AWS_IDENTITY_DELETE() {
 				
 				if [ -f "$THEFOLDERINQ/ISDELETED" ]; then
 				    	thenewdeleteflag="Y"
-				    	#echo "came here2: $thenewdeleteflag"
+				    	#echo "came here2: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 				else				    
 					tf_file=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.tf" | head -n 1)
 					tf_filename=$(basename "$tf_file")
-					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"					
+					
+					if [ "$AID4" == "GCP" ] ; then
+						gcpsafile=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.gcpsa" | head -n 1)
+						gcpsafilename=$(basename "$gcpsafile")
+					fi
+					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"	 | sudo tee -a /home/prathamos/Downloads/log > /dev/null				
 					RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
-					RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+					RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)					
 							
 					sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/$RANDOM2VAL 		
 					sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$RANDOM3VAL
+					
+					if [ "$AID4" == "GCP" ] ; then
+						RANDOMSAVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+						sudo mv $THEFOLDERINQ/$gcpsafilename $THEFOLDERINQ/$RANDOMSAVAL
+					fi
 					
 					$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM2VAL├1├1├$THEFOLDERINQ/terraform.tfstate├$Secret1Key"
 					$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM3VAL├1├1├$THEFOLDERINQ/$tf_filename├$Secret1Key"
 					
 					sudo chmod 777 $THEFOLDERINQ/terraform.tfstate
 					sudo chmod 777 $THEFOLDERINQ/$tf_filename
+					
+					if [ "$AID4" == "GCP" ] ; then
+						$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOMSAVAL├1├1├$THEFOLDERINQ/$gcpsafilename├$Secret1Key"
+						sudo chmod 777 $THEFOLDERINQ/$gcpsafilename
+						gcpsabasename="${gcpsafilename%.*}"
+						sudo mv $THEFOLDERINQ/$gcpsafilename $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+					fi										
+					
+					RANDOM4VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1) 
+					echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null
 					
 					(
 					set -Ee
@@ -269,9 +290,15 @@ AWS_IDENTITY_DELETE() {
 						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
 						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
-						thenewdeleteflag="A"		
+						if [ "$AID4" == "GCP" ] ; then
+							sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+						fi						
+						thenewdeleteflag="A"
+						#echo "came here4: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null		
 						exit 0
 					}
 					function _finally {
@@ -292,62 +319,104 @@ AWS_IDENTITY_DELETE() {
 						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
 						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
-						thenewdeleteflag="Y"									
+						if [ "$AID4" == "GCP" ] ; then
+							sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+						fi						
+						thenewdeleteflag="Y"
+						#echo "came here5: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null									
 					else
 						cd $CURDIR
 						sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
 						sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 						sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 						sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
+						sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
 						sudo rm -rf $THEFOLDERINQ/$tf_filename-2
-						thenewdeleteflag="A"													
+						if [ "$AID4" == "GCP" ] ; then
+							sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+						fi						
+						thenewdeleteflag="A"
+						#echo "came here6: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null													
 					fi			
 					cd $CURDIR					
 					)
 					
+					thenewdeleteflag=$(head -n 1 "$THEFOLDERINQ/$RANDOM4VAL")
+					
 					sudo rm -rf $THEFOLDERINQ/$RANDOM2VAL
 					sudo rm -rf $THEFOLDERINQ/$RANDOM3VAL
+					sudo rm -rf $THEFOLDERINQ/$RANDOM4VAL
 							
 					FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM2VAL")
 					FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM3VAL")
+					FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM4VAL")
+					
+					if [ "$AID4" == "GCP" ] ; then
+						sudo rm -rf $THEFOLDERINQ/$RANDOMSAVAL
+						FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM4VAL")
+					fi
 				fi							
 			fi
-			#echo "came here3: $thenewdeleteflag"
+			#echo "came here3: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 			thenewcontent="$filtered_content,$thenewdeleteflag"
-			#echo "thenewcontent : $thenewcontent"
+			#echo "thenewcontent : $thenewcontent" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 			sed -i "$line_number""s#.*#$thenewcontent#" "$AID2"		
 		else
 		    echo "Not Found"
 		fi
 	done
 	
-	sudo rm -rf /home/$CURRENTUSER/nohup.out	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	
+	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN CLD_IDENTITY_DELETE Function [$AID4]"		
 }
 
 VISION_TERRAFORM_DELETE() {
 	THEFOLDERINQ=$1
 	VISKEY=$2
+	AID4=$3
+	
 	if [ -f "$THEFOLDERINQ/ISDELETED" ]; then
 		ABC="XYZ"
 	else
 		tf_file=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.tf" | head -n 1)
 		tf_filename=$(basename "$tf_file")
-							
+		
+		if [ "$AID4" == "GCP" ] ; then
+			gcpsafile=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.gcpsa" | head -n 1)
+			gcpsafilename=$(basename "$gcpsafile")
+		fi
+												
 		RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
 		RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
 				
 		sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/$RANDOM2VAL 		
 		sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$RANDOM3VAL
-		
+
+		if [ "$AID4" == "GCP" ] ; then
+			RANDOMSAVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+			sudo mv $THEFOLDERINQ/$gcpsafilename $THEFOLDERINQ/$RANDOMSAVAL
+		fi
+							
 		$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM2VAL├1├1├$THEFOLDERINQ/terraform.tfstate├$VISKEY"
 		$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOM3VAL├1├1├$THEFOLDERINQ/$tf_filename├$VISKEY"
 		
 		sudo chmod 777 $THEFOLDERINQ/terraform.tfstate
 		sudo chmod 777 $THEFOLDERINQ/$tf_filename
-		
+
+		if [ "$AID4" == "GCP" ] ; then
+			$BASE/Scripts/SecretsFile-Decrypter "$THEFOLDERINQ/$RANDOMSAVAL├1├1├$THEFOLDERINQ/$gcpsafilename├$VISKEY"
+			sudo chmod 777 $THEFOLDERINQ/$gcpsafilename
+			gcpsabasename="${gcpsafilename%.*}"
+			sudo mv $THEFOLDERINQ/$gcpsafilename $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+		fi
+							
 		(
 		set -Ee
 		function _catch {
@@ -357,8 +426,12 @@ VISION_TERRAFORM_DELETE() {
 			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
-			sudo rm -rf $THEFOLDERINQ/$tf_filename-2		
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+			if [ "$AID4" == "GCP" ] ; then
+				sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+				sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+			fi		
 			exit 0
 		}
 		function _finally {
@@ -378,16 +451,24 @@ VISION_TERRAFORM_DELETE() {
 			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
-			sudo rm -rf $THEFOLDERINQ/$tf_filename-2									
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+			if [ "$AID4" == "GCP" ] ; then
+				sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+				sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+			fi									
 		else
 			cd $CURDIR
 			sudo mv $THEFOLDERINQ/terraform.tfstate $THEFOLDERINQ/terraform.tfstate2
 			sudo mv $THEFOLDERINQ/$tf_filename $THEFOLDERINQ/$tf_filename-2
 			sudo mv $THEFOLDERINQ/$RANDOM2VAL $THEFOLDERINQ/terraform.tfstate
 			sudo mv $THEFOLDERINQ/$RANDOM3VAL $THEFOLDERINQ/$tf_filename
-			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2
-			sudo rm -rf $THEFOLDERINQ/$tf_filename-2													
+			sudo rm -rf $THEFOLDERINQ/terraform.tfstate2 && sudo rm -rf $THEFOLDERINQ/terraform.tfstate.backup
+			sudo rm -rf $THEFOLDERINQ/$tf_filename-2
+			if [ "$AID4" == "GCP" ] ; then
+				sudo rm -rf $BASE/tmp/.GCP-ServiceAccount-$gcpsabasename
+				sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
+			fi													
 		fi			
 		cd $CURDIR					
 		)
@@ -397,6 +478,11 @@ VISION_TERRAFORM_DELETE() {
 				
 		FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM2VAL")
 		FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM3VAL")
+		
+		if [ "$AID4" == "GCP" ] ; then
+			sudo rm -rf $THEFOLDERINQ/$RANDOMSAVAL
+			FILESTOBEDELETED+=("$THEFOLDERINQ/$RANDOM4VAL")
+		fi		
 	fi		
 }
 
@@ -455,20 +541,152 @@ AWS_VPC_DELETE() {
 	#echo ""
 	#echo "$SCPIDYMULTIPLE"
 	
-	AWS_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key"	
+	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "AWS"	
 	
 	for file in "${z_files[@]}"; do
 		folder_name=$(dirname "$file")
-		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key"
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key" "AWS"
 	done
 	
 	for file in "${c_files[@]}"; do
 		folder_name=$(dirname "$file")
-		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key"
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key" "AWS"
 	done
 	
 	sudo rm -rf /home/$CURRENTUSER/nohup.out
-	sudo rm -rf $vision_dir			
+	sudo rm -rf $vision_dir	
+	
+	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN AWS_VPC_DELETE Function"		
+}
+
+AZURE_VPC_DELETE() {
+	The1Vision1ID=$1
+	Vision1Key=$2
+	TheScope1File=$3
+	
+	vision_dir="$BASE/Output/Vision/V$The1Vision1ID/azure"
+	terraform_dir="$BASE/Output/Terraform/"
+
+	MatchingTF=()
+
+	for vision_file in "$vision_dir"/*; do
+	    vision_filename=$(basename "$vision_file")
+	    while IFS= read -r terraform_file; do
+		terraform_filename=$(basename "$terraform_file")
+		if [[ $terraform_filename == *"$vision_filename"* ]]; then
+		    MatchingTF+=("$terraform_file")
+		fi
+	    done < <(find "$terraform_dir" -type f -name "*.tf")
+	done
+
+	r_files=()
+	c_files=()
+
+	for file in "${MatchingTF[@]}"; do
+	    if [[ $file == *"-r.tf" ]]; then
+		r_files+=("$file")
+	    elif [[ $file == *"-c.tf" ]]; then
+		c_files+=("$file")
+	    fi
+	done
+
+	sorted_files=("${r_files[@]}" "${c_files[@]}")
+	
+	printf '%s\n' "${MatchingTF[@]}"
+	echo ""
+	printf '%s\n' "${sorted_files[@]}"
+
+	SCPIDYMULTIPLE=""
+
+	for file in "${r_files[@]}"; do
+	    folder_name=$(basename "$(dirname "$file")")
+	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
+		SCPIDYMULTIPLE+="|$scpid"
+	    else
+		SCPIDYMULTIPLE="$scpid"
+	    fi
+	done
+	
+	echo ""
+	echo "$SCPIDYMULTIPLE"
+	
+	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "AZURE"	
+	
+	for file in "${c_files[@]}"; do
+		folder_name=$(dirname "$file")
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key" "AZURE"
+	done
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	sudo rm -rf $vision_dir	
+	
+	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN AZURE_VPC_DELETE Function"		
+}
+
+GCP_VPC_DELETE() {
+	The1Vision1ID=$1
+	Vision1Key=$2
+	TheScope1File=$3
+	
+	vision_dir="$BASE/Output/Vision/V$The1Vision1ID/gcp"
+	terraform_dir="$BASE/Output/Terraform/"
+
+	MatchingTF=()
+
+	for vision_file in "$vision_dir"/*; do
+	    vision_filename=$(basename "$vision_file")
+	    while IFS= read -r terraform_file; do
+		terraform_filename=$(basename "$terraform_file")
+		if [[ $terraform_filename == *"$vision_filename"* ]]; then
+		    MatchingTF+=("$terraform_file")
+		fi
+	    done < <(find "$terraform_dir" -type f -name "*.tf")
+	done
+
+	r_files=()
+	c_files=()
+
+	for file in "${MatchingTF[@]}"; do
+	    if [[ $file == *"-r.tf" ]]; then
+		r_files+=("$file")
+	    elif [[ $file == *"-c.tf" ]]; then
+		c_files+=("$file")
+	    fi
+	done
+
+	sorted_files=("${r_files[@]}" "${c_files[@]}")
+	
+	printf '%s\n' "${MatchingTF[@]}"
+	echo ""
+	printf '%s\n' "${sorted_files[@]}"
+
+	SCPIDYMULTIPLE=""
+
+	for file in "${r_files[@]}"; do
+	    folder_name=$(basename "$(dirname "$file")")
+	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
+		SCPIDYMULTIPLE+="|$scpid"
+	    else
+		SCPIDYMULTIPLE="$scpid"
+	    fi
+	done
+	
+	echo ""
+	echo "$SCPIDYMULTIPLE"
+	
+	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "GCP"	
+	
+	for file in "${c_files[@]}"; do
+		folder_name=$(dirname "$file")
+		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key" "GCP"
+	done
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	sudo rm -rf $vision_dir	
+	
+	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN GCP_VPC_DELETE Function"		
 }
 
 THECHOICE=$1
@@ -480,10 +698,11 @@ if [ "$THECHOICE" == "Vision_DELETE" ] ; then
 	Vision_DELETE "$THEVALUES"
 fi
 
-if [ "$THECHOICE" == "AWS_IDENTITY_DELETE" ] ; then
+if [ "$THECHOICE" == "CLD_IDENTITY_DELETE" ] ; then
 	THE3VALUES=$3
 	THE4VALUES=$4
-	AWS_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES"
+	THE5VALUES=$5
+	CLD_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES" "$THE5VALUES"
 fi
 
 if [ "$THECHOICE" == "AWS_VPC_DELETE" ] ; then
@@ -491,6 +710,20 @@ if [ "$THECHOICE" == "AWS_VPC_DELETE" ] ; then
 	VisionKey=$3
 	THE4VALUES=$4
 	AWS_VPC_DELETE "$TheVision1ID" "$VisionKey" "$THE4VALUES"
+fi
+
+if [ "$THECHOICE" == "AZURE_VPC_DELETE" ] ; then
+	TheVision1ID=$2
+	VisionKey=$3
+	THE4VALUES=$4
+	AZURE_VPC_DELETE "$TheVision1ID" "$VisionKey" "$THE4VALUES"
+fi
+
+if [ "$THECHOICE" == "GCP_VPC_DELETE" ] ; then
+	TheVision1ID=$2
+	VisionKey=$3
+	THE4VALUES=$4
+	GCP_VPC_DELETE "$TheVision1ID" "$VisionKey" "$THE4VALUES"
 fi
 
 for FILE in "${FILESTOBEDELETED[@]}"; do

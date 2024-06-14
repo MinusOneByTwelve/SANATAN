@@ -28,10 +28,10 @@ if [[ ! -d "$BASE/Output/Vision" ]]; then
 	sudo chmod -R 777 $BASE/Output/Vision
 fi
 
-if [[ ! -d "$BASE/Resources/Terraform" ]]; then
-	sudo mkdir -p $BASE/Resources/Terraform
-	sudo chmod -R 777 $BASE/Resources/Terraform
-fi
+#if [[ ! -d "$BASE/Resources/Terraform" ]]; then
+#	sudo mkdir -p $BASE/Resources/Terraform
+#	sudo chmod -R 777 $BASE/Resources/Terraform
+#fi
 
 THEMODEOFEXECUTION="$1"
 
@@ -43,7 +43,8 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	thereal2file=$6
 	thenohupfile=$7
 	ALLWORK1FOLDER1SYNC=$8
-	RND1AWS1XM=$9
+	RND1CLD1XM=$9
+	THEREQCLD="${10}"
 		
 	source $BASE/Resources/StackVersioningAndMisc
 
@@ -175,16 +176,16 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	    done
 
 	    if [[ "${#processed_files[@]}" -eq "${#files[@]}" ]]; then
-		sudo touch $ALLWORK1FOLDER1SYNC/$RND1AWS1XM
-		sudo chmod 777 $ALLWORK1FOLDER1SYNC/$RND1AWS1XM		
-		echo '#!/bin/bash' | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1AWS1XM > /dev/null
-		echo '' | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1AWS1XM > /dev/null
-		echo "sudo rm -f \"$WIP_LIST\"" | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1AWS1XM > /dev/null
-		echo "sudo rm -rf \"$WIP_FOLDER\"" | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1AWS1XM > /dev/null						
+		sudo touch $ALLWORK1FOLDER1SYNC/$RND1CLD1XM
+		sudo chmod 777 $ALLWORK1FOLDER1SYNC/$RND1CLD1XM		
+		echo '#!/bin/bash' | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1CLD1XM > /dev/null
+		echo '' | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1CLD1XM > /dev/null
+		echo "sudo rm -f \"$WIP_LIST\"" | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1CLD1XM > /dev/null
+		echo "sudo rm -rf \"$WIP_FOLDER\"" | sudo tee -a $ALLWORK1FOLDER1SYNC/$RND1CLD1XM > /dev/null						
 		sudo rm -f $BASE/tmp/$thenohupfile-JOBLOG2.out
 		
 		echo "All files processed. Exiting."
-		notify-send -t 5000 "Progress" "All files processed. Exiting.AWS-Instance-Sync A Function"
+		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync A Function [$THEREQCLD]"
 				
 		break
 	    fi

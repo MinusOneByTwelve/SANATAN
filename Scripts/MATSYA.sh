@@ -67,6 +67,7 @@ declare -A name_map
 THEPARALLELFUNC_LIST=()
 FILESTOBEDELETED=()
 THEOVERALLPEMFILES=()
+THEGCPSAFILECORETF="NA"
 
 deploy_instances_azure() {
 	local CHOICE=$1
@@ -77,6 +78,8 @@ deploy_instances_azure() {
 		local thevar2=$4
 		local thevar3=$5
 		local thevar4=$6
+		local thevar7=$7 #THETFFILEISREPEAT
+		local thevar8=$8 #THETFFILEISCORE		
 		
 		IFS='¬' read -r -a CHOICEVALS2 <<< $thevar2
 		SECRETSTHEFILE="${CHOICEVALS2[0]}"
@@ -169,9 +172,15 @@ deploy_instances_azure() {
 
 		source_file="$BASE/tmp/$SECPORTFILE"
 		target_file="$BASE/tmp/$AZNAME.tf"
-		line_number=69
-		sed -i "${line_number}r ${source_file}" "${target_file}"
-		sed -i -e s~"AZURESCOPE13VAL"~""~g $BASE/tmp/$AZNAME.tf
+		#line_number=69
+		line_number=32
+		
+		if [ "$thevar7" == "NO" ] ; then
+			if [ "$thevar8" == "YES" ] ; then
+				sed -i "${line_number}r ${source_file}" "${target_file}"
+				sed -i -e s~"AZURESCOPE13VAL"~""~g $BASE/tmp/$AZNAME.tf
+			fi
+		fi		
 																
 		sudo rm -rf $BASE/tmp/$SECPORTFILE
 		
@@ -191,7 +200,10 @@ deploy_instances_gcp() {
 		local thevar2=$4
 		local thevar3=$5
 		local thevar4=$6
-		
+		local thevar7=$7 #THETFFILEISREPEAT
+		local thevar8=$8 #THETFFILEISCORE
+		local thevar9=$9 #THEVISIONXKEY
+				
 		IFS='¬' read -r -a CHOICEVALS2 <<< $thevar2
 		SECRETSTHEFILE="${CHOICEVALS2[0]}"
 		SECRETTHEKEY="${CHOICEVALS2[1]}"
@@ -227,7 +239,15 @@ deploy_instances_gcp() {
 		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/tmp/$REALSECRETSFILE1NAME
 		sudo chmod u=rx,g=rx,o=rx $BASE/tmp/$REALSECRETSFILE1NAME
 		sudo cp $BASE/tmp/$REALSECRETSFILE1NAME $BASE/tmp/.GCP-ServiceAccount-$thevar3
-		$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/.GCP-ServiceAccount-$thevar3├$BASE/Output/Pem/.GCP-ServiceAccount-$thevar3├$SECRETTHEKEY├$thevar3"
+
+		if [ "$thevar7" == "NO" ] ; then
+			$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/.GCP-ServiceAccount-$thevar3├$BASE/Output/Pem/.GCP-ServiceAccount-$thevar3├$thevar9├$thevar3"
+			THEGCPSAFILECORETF="$BASE/Output/Pem/.GCP-ServiceAccount-$thevar3"
+			THEGCPSAFILECORETF2="$thevar3"
+		else
+			$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/.GCP-ServiceAccount-$thevar3├$BASE/Output/Pem/.GCP-ServiceAccount-$thevar3├$SECRETTHEKEY├$thevar3"
+		fi				
+		
 		#sudo cp $SECRETSTHE1FILE $BASE/Output/Pem/.GCP-ServiceAccount-$thevar3
 		sudo chmod u=rx,g=rx,o=rx $BASE/Output/Pem/.GCP-ServiceAccount-$thevar3
 		sudo rm -rf $BASE/tmp/$REALSECRETSFILE1NAME				
@@ -310,8 +330,8 @@ deploy_instances() {
     local cloud_provider=$2
     local terraform_file=$3
     local THEREALTERRAFORMFILE=""
-    local VAR1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
-    local guid="$4""_""$VAR1"
+    local VAR1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 5 | head -n 1)
+    local guid="$4""_r""$VAR1"
     local parallel=$5
     local flnmofcldp=$6
     local flnmofcldpres=$7
@@ -334,7 +354,28 @@ deploy_instances() {
 
 		if [ "$cloud_provider" == "gcp" ] ; then
 			RANDOMINSTANCEGCPNAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-			sudo cp $BASE/Resources/TerraformTemplateGCP.tf $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf
+			THETFFILEISREPEAT="NO"
+			THETFFILEISCORE="NO"			
+
+			if [ "$THEREALTERRAFORMFILE" == "NA" ] ; then
+				sudo cp $BASE/Resources/TerraformTemplateGCP.tf $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf
+			else
+				RANDOMINSTANCE1NAME=$(basename "$THEREALTERRAFORMFILE")
+				RANDOMINSTANCE2NAME="${RANDOMINSTANCE1NAME%.*}"
+				RANDOMINSTANCEGCPNAME="$RANDOMINSTANCEGCPNAME""_""$RANDOMINSTANCE2NAME"
+				
+				last_four="${THEREALTERRAFORMFILE: -4}"
+				if [[ "$last_four" == "r.tf" ]]; then
+				    THETFFILEISREPEAT="YES"
+				fi
+				if [[ "$last_four" == "c.tf" ]]; then
+				    THETFFILEISCORE="YES"
+				    RANDOMINSTANCEGCPNAME="$RANDOMINSTANCEGCPNAME""_""$RANDOMINSTANCE2NAME"
+				fi
+				
+				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf																
+			fi						
+			
 			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf 
 			
 			terraform_file="$BASE/tmp/$RANDOMINSTANCEGCPNAME.tf"
@@ -360,12 +401,65 @@ deploy_instances() {
 			FILESTOBEDELETED+=("$BASE/tmp/$RANDOMSCOPEVAL")
 			echo "$BASE/tmp/$RANDOMSCOPEVAL" | sudo tee -a $thevar3 > /dev/null
 												
-			deploy_instances_gcp "A" "$RANDOMINSTANCEGCPNAME" "$thevar1" "$thevar2" "$guid" "$num_instances"
+			deploy_instances_gcp "A" "$RANDOMINSTANCEGCPNAME" "$thevar1" "$thevar2" "$guid" "$num_instances" "$THETFFILEISREPEAT" "$THETFFILEISCORE" "$THEVISIONXKEY"
+			
+			IFS='¬' read -r -a CHOICE1VALS2 <<< $thevar2
+			SECRETS1THEFILE="${CHOICE1VALS2[0]}"
+			SECRET1THEKEY="${CHOICE1VALS2[1]}"
+
+			IFS='¬' read -r -a CHVL <<< $thevar1
+
+			THE1VAL1HASH="${CHVL[6]}"
+			THESTACKFOLDERSYNC="${CHVL[7]}"
+			RNDXM="${CHVL[8]}"
+
+			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf
+			
+			THESYNCCONTENT=""
+			
+			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
+				THESCOPEID="${CHVL[9]}"
+				THEIDENTITYID="${CHVL[10]}"
+				
+				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,gcp,""${CHVL[0]}""├""${CHVL[1]}""├""${CHVL[3]}""├""${CHVL[4]}"",$SECRETS1THEFILE,$SECRET1THEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,""${CHVL[2]}"",No,TBD,TBD,TBD,""${CHVL[5]}"",22,,$BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem,N,N"
+			fi
+			
+			if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+				SECRETTHEKEY="$THEVISIONXKEY"
+				ITER=${SECRETTHEKEY:7:6}
+			else
+				SECRETTHEKEY="$SECRET1THEKEY"
+				ITER=${SECRETTHEKEY:7:6}				
+			fi
+			
+			#echo "THESYNCCONTENT : $THESYNCCONTENT"	
+			#exit						
 		fi
 
 		if [ "$cloud_provider" == "azure" ] ; then
 			RANDOMINSTANCEAZNAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-			sudo cp $BASE/Resources/TerraformTemplateAZURE.tf $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+			THETFFILEISREPEAT="NO"
+			THETFFILEISCORE="NO"			
+
+			if [ "$THEREALTERRAFORMFILE" == "NA" ] ; then
+				sudo cp $BASE/Resources/TerraformTemplateAZURE.tf $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+			else
+				RANDOMINSTANCE1NAME=$(basename "$THEREALTERRAFORMFILE")
+				RANDOMINSTANCE2NAME="${RANDOMINSTANCE1NAME%.*}"
+				RANDOMINSTANCEAZNAME="$RANDOMINSTANCEAZNAME""_""$RANDOMINSTANCE2NAME"
+				
+				last_four="${THEREALTERRAFORMFILE: -4}"
+				if [[ "$last_four" == "r.tf" ]]; then
+				    THETFFILEISREPEAT="YES"
+				fi
+				if [[ "$last_four" == "c.tf" ]]; then
+				    THETFFILEISCORE="YES"
+				    RANDOMINSTANCEAZNAME="$RANDOMINSTANCEAZNAME""_""$RANDOMINSTANCE2NAME"
+				fi
+				
+				sudo cp $THEREALTERRAFORMFILE $BASE/tmp/$RANDOMINSTANCEAZNAME.tf																
+			fi			
+			
 			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCEAZNAME.tf 
 			
 			terraform_file="$BASE/tmp/$RANDOMINSTANCEAZNAME.tf"
@@ -391,7 +485,39 @@ deploy_instances() {
 			FILESTOBEDELETED+=("$BASE/tmp/$RANDOMSCOPEVAL")
 			echo "$BASE/tmp/$RANDOMSCOPEVAL" | sudo tee -a $thevar3 > /dev/null
 												
-			deploy_instances_azure "A" "$RANDOMINSTANCEAZNAME" "$thevar1" "$thevar2" "$guid" "$num_instances"
+			deploy_instances_azure "A" "$RANDOMINSTANCEAZNAME" "$thevar1" "$thevar2" "$guid" "$num_instances" "$THETFFILEISREPEAT" "$THETFFILEISCORE"
+
+			IFS='¬' read -r -a CHOICE1VALS2 <<< $thevar2
+			SECRETS1THEFILE="${CHOICE1VALS2[0]}"
+			SECRET1THEKEY="${CHOICE1VALS2[1]}"
+
+			IFS='¬' read -r -a CHVL <<< $thevar1
+
+			THE1VAL1HASH="${CHVL[4]}"
+			THESTACKFOLDERSYNC="${CHVL[5]}"
+			RNDXM="${CHVL[6]}"
+
+			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+			
+			THESYNCCONTENT=""
+			
+			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
+				THESCOPEID="${CHVL[7]}"
+				THEIDENTITYID="${CHVL[8]}"
+				
+				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,azure,""${CHVL[0]}""├""${CHVL[1]}"",$SECRETS1THEFILE,$SECRET1THEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,""${CHVL[3]}"",No,TBD,TBD,TBD,""${CHVL[2]}"",22,,$BASE/Output/Pem/$guid.pem,N,N"
+			fi
+			
+			if [ "$THETFFILEISREPEAT" == "NO" ] ; then
+				SECRETTHEKEY="$THEVISIONXKEY"
+				ITER=${SECRETTHEKEY:7:6}
+			else
+				SECRETTHEKEY="$SECRET1THEKEY"
+				ITER=${SECRETTHEKEY:7:6}				
+			fi
+			
+			#echo "THESYNCCONTENT : $THESYNCCONTENT"	
+			#exit								
 		fi
 				
 		if [ "$cloud_provider" == "aws" ] ; then
@@ -439,8 +565,8 @@ deploy_instances() {
 				THETERRACACHEFOLDER="$BASE/Resources/Terraform/awsz"
 			fi
 			
-			sudo mkdir -p $THETERRACACHEFOLDER
-			sudo chmod -R 777 $THETERRACACHEFOLDER
+			#sudo mkdir -p $THETERRACACHEFOLDER
+			#sudo chmod -R 777 $THETERRACACHEFOLDER
 									
 			sudo chmod 777 $BASE/tmp/$RANDOMINSTANCENAME.tf 
 			
@@ -601,6 +727,17 @@ deploy_instances() {
     else    
     	echo "    sudo mv $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     fi
+    
+    if [ "$cloud_provider" == "gcp" ] ; then
+    	if [ "$THEGCPSAFILECORETF" == "NA" ] ; then
+    		ABC="XYZ"
+    	else
+		#sudo mv $THEGCPSAFILECORETF $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa && sudo chmod 777 $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa
+		echo "sudo mv $THEGCPSAFILECORETF $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa && sudo chmod 777 $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa" | sudo tee -a $flnmofcldp > /dev/null
+		#echo "sudo mv $THEGCPSAFILECORETF $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa && sudo chmod 777 $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa" | sudo tee -a /home/prathamos/Downloads/log > /dev/null	
+	fi    	    	
+    fi    
+    
     echo "    cd $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     #if [ "$THETFFILEISREPEAT" == "NO" ] ; then
     #	echo "    export TF_PLUGIN_CACHE_DIR=$THETERRACACHEFOLDER" | sudo tee -a $flnmofcldp > /dev/null  
@@ -627,6 +764,22 @@ deploy_instances() {
         ips_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.public_ips.value[]'))
         totcnt_$guid=\${#names_$guid[@]}
         for i in \"\${"'!'"names_$guid[@]}\"; do
+            THETFFILEISREPEAT=\"$THETFFILEISREPEAT\"
+            if [ \"\$THETFFILEISREPEAT\" == \"YES\" ] ; then
+                sudo touch $THESTACKFOLDERSYNC/$RNDXM
+                THESYNC1CONTENT=\"$THESYNCCONTENT\"
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDIP/\${ips_$guid[\$i]}/g\")
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDNAME/\${names_$guid[\$i]}/g\")
+	        echo \"\$THESYNC1CONTENT\" | sudo tee -a $THESTACKFOLDERSYNC/$RNDXM > /dev/null
+	        sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM
+		THEFILEFORNEWVAL_$guid=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/\$THEFILEFORNEWVAL_$guid
+		sudo chmod 777 $BASE/tmp/\$THEFILEFORNEWVAL_$guid 
+		source $BASE/Resources/StackVersioningAndMisc	
+		CSVFILE_ENC_DYC \"$THESTACKFOLDERSYNC/$RNDXM\" \"6,12,13,14,15,23,24,25,26\" \"27\" \"Y\" \"encrypt\" \"$THEVISIONXKEY\" \"0\" \"27\" \"$BASE/tmp/\$THEFILEFORNEWVAL_$guid\"
+		sudo rm -f $THESTACKFOLDERSYNC/$RNDXM
+		sudo mv $BASE/tmp/\$THEFILEFORNEWVAL_$guid $THESTACKFOLDERSYNC/$RNDXM	         
+	    fi         
             echo \"\${ips_$guid[\$i]}¬\${names_$guid[\$i]}¬$_GCPVAL6¬$BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem\" >> \"$BASE/tmp/$cp_guid.matsya\"
             #echo \"CURRENTUSER=\$(whoami) && sudo rm -rf /home/\$CURRENTUSER/.ssh/known_hosts && sudo rm -rf /root/.ssh/known_hosts && ssh -o StrictHostKeyChecking=no -i $BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem $_GCPVAL6@\${ips_$guid[\$i]}\"
             echo '          {
@@ -647,6 +800,22 @@ deploy_instances() {
         ips_$guid=(\$(echo \"\$public_ips_json_$guid\" | jq -r '.public_ips.value[]'))
         totcnt_$guid=\${#names_$guid[@]}
         for i in \"\${"'!'"names_$guid[@]}\"; do
+            THETFFILEISREPEAT=\"$THETFFILEISREPEAT\"
+            if [ \"\$THETFFILEISREPEAT\" == \"YES\" ] ; then
+                sudo touch $THESTACKFOLDERSYNC/$RNDXM
+                THESYNC1CONTENT=\"$THESYNCCONTENT\"
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDIP/\${ips_$guid[\$i]}/g\")
+                THESYNC1CONTENT=\$(echo \"\$THESYNC1CONTENT\" | sed \"s/THEGENERATEDNAME/\${names_$guid[\$i]}/g\")
+	        echo \"\$THESYNC1CONTENT\" | sudo tee -a $THESTACKFOLDERSYNC/$RNDXM > /dev/null
+	        sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM
+		THEFILEFORNEWVAL_$guid=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/\$THEFILEFORNEWVAL_$guid
+		sudo chmod 777 $BASE/tmp/\$THEFILEFORNEWVAL_$guid 
+		source $BASE/Resources/StackVersioningAndMisc	
+		CSVFILE_ENC_DYC \"$THESTACKFOLDERSYNC/$RNDXM\" \"6,12,13,14,15,23,24,25,26\" \"27\" \"Y\" \"encrypt\" \"$THEVISIONXKEY\" \"0\" \"27\" \"$BASE/tmp/\$THEFILEFORNEWVAL_$guid\"
+		sudo rm -f $THESTACKFOLDERSYNC/$RNDXM
+		sudo mv $BASE/tmp/\$THEFILEFORNEWVAL_$guid $THESTACKFOLDERSYNC/$RNDXM	         
+	    fi        
             echo \"\${ips_$guid[\$i]}¬\${names_$guid[\$i]}¬$AZURESCOPE14VAL¬$AZURESCOPE6VAL\" >> \"$BASE/tmp/$cp_guid.matsya\"
             #echo \"CURRENTUSER=\$(whoami) && sudo rm -rf /home/\$CURRENTUSER/.ssh/known_hosts && sudo rm -rf /root/.ssh/known_hosts && ssh -o StrictHostKeyChecking=no -i $AZURESCOPE6VAL $AZURESCOPE14VAL@\${ips_$guid[\$i]}\"
             echo '          {
@@ -710,7 +879,7 @@ deploy_instances() {
     fi 
     if [ "$cloud_provider" == "gcp" ] ; then
 	    if [ "$createnewtf" == "YES" ] ; then
-    		echo "        CURRENTUSER=\$(whoami) && sudo chown \$CURRENTUSER:\$CURRENTUSER $BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem && sudo chmod 400 $BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem" | sudo tee -a $flnmofcldp > /dev/null 	    	
+    		echo "        CURRENTUSER=\$(whoami) && sudo chown \$CURRENTUSER:\$CURRENTUSER $BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem && sudo chmod 400 $BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem && sudo mv $BASE/Output/Pem/.GCP-ServiceAccount-$THENAMEOFTHEGCPPEM $BASE/Output/Terraform/$guid/$THENAMEOFTHEGCPPEM.gcpsa && sudo chmod 777 $BASE/Output/Terraform/$guid/$THENAMEOFTHEGCPPEM.gcpsa" | sudo tee -a $flnmofcldp > /dev/null 	    	
 	    fi
     fi 
         
@@ -744,6 +913,9 @@ deploy_instances() {
     	    fi
     	    if [ "$cloud_provider" == "gcp" ] ; then
     	    	RANDOMINSTANCENAME="$RANDOMINSTANCEGCPNAME"
+		if [ "$THEGCPSAFILECORETF" != "NA" ] ; then
+			sudo mv $THEGCPSAFILECORETF $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa && sudo chmod 777 $BASE/Output/Terraform/$guid/$THEGCPSAFILECORETF2.gcpsa	
+		fi    	    	
     	    fi    	    
 	    if [ "$createnewtf" == "YES" ] ; then
 		echo "    if [ -f \"$BASE/Output/Terraform/$guid/$RANDOMINSTANCENAME.tf\" ]; then" | sudo tee -a $flnmofcldp > /dev/null

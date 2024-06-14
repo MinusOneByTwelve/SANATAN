@@ -52,10 +52,10 @@ if [[ ! -d "$BASE/Output/Vision" ]]; then
 	sudo chmod -R 777 $BASE/Output/Vision
 fi
 
-if [[ ! -d "$BASE/Resources/Terraform" ]]; then
-	sudo mkdir -p $BASE/Resources/Terraform
-	sudo chmod -R 777 $BASE/Resources/Terraform
-fi
+#if [[ ! -d "$BASE/Resources/Terraform" ]]; then
+#	sudo mkdir -p $BASE/Resources/Terraform
+#	sudo chmod -R 777 $BASE/Resources/Terraform
+#fi
 
 source $BASE/Resources/StackVersioningAndMisc
 SSKEYGENSH="$BASE/Scripts/KeyGeneratorSSH.sh"
@@ -110,6 +110,7 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 		
 		if [ "$key1" == "azure" ] ; then
 			nohup $BASE/Scripts/ActionRUN.sh "AZURE_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+			#$BASE/Scripts/ActionRUN.sh "AZURE_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile"
 		fi
 		
 		if [ "$key1" == "e2e" ] ; then
@@ -151,22 +152,24 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 
 	for key in "${!DiffInstanceTypes[@]}"; do
 	    	#echo "InstanceType: $key, ScpIdy items: ${DiffInstanceTypes["$key"]}"
-		if [ "$key" == "onprem1" ] ; then
+		if [ "$key" == "onprem" ] ; then
 			#echo "sudo $BASE/Scripts/Vagrant-VirtualBox.sh \"D\" \"$ScopeFile\" \"$VisionKey\" \"${DiffInstanceTypes["$key"]}\""
 			nohup sudo $BASE/Scripts/Vagrant-VirtualBox.sh "D" "$ScopeFile" "$VisionKey" "${DiffInstanceTypes["$key"]}" 2>&1 &
 		fi
 		
 		if [ "$key" == "gcp" ] ; then
-			echo "gcp : ${DiffInstanceTypes["$key"]}"
+			#echo "gcp : ${DiffInstanceTypes["$key"]}"
+			nohup $BASE/Scripts/ActionRUN.sh "CLD_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" "GCP" 2>&1 &
 		fi
 		
 		if [ "$key" == "aws" ] ; then
 			#echo "aws : ${DiffInstanceTypes["$key"]}"
-			nohup $BASE/Scripts/ActionRUN.sh "AWS_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" 2>&1 &
+			nohup $BASE/Scripts/ActionRUN.sh "CLD_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" "AWS" 2>&1 &
 		fi
 		
 		if [ "$key" == "azure" ] ; then
-			echo "azure : ${DiffInstanceTypes["$key"]}"
+			#echo "azure : ${DiffInstanceTypes["$key"]}"
+			nohup $BASE/Scripts/ActionRUN.sh "CLD_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" "AZURE" 2>&1 &
 		fi
 		
 		if [ "$key" == "e2e" ] ; then
@@ -326,7 +329,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
 		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
 		
-		if [ "$THEWORK_FILE" == "onprem1" ] ; then
+		if [ "$THEWORK_FILE" == "onprem" ] ; then
 			echo "onprem : $THEWORKFILE"
 			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
@@ -336,6 +339,11 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
 			echo "gcp : $THEWORKFILE"
+			RNDGCPXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo "$ALLWORKFOLDERSYNC/$RNDGCPXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
+			#$BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}'
+			#exit
+			nohup $BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}' 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "aws" ] ; then
@@ -347,15 +355,516 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
 			echo "azure : $THEWORKFILE"
+			RNDAZRXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo "$ALLWORKFOLDERSYNC/$RNDAZRXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
+			#$BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}'
+			#exit
+			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' 2>&1 &						
 		fi
 		
-		if [ "$THEWORK_FILE" == "e2e" ] ; then
+		if [ "$THEWORK_FILE" == "e2e1" ] ; then
 			echo "e2e : $THEWORKFILE"
 		fi		
 	done	
 	# INSTANCE TYPE BASED FILE ACTION
 	
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" 2>&1 &		
+fi
+
+if [ "$TASKIDENTIFIER" == "gcp" ] ; then
+	THEJSON=$2
+
+	THESTACKGCPFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
+	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
+	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
+	RNDGCP1XM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
+		
+	THESTACKFOLDERGCP=$(dirname "$THESTACKGCPFILE")
+	sudo mkdir $THESTACKFOLDERGCP/"$TASKIDENTIFIER-WIP"
+	sudo chmod -R 777 $THESTACKFOLDERGCP/"$TASKIDENTIFIER-WIP"
+	sudo touch $THESTACKFOLDERGCP/"$TASKIDENTIFIER-WIP_"
+	sudo chmod 777 $THESTACKFOLDERGCP/"$TASKIDENTIFIER-WIP_"
+	THESTACKFOLDERSYNC="$THESTACKFOLDERGCP/$TASKIDENTIFIER-WIP"
+	THESTACKFILESYNC="$THESTACKFOLDERGCP/$TASKIDENTIFIER-WIP_"
+	
+	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+	fi
+	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+		
+	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	
+	header=$(head -n 1 $THESTACKGCPFILE)
+	csv_data=$(tail -n +2 $THESTACKGCPFILE)
+	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
+	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')	
+	newfiltered_json2_json=$(echo "$filtered_json2" | jq 'map((.OtherInfo | split("├")) as $info | .OtherInfo = ($info[0:2] + [.OS] + $info[2:5] + [.UserName] | join("├")))')
+	
+	THESANITIZEDREAL2FILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESANITIZEDREAL2FILE_file="$BASE/tmp/$THESANITIZEDREAL2FILE__file"
+	header=$(echo "$filtered_json2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESANITIZEDREAL2FILE_file"
+	echo "$filtered_json2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESANITIZEDREAL2FILE_file"
+	done	
+	sudo chmod 777 $THESANITIZEDREAL2FILE_file
+	sed -i 's/""//g' "$THESANITIZEDREAL2FILE_file"
+	sed -i 's/"//g' "$THESANITIZEDREAL2FILE_file"
+	sudo rm -f $THESTACKGCPFILE
+	sudo mv $THESANITIZEDREAL2FILE_file $THESTACKGCPFILE
+
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$THESTACKGCPFILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $THESTACKGCPFILE
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKGCPFILE	
+	
+	declare -A Region1Seg
+	while read -r line; do
+		region=$(echo "$line" | jq -r '.OtherInfo | split("├")[4]')
+		if [[ -z "${Region1Seg[$region]}" ]]; then
+			Region1Seg[$region]="[$line"
+		else
+			Region1Seg[$region]+=", $line"
+		fi
+	done < <(echo "$newfiltered_json2_json" | jq -c '.[]')
+	for key in "${!Region1Seg[@]}"; do
+		Region1Seg[$key]+="]"
+	done
+	declare -A InstanceTFgcpChoice
+	for key in "${!Region1Seg[@]}"; do
+		Instance1TFgcpChoice=()
+		#echo "Region: $key"
+		regjson=$(echo "${Region1Seg[$key]}" | jq .)
+		#echo "Items:"
+		#echo "$regjson"
+		while read -r line2; do	
+			#echo "$line2"
+			other_info=$(echo $line2 | jq -r '.OtherInfo')
+			IFS='├' read -ra other1_info <<< "$other_info"
+			the1region="${other1_info[4]}"
+			#echo "other_info : $other_info     -------    the1region : $the1region"
+			secrets_key=$(echo $line2 | jq -r '.SecretsKey')
+			secrets_file=$(echo $line2 | jq -r '.Secrets')
+			Scope1Id=$(echo $line2 | jq -r '.ScopeId')
+			Identity1Id=$(echo $line2 | jq -r '.Identity')			
+			line2reqval="${THEVISIONID}├${the1region}"
+			thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')
+			thevalhash="$TASKIDENTIFIER""$thevalhash"
+			#echo "line2reqval : $line2reqval     -------    thevalhash : $thevalhash"
+			
+			CHOICEDONE="Z"
+			
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-c.tf" ]]; then
+				Aexists="NO"
+				for element in "${Instance1TFgcpChoice[@]}"; do
+					if [[ "$element" == "A" ]]; then
+						Aexists="YES"
+						break
+					fi
+				done
+				if [ "$Aexists" == "NO" ] ; then			
+					sudo cp $BASE/Resources/TerraformTemplateCoreGCP.tf $THEVISIONFOLDER/$thevalhash-c.tf
+					CHOICEDONE="A"
+					Instance1TFgcpChoice+=("$CHOICEDONE")
+					InstanceTFgcpChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+					CHOICEDONE="Z"
+				fi
+			else
+				thecopycandidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-c*" -print -quit)
+				if [ -n "$thecopycandidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] ; then				    
+						CHOICEDONE="B"
+						Instance1TFgcpChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] ; then
+						Aexists="NO"
+						for element in "${Instance1TFgcpChoice[@]}"; do
+							if [[ "$element" == "A" ]]; then
+								Aexists="YES"
+								break
+							fi
+						done
+						Cexists="NO"
+						for element in "${Instance1TFgcpChoice[@]}"; do
+							if [[ "$element" == "C" ]]; then
+								Cexists="YES"
+								break
+							fi
+						done						
+						if [ "$Aexists" == "NO" ] ; then
+							if [ "$Cexists" == "NO" ] ; then		
+								CHOICEDONE="C"
+								Instance1TFgcpChoice+=("$CHOICEDONE")
+								InstanceTFgcpChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+								CHOICEDONE="Z"
+							fi
+						fi									    
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE1 : $CHOICEDONE"			
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-r.tf" ]]; then
+				sudo cp $BASE/Resources/TerraformTemplateRepeatGCP.tf $THEVISIONFOLDER/$thevalhash-r.tf
+				if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+					CHOICEDONE="D"
+					Instance1TFgcpChoice+=("$CHOICEDONE")
+				fi
+			else
+				thecopy1candidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-r*" -print -quit)
+				if [ -n "$thecopy1candidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="E"
+						Instance1TFgcpChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="F"
+						Instance1TFgcpChoice+=("$CHOICEDONE")
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE2 : $CHOICEDONE"
+			if [ "$CHOICEDONE" == "A" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "B" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "C" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "D" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "E" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "F" ] ; then
+				InstanceTFgcpChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi															
+		done < <(echo "$regjson" | jq -c '.[]')	
+		unset Instance1TFgcpChoice		
+	done
+	
+	AIFCTR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo '#!/bin/bash' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	sudo chmod 777 	$BASE/tmp/$AIFCTR
+	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
+	THEREPEATITEMS=""
+	THEZONEITEMS=""
+	TERRAVFILETRACKING=()
+	THEFIRSTTIME="YES"
+	for key in "${!InstanceTFgcpChoice[@]}"; do
+		#echo "$key  :::::::: ${InstanceTFgcpChoice[$key]}"	
+		THEFULL_VALUE="${InstanceTFgcpChoice[$key]}"
+		IFS='■' read -ra THEFULLVALUE <<< "$THEFULL_VALUE"
+		THEVAL1="${THEFULLVALUE[0]}"
+		THEVAL2="${THEFULLVALUE[1]}"
+		THEVAL3="${THEFULLVALUE[2]}"
+		THEVAL4="${THEFULLVALUE[3]}"
+		THEVAL4=$(echo "$THEVAL4" | sed 's/├/¬/g')
+		THEVAL5="${THEFULLVALUE[4]}"
+		THEVAL6="${THEFULLVALUE[5]}"
+		THEVAL7="${THEFULLVALUE[6]}"												
+		THEREQMODE="${THEFULLVALUE[7]}"
+		THEVAL1HASH="${THEFULLVALUE[8]}"
+		
+		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+						
+		if [ "$THEREQMODE" == "NEW" ] ; then
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
+		fi
+		
+		if [ "$THEREQMODE" == "REPEAT" ] ; then
+				THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+
+			echo "$THESTACKFOLDERSYNC/$RNDXM" | sudo tee -a $THESTACKFILESYNC > /dev/null
+		fi				
+	done
+
+	THEREPEATITEMS="${THEREPEATITEMS%├}"
+	
+	if [ "$THEREPEATITEMS" != "" ] ; then	
+		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+		TERRAVFILETRACKING+=("$RNDM1")
+	fi
+	
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
+	#for item in "${TERRAVFILETRACKING[@]}"; do
+	#	echo "$item"
+	#done
+	
+	#cat $BASE/tmp/$AIFCTR
+	#exit
+	#$BASE/tmp/$AIFCTR
+	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKGCPFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDGCP1XM" "GCP" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKGCPFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDGCP1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
+fi
+
+if [ "$TASKIDENTIFIER" == "azure" ] ; then
+	THEJSON=$2
+
+	THESTACKAZUREFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
+	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
+	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
+	RNDAZURE1XM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
+		
+	THESTACKFOLDERAZURE=$(dirname "$THESTACKAZUREFILE")
+	sudo mkdir $THESTACKFOLDERAZURE/"$TASKIDENTIFIER-WIP"
+	sudo chmod -R 777 $THESTACKFOLDERAZURE/"$TASKIDENTIFIER-WIP"
+	sudo touch $THESTACKFOLDERAZURE/"$TASKIDENTIFIER-WIP_"
+	sudo chmod 777 $THESTACKFOLDERAZURE/"$TASKIDENTIFIER-WIP_"
+	THESTACKFOLDERSYNC="$THESTACKFOLDERAZURE/$TASKIDENTIFIER-WIP"
+	THESTACKFILESYNC="$THESTACKFOLDERAZURE/$TASKIDENTIFIER-WIP_"
+	
+	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+	fi
+	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+		
+	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	
+	header=$(head -n 1 $THESTACKAZUREFILE)
+	csv_data=$(tail -n +2 $THESTACKAZUREFILE)
+	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
+	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')	
+	newfiltered_json2_json=$(echo "$filtered_json2" | jq 'map((.OtherInfo | split("├")) as $info | .OtherInfo = ($info[0:2] + [.UserName, .OS] | join("├")))')
+
+	THESANITIZEDREAL2FILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESANITIZEDREAL2FILE_file="$BASE/tmp/$THESANITIZEDREAL2FILE__file"
+	header=$(echo "$filtered_json2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESANITIZEDREAL2FILE_file"
+	echo "$filtered_json2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESANITIZEDREAL2FILE_file"
+	done	
+	sudo chmod 777 $THESANITIZEDREAL2FILE_file
+	sed -i 's/""//g' "$THESANITIZEDREAL2FILE_file"
+	sed -i 's/"//g' "$THESANITIZEDREAL2FILE_file"
+	sudo rm -f $THESTACKAZUREFILE
+	sudo mv $THESANITIZEDREAL2FILE_file $THESTACKAZUREFILE
+
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$THESTACKAZUREFILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $THESTACKAZUREFILE
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKAZUREFILE	
+	
+	declare -A Region1Seg
+	while read -r line; do
+		region=$(echo "$line" | jq -r '.OtherInfo | split("├")[0]')
+		if [[ -z "${Region1Seg[$region]}" ]]; then
+			Region1Seg[$region]="[$line"
+		else
+			Region1Seg[$region]+=", $line"
+		fi
+	done < <(echo "$newfiltered_json2_json" | jq -c '.[]')
+	for key in "${!Region1Seg[@]}"; do
+		Region1Seg[$key]+="]"
+	done
+	declare -A InstanceTFazrChoice
+	for key in "${!Region1Seg[@]}"; do
+		Instance1TFazrChoice=()
+		#echo "Region: $key"
+		regjson=$(echo "${Region1Seg[$key]}" | jq .)
+		#echo "Items:"
+		#echo "$regjson"
+		while read -r line2; do	
+			#echo "$line2"
+			other_info=$(echo $line2 | jq -r '.OtherInfo')
+			IFS='├' read -ra other1_info <<< "$other_info"
+			the1region="${other1_info[0]}"
+			#echo "other_info : $other_info     -------    the1region : $the1region"
+			secrets_key=$(echo $line2 | jq -r '.SecretsKey')
+			secrets_file=$(echo $line2 | jq -r '.Secrets')
+			Scope1Id=$(echo $line2 | jq -r '.ScopeId')
+			Identity1Id=$(echo $line2 | jq -r '.Identity')			
+			line2reqval="${THEVISIONID}├${the1region}"
+			thevalhash=$(echo -n "$line2reqval" | md5sum | awk '{print $1}')
+			thevalhash="$TASKIDENTIFIER""$thevalhash"
+			#echo "line2reqval : $line2reqval     -------    thevalhash : $thevalhash"
+			
+			CHOICEDONE="Z"
+			
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-c.tf" ]]; then
+				Aexists="NO"
+				for element in "${Instance1TFazrChoice[@]}"; do
+					if [[ "$element" == "A" ]]; then
+						Aexists="YES"
+						break
+					fi
+				done
+				if [ "$Aexists" == "NO" ] ; then			
+					sudo cp $BASE/Resources/TerraformTemplateCoreAZURE.tf $THEVISIONFOLDER/$thevalhash-c.tf
+					CHOICEDONE="A"
+					Instance1TFazrChoice+=("$CHOICEDONE")
+					InstanceTFazrChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+					CHOICEDONE="Z"
+				fi
+			else
+				thecopycandidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-c*" -print -quit)
+				if [ -n "$thecopycandidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] ; then				    
+						CHOICEDONE="B"
+						Instance1TFazrChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] ; then
+						Aexists="NO"
+						for element in "${Instance1TFazrChoice[@]}"; do
+							if [[ "$element" == "A" ]]; then
+								Aexists="YES"
+								break
+							fi
+						done
+						Cexists="NO"
+						for element in "${Instance1TFazrChoice[@]}"; do
+							if [[ "$element" == "C" ]]; then
+								Cexists="YES"
+								break
+							fi
+						done						
+						if [ "$Aexists" == "NO" ] ; then
+							if [ "$Cexists" == "NO" ] ; then		
+								CHOICEDONE="C"
+								Instance1TFazrChoice+=("$CHOICEDONE")
+								InstanceTFazrChoice["$thevalhash"]="$thevalhash■0■0■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+								CHOICEDONE="Z"
+							fi
+						fi									    
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE1 : $CHOICEDONE"			
+			if [[ ! -f "$THEVISIONFOLDER/$thevalhash-r.tf" ]]; then
+				sudo cp $BASE/Resources/TerraformTemplateRepeatAZURE.tf $THEVISIONFOLDER/$thevalhash-r.tf
+				if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+					CHOICEDONE="D"
+					Instance1TFazrChoice+=("$CHOICEDONE")
+				fi
+			else
+				thecopy1candidate=$(find $BASE/Output/Terraform -type f -name "*$thevalhash-r*" -print -quit)
+				if [ -n "$thecopy1candidate" ]; then
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="E"
+						Instance1TFazrChoice+=("$CHOICEDONE")
+					fi
+				else
+					if [ "$CHOICEDONE" == "Z" ] || [ "$CHOICEDONE" == "B" ] ; then				    
+						CHOICEDONE="F"
+						Instance1TFazrChoice+=("$CHOICEDONE")
+					fi
+				fi			
+			fi
+			#echo "CHOICEDONE2 : $CHOICEDONE"
+			if [ "$CHOICEDONE" == "A" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "B" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "C" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-c.tf■NEW■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "D" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "E" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi
+			if [ "$CHOICEDONE" == "F" ] ; then
+				InstanceTFazrChoice["$Scope1Id-$Identity1Id"]="$THEVISIONID■$Scope1Id■$Identity1Id■$other_info■$secrets_file■$secrets_key■$THEVISIONFOLDER/$thevalhash-r.tf■REPEAT■$thevalhash"
+			fi															
+		done < <(echo "$regjson" | jq -c '.[]')	
+		unset Instance1TFazrChoice		
+	done
+	
+	AIFCTR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo '#!/bin/bash' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	sudo chmod 777 	$BASE/tmp/$AIFCTR
+	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
+	THEREPEATITEMS=""
+	THEZONEITEMS=""
+	TERRAVFILETRACKING=()
+	THEFIRSTTIME="YES"
+	for key in "${!InstanceTFazrChoice[@]}"; do
+		#echo "$key  :::::::: ${InstanceTFazrChoice[$key]}"	
+		THEFULL_VALUE="${InstanceTFazrChoice[$key]}"
+		IFS='■' read -ra THEFULLVALUE <<< "$THEFULL_VALUE"
+		THEVAL1="${THEFULLVALUE[0]}"
+		THEVAL2="${THEFULLVALUE[1]}"
+		THEVAL3="${THEFULLVALUE[2]}"
+		THEVAL4="${THEFULLVALUE[3]}"
+		THEVAL4=$(echo "$THEVAL4" | sed 's/├/¬/g')
+		THEVAL5="${THEFULLVALUE[4]}"
+		THEVAL6="${THEFULLVALUE[5]}"
+		THEVAL7="${THEFULLVALUE[6]}"												
+		THEREQMODE="${THEFULLVALUE[7]}"
+		THEVAL1HASH="${THEFULLVALUE[8]}"
+		
+		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+						
+		if [ "$THEREQMODE" == "NEW" ] ; then
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
+		fi
+		
+		if [ "$THEREQMODE" == "REPEAT" ] ; then
+				THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
+
+			echo "$THESTACKFOLDERSYNC/$RNDXM" | sudo tee -a $THESTACKFILESYNC > /dev/null
+		fi				
+	done
+
+	THEREPEATITEMS="${THEREPEATITEMS%├}"
+	
+	if [ "$THEREPEATITEMS" != "" ] ; then	
+		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+		TERRAVFILETRACKING+=("$RNDM1")
+	fi
+	
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	
+	#for item in "${TERRAVFILETRACKING[@]}"; do
+	#	echo "$item"
+	#done
+	
+	#cat $BASE/tmp/$AIFCTR
+	#exit
+	#$BASE/tmp/$AIFCTR
+	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAZUREFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAZURE1XM" "AZURE" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKAZUREFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDAZURE1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
 fi
 
 if [ "$TASKIDENTIFIER" == "aws" ] ; then
@@ -647,7 +1156,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAWS1XM" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAWS1XM" "AWS" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
