@@ -377,6 +377,59 @@ CLD_IDENTITY_DELETE() {
 	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN CLD_IDENTITY_DELETE Function [$AID4]"		
 }
 
+E2E_IDENTITY_DELETE() {
+	AID1=$1
+	AID2=$2
+	AID3=$3
+	AID4=$4
+		
+	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+	IFS='|' read -ra items <<< "$AID1"
+	for scopeidy in "${items[@]}"; do
+		search_result=$(grep -n "^$scopeidy" $AID2)
+		
+		IFS=',' read -ra scid <<< "$scopeidy"
+		sc1id="${scid[0]}"
+		sc2id="${scid[1]}"
+		sc3id="s""$sc1id""i""$sc2id"
+		
+		if [ -n "$search_result" ]; then
+			line_number=$(echo "$search_result" | awk -F ':' 'NR==1 {print $1}')
+			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
+			IFS=',' read -ra contents <<< "$content"
+			filtered_content=$(IFS=',' && printf "%s," "${contents[@]:0:${#contents[@]}-1}")
+			filtered_content=${filtered_content%,}	
+			IFS=',' read -r -a USERLISTVALS <<< $content
+			thecurrentdeleteflag="${USERLISTVALS[27]}"
+			TheVMPemFile="${USERLISTVALS[25]}"
+			TheVMPemFile=$(NARASIMHA "decrypt" "$TheVMPemFile" "$AID3")				
+			thenewdeleteflag="N"
+			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$thecurrentdeleteflag" == "Y" ] ; then
+				thenewdeleteflag="Y"
+				#echo "came here1: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			else
+				Secret1Key="${USERLISTVALS[5]}"
+				Secret1Key=$(NARASIMHA "decrypt" "$Secret1Key" "$AID3")	
+				EXECUTEORDER66=$(find $BASE/Output/Vision -type f -name "*$sc3id*" | head -n 1)
+				$BASE/Scripts/SecretsFile-Decrypter "$EXECUTEORDER66├2├1├NA├$Secret1Key"
+				sudo rm -f $TheVMPemFile
+				thenewdeleteflag="Y"			
+			fi
+			#echo "came here3: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			thenewcontent="$filtered_content,$thenewdeleteflag"
+			#echo "thenewcontent : $thenewcontent" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			sed -i "$line_number""s#.*#$thenewcontent#" "$AID2"		
+		else
+		    echo "Not Found"
+		fi
+	done
+	
+	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	
+	notify-send -t 5000 "Progress" "All files processed. Exiting.ActionRUN E2E_IDENTITY_DELETE Function"		
+}
+
 VISION_TERRAFORM_DELETE() {
 	THEFOLDERINQ=$1
 	VISKEY=$2
@@ -702,7 +755,11 @@ if [ "$THECHOICE" == "CLD_IDENTITY_DELETE" ] ; then
 	THE3VALUES=$3
 	THE4VALUES=$4
 	THE5VALUES=$5
-	CLD_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES" "$THE5VALUES"
+	if [ "$THE5VALUES" == "E2E" ] ; then
+		E2E_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES" "$THE5VALUES"
+	else
+		CLD_IDENTITY_DELETE "$THEVALUES" "$THE3VALUES" "$THE4VALUES" "$THE5VALUES"
+	fi
 fi
 
 if [ "$THECHOICE" == "AWS_VPC_DELETE" ] ; then

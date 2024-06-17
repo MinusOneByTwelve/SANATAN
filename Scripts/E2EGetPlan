@@ -1,0 +1,39 @@
+#!/bin/bash
+
+clear
+
+DoubleQuotes='"'
+NoQuotes=''
+
+E2EQUERYRESPONSE=''
+
+E2ETHEAPIKEY=$1
+E2ETHEPROJECTCHOICE=$2
+E2ETHEVMLOCATION=$3
+E2ETHEAUTHTOKEN=$4
+E2ETHEINSTANCERAM=$5
+E2ETHEINSTANCECORE=$6
+E2ETHEINSTANCEOS=$7
+E2ETHEINSTANCEOSVER=$8
+
+THEGETCOMMAND="'https://api.e2enetworks.com/myaccount/api/v1/images/?apikey=$E2ETHEAPIKEY&project_id=$E2ETHEPROJECTCHOICE&ram=$E2ETHEINSTANCERAM&location=$E2ETHEVMLOCATION&cpu=$E2ETHEINSTANCECORE&os=$E2ETHEINSTANCEOS'"
+
+AUTHDET="'Authorization: Bearer $E2ETHEAUTHTOKEN'"
+
+GETAUTH="curl -X GET $THEGETCOMMAND  -H $AUTHDET"
+
+#echo $GETAUTH && exit
+
+E2EQUERYRESPONSE=$(eval $GETAUTH)
+
+#echo 'https://api.e2enetworks.com/myaccount/api/v1/images/?apikey='"$E2ETHEAPIKEY"'&project_id='"$E2ETHEPROJECTCHOICE"'&ram='"$E2ETHEINSTANCERAM"'&location='"$E2ETHEVMLOCATION"'&cpu='"$E2ETHEINSTANCECORE"'&os='"$E2ETHEINSTANCEOS"''  -H 'Authorization: Bearer '"$E2ETHEAUTHTOKEN"''
+#echo ''
+#echo ''
+#echo $E2EQUERYRESPONSE
+clear
+
+echo ''
+
+jq --arg ver "$E2ETHEINSTANCEOSVER" '.data[] | select(.os.version == $ver) | {name, plan, image, "os": {name: .os.name, version: .os.version, image: .os.image, category: .os.category}, location, "specs": {id: .specs.id, sku_name: .specs.sku_name, ram: .specs.ram, cpu: .specs.cpu, disk_space: .specs.disk_space, price_per_hour: .specs.price_per_hour, series: .specs.series, family: .specs.family}, cpu_type}' <<< "$E2EQUERYRESPONSE"
+
+echo ''

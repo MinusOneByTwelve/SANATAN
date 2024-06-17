@@ -7,4 +7,4 @@ E2ERESPONSE=$(curl 'https://api.e2enetworks.com/myaccount/api/v1/nodes/E2ETHENEW
  --header 'x-api-key: E2ETHEAPIKEY' \
  --data '{
          "type":"reboot"
-         }')
+         }')        

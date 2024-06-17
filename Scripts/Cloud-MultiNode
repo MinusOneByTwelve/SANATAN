@@ -27,6 +27,7 @@ NoQuotes=''
 USERINTERACTION="YES"
 USERVALS=""
 MANUALRUN="NO"
+ISAUTOMATION="NO"
 
 BASE="/opt/Matsya"
 sudo mkdir -p $BASE
@@ -35,6 +36,22 @@ sudo mkdir -p $BASE/Scripts
 sudo mkdir -p $BASE/Secrets
 sudo mkdir -p $BASE/Resources
 sudo mkdir -p $BASE/Output
+sudo mkdir -p $BASE/Output/Terraform
+
+if [[ ! -d "$BASE/Output/Pem" ]]; then
+	sudo mkdir -p $BASE/Output/Pem
+	sudo chmod -R 777 $BASE/Output/Pem
+fi
+
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
+if [[ ! -d "$BASE/Output/Vision" ]]; then
+	sudo mkdir -p $BASE/Output/Vision
+	sudo chmod -R 777 $BASE/Output/Vision
+fi
 
 source $BASE/Resources/StackVersioningAndMisc
 
@@ -72,8 +89,24 @@ else
 		E2ECHOICE6="${USERLISTVALS[11]}"		
 	fi
 	USERINPUTCOUNT=${#USERLISTVALS[@]}
-	if (( $USERINPUTCOUNT > 12 )) ; then
-		MANUALRUN="YES"
+	
+	if (( $USERINPUTCOUNT > 12 )) ; then				
+		E2ECHOICE7="${USERLISTVALS[12]}"
+		if [ "$E2ECHOICE7" == "ISAUTOMATION" ] ; then
+			ISAUTOMATION="YES"
+			THEVISIONFOLDER="${USERLISTVALS[13]}"
+			GlobalE2EPassword="${USERLISTVALS[14]}"
+			Scope1Id="${USERLISTVALS[15]}"
+			Identity1Id="${USERLISTVALS[16]}"
+			The1OS="${USERLISTVALS[17]}"
+			THEVISIONXKEY="${USERLISTVALS[18]}"
+			THESTACKFOLDERSYNC="${USERLISTVALS[19]}"
+			RNDXM="${USERLISTVALS[20]}"
+			PEM_FILE="${USERLISTVALS[21]}"
+		fi
+		if [ "$E2ECHOICE7" == "MANUALRUN" ] ; then
+			MANUALRUN="YES"
+		fi		
 	fi				
 fi
 
@@ -109,6 +142,8 @@ RANDOMCLUSTERNAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n
 sudo mkdir -p $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME
 sudo rm -rf $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/*
 sudo chmod -R 777 $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME
+
+#echo "CLUSTERTHENAME : $CLUSTERTHENAME   THECLOUDCHOICE : $THECLOUDCHOICE   NODESTHENUMBER : $NODESTHENUMBER   PLIMIT : $PLIMIT   SECRETSTHEFILE : $SECRETSTHEFILE   SECRETTHEKEY : $SECRETTHEKEY   E2ECHOICE1 : $E2ECHOICE1   E2ECHOICE2 : $E2ECHOICE2   E2ECHOICE3 : $E2ECHOICE3   E2ECHOICE4 : $E2ECHOICE4   E2ECHOICE5 : $E2ECHOICE5   E2ECHOICE6 : $E2ECHOICE6   MANUALRUN : $MANUALRUN" && exit
 
 ITER=${SECRETTHEKEY:7:6}
 RANDOMSECFILENAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -146,7 +181,7 @@ $E2EPLANCHOICEFORCLUSTER
 $E2EOSIMAGECHOICEFORCLUSTER
 					> " -e -i "AlmaLinux-9-Distro" E2ECHOICE5	
 		echo ""	
-		read -p "Master PEM File				> " -e -i "$BASE/Resources/E2E-Master.pem" E2ECHOICE6
+		read -p "Master PEM File				> " -e -i "$BASE/Secrets/E2E-Master.pem" E2ECHOICE6
 		echo ""
 	fi
 		
@@ -160,7 +195,13 @@ $E2EOSIMAGECHOICEFORCLUSTER
 	AuthToken="${AuthToken//$DoubleQuotes/$NoQuotes}"
 	SSHKey=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].SSHKey?")
 	SSHKey="${SSHKey//$DoubleQuotes/$NoQuotes}"
-
+	E2ETHEPROJECTCHOICE1=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].Project?")
+	E2ETHEPROJECTCHOICE1="${E2ETHEPROJECTCHOICE1//$DoubleQuotes/$NoQuotes}"
+	E2ECHOICE6=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].GlobalPEM?")
+	E2ECHOICE6="${E2ECHOICE6//$DoubleQuotes/$NoQuotes}"
+	if [ "$USERINTERACTION" == "NO" ] || [ "$USERINTERACTION" == "no" ] ; then
+		E2ECHOICE1="$E2ETHEPROJECTCHOICE1¤$E2ECHOICE1"
+	fi
 	sudo chown $CURRENTUSER:$CURRENTUSER $E2ECHOICE6
 	sudo chmod 400 $E2ECHOICE6
 							
@@ -184,10 +225,14 @@ $E2EOSIMAGECHOICEFORCLUSTER
 		VAR1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 		VAR2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 		VAR3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		VAR4=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			VAR4="$GlobalE2EPassword"
+		else
+			VAR4=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		fi
 		THEPARALLELFUNCTIONNAME="ParallelFunction$IV"
 		echo "function $THEPARALLELFUNCTIONNAME(){" | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THEPARALLELFUNCTIONLIST > /dev/null
-		echo "$BASE/Scripts/E2ECreateTerminal \"$VAR1\" \"$VAR2\" \"$VAR3\" \"$APIKey\" \"$E2ECHOICE1\" \"$AuthToken\" \"$TokenName\" \"$E2ECHOICE3\" \"$E2ECHOICE4\" \"$E2ECHOICE5\" \"$SSHKey\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV\" \"$E2ECHOICE6\" \"$VAR4\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-DONE\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-FAIL\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-ERROR\" \"$BASE\" \"22\" \"$CLUSTERDELETELIST\" \"$CLUSTERTHENAME-$RANDOMCLUSTERNAME\"" | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THEPARALLELFUNCTIONLIST > /dev/null		
+		echo "$BASE/Scripts/E2ECreateTerminal \"$VAR1\" \"$VAR2\" \"$VAR3\" \"$APIKey\" \"$E2ECHOICE1\" \"$AuthToken\" \"$TokenName\" \"$E2ECHOICE3\" \"$E2ECHOICE4\" \"$E2ECHOICE5\" \"$SSHKey\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV\" \"$E2ECHOICE6\" \"$VAR4\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-DONE\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-FAIL\" \"$CLUSTERTHENAME-$E2ECHOICE2-$IV-ERROR\" \"$BASE\" \"22\" \"$CLUSTERDELETELIST\" \"$CLUSTERTHENAME-$RANDOMCLUSTERNAME\" \"$ISAUTOMATION\"" | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THEPARALLELFUNCTIONLIST > /dev/null		
 		echo "}" | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THEPARALLELFUNCTIONLIST > /dev/null
 		THEPARALLELFUNC_LIST+=("$THEPARALLELFUNCTIONNAME")
 		PARALLELFUNCCOUNT=$((PARALLELFUNCCOUNT + 1))
@@ -303,10 +348,17 @@ echo \"\"
 	echo ''
 
 	VAR5=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "
+	if [ "$ISAUTOMATION" == "YES" ] ; then
+		echo "
+sudo rm -rf $THEVISIONFOLDER/$CLUSTERTHENAME-$E2ECHOICE2-EXECUTE-ORDER-66-$VAR5
+sudo rm -rf $THEVISIONFOLDER/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
+" | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$CLUSTERDELETELIST > /dev/null	
+	else	
+		echo "
 sudo rm -rf $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-EXECUTE-ORDER-66-$VAR5
 sudo rm -rf $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
 " | sudo tee -a $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$CLUSTERDELETELIST > /dev/null
+	fi
 	
 	MINIMUMSUCCESS="0"
 	if [ "$TOTALSUCCESS" -gt "$MINIMUMSUCCESS" ]; then
@@ -320,7 +372,11 @@ sudo rm -rf $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
 		sudo rm -rf $BASE/Secrets/$VAR6
 		sudo rm -rf /root/.bash_history
 		sudo rm -rf /home/$CURRENTUSER/.bash_history
-		sudo mv $BASE/Secrets/".$VAR6" $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-EXECUTE-ORDER-66-$VAR5
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			sudo mv $BASE/Secrets/".$VAR6" $THEVISIONFOLDER/$CLUSTERTHENAME-$E2ECHOICE2-EXECUTE-ORDER-66-$VAR5
+		else
+			sudo mv $BASE/Secrets/".$VAR6" $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-EXECUTE-ORDER-66-$VAR5
+		fi
 
 		VAR7=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 		sudo cp $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THENEWNODELIST $BASE/Secrets/$VAR7
@@ -332,7 +388,49 @@ sudo rm -rf $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
 		sudo rm -rf $BASE/Secrets/$VAR7
 		sudo rm -rf /root/.bash_history
 		sudo rm -rf /home/$CURRENTUSER/.bash_history
-		sudo mv $BASE/Secrets/".$VAR7" $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			sudo mv $BASE/Secrets/".$VAR7" $THEVISIONFOLDER/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
+		else
+			sudo mv $BASE/Secrets/".$VAR7" $BASE/Output/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5
+		fi
+				
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			THERES1VALS=$(head -n 1 "$BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/$THENEWNODELIST")
+			IFS='├' read -r -a THERES1_VALS <<< $THERES1VALS
+			THERES1__VALS="${THERES1_VALS[0]}"
+			THERES1___VALS="${THERES1_VALS[1]}"
+			
+			VARTK=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			TEMP_KEY_FILE="$BASE/tmp/temp_key_$VARTK"
+			TEMP_KEY_PUB_FILE="$BASE/tmp/temp_key_$VARTK.pub"			
+			echo -e  'y\n'|ssh-keygen -b 2048 -t rsa -P '' -f $TEMP_KEY_FILE && cp $TEMP_KEY_FILE $PEM_FILE
+			sudo chmod 400 "$PEM_FILE"
+			expect -c "
+spawn ssh-copy-id -i \"$TEMP_KEY_PUB_FILE\" \"matsya@$THERES1__VALS\"
+expect {
+    \"*?assword:*\" {
+        send \"$GlobalE2EPassword\\r\"
+        expect eof
+    }
+}
+"
+			rm "$TEMP_KEY_FILE" "$TEMP_KEY_PUB_FILE"
+						
+			THESYNCCONTENT="$Scope1Id,$Identity1Id,e2e,$E2ECHOICE3├$E2ECHOICE1├$E2ECHOICE4├$E2ECHOICE5,$SECRETSTHEFILE,$SECRETTHEKEY,$THERES1__VALS,,,,,,,,,No,$THERES1___VALS,$The1OS,No,TBD,TBD,TBD,matsya,22,$GlobalE2EPassword,$PEM_FILE,N,N"
+			
+		        sudo touch $THESTACKFOLDERSYNC/$RNDXM
+		        echo "$THESYNCCONTENT" | sudo tee -a $THESTACKFOLDERSYNC/$RNDXM > /dev/null
+			sudo chmod 777 $THESTACKFOLDERSYNC/$RNDXM
+			THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+			sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 
+			source $BASE/Resources/StackVersioningAndMisc	
+			CSVFILE_ENC_DYC "$THESTACKFOLDERSYNC/$RNDXM" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONXKEY" "0" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+			sudo rm -f $THESTACKFOLDERSYNC/$RNDXM
+			sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKFOLDERSYNC/$RNDXM	
+			
+			sudo rm -f $THEVISIONFOLDER/$CLUSTERTHENAME-$E2ECHOICE2-LIST-$VAR5		
+		fi		
 	fi
 		
 	sudo rm -rf $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/*
@@ -353,6 +451,10 @@ sudo rm -rf $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME/*
 sudo rm -rf $BASE/tmp/$CLUSTERTHENAME-$RANDOMCLUSTERNAME
 sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+if [ "$ISAUTOMATION" == "YES" ] || [ "$ISAUTOMATION" == "yes" ] ; then
+	sudo rm -rf $BASE/tmp/$CLUSTERTHENAME-JOBLOG.out
+fi
 
 if [ "$MANUALRUN" == "YES" ] || [ "$MANUALRUN" == "yes" ] ; then
 	read -p "" -e -i "" QUIT

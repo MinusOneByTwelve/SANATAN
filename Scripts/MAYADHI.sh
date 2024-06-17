@@ -113,9 +113,9 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 			#$BASE/Scripts/ActionRUN.sh "AZURE_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile"
 		fi
 		
-		if [ "$key1" == "e2e" ] ; then
-			nohup $BASE/Scripts/ActionRUN.sh "E2E_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
-		fi		
+		#if [ "$key1" == "e2e" ] ; then
+		#	nohup $BASE/Scripts/ActionRUN.sh "E2E_VPC_DELETE" "$TheVision1ID" "$VisionKey" "$ScopeFile" 2>&1 &
+		#fi		
 		
 		exit
 	fi
@@ -173,7 +173,9 @@ if [ "$TASKIDENTIFIER" == "PARASHURAMA" ] ; then
 		fi
 		
 		if [ "$key" == "e2e" ] ; then
-			echo "e2e : ${DiffInstanceTypes["$key"]}"
+			#echo "e2e : ${DiffInstanceTypes["$key"]}"
+			nohup $BASE/Scripts/ActionRUN.sh "CLD_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" "E2E" 2>&1 &
+			#$BASE/Scripts/ActionRUN.sh "CLD_IDENTITY_DELETE" "${DiffInstanceTypes["$key"]}" "$ScopeFile" "$VisionKey" "E2E"
 		fi			    
 	done	
 fi
@@ -362,13 +364,112 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' 2>&1 &						
 		fi
 		
-		if [ "$THEWORK_FILE" == "e2e1" ] ; then
+		if [ "$THEWORK_FILE" == "e2e" ] ; then
 			echo "e2e : $THEWORKFILE"
+			RNDE2EXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			echo "$ALLWORKFOLDERSYNC/$RNDE2EXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
+			#$BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}'
+			#exit
+			nohup $BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}' 2>&1 &	
 		fi		
 	done	
 	# INSTANCE TYPE BASED FILE ACTION
 	
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" 2>&1 &		
+fi
+
+if [ "$TASKIDENTIFIER" == "e2e" ] ; then
+	THEJSON=$2
+
+	THESTACKE2EFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
+	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
+	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
+	RNDE2E1XM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
+		
+	THESTACKFOLDERE2E=$(dirname "$THESTACKE2EFILE")
+	sudo mkdir $THESTACKFOLDERE2E/"$TASKIDENTIFIER-WIP"
+	sudo chmod -R 777 $THESTACKFOLDERE2E/"$TASKIDENTIFIER-WIP"
+	sudo touch $THESTACKFOLDERE2E/"$TASKIDENTIFIER-WIP_"
+	sudo chmod 777 $THESTACKFOLDERE2E/"$TASKIDENTIFIER-WIP_"
+	THESTACKFOLDERSYNC="$THESTACKFOLDERE2E/$TASKIDENTIFIER-WIP"
+	THESTACKFILESYNC="$THESTACKFOLDERE2E/$TASKIDENTIFIER-WIP_"
+	
+	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+	fi
+	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+		
+	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	
+	header=$(head -n 1 $THESTACKE2EFILE)
+	csv_data=$(tail -n +2 $THESTACKE2EFILE)
+	json_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	filtered_json=$(echo "$json_data" | jq 'map(select(.IP != null and .IP != ""))')
+	filtered_json2=$(echo "$filtered_json" | jq 'map(select(.IP == "TBD"))')
+	
+	THESANITIZEDREAL2FILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESANITIZEDREAL2FILE_file="$BASE/tmp/$THESANITIZEDREAL2FILE__file"
+	header=$(echo "$filtered_json2" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESANITIZEDREAL2FILE_file"
+	echo "$filtered_json2" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESANITIZEDREAL2FILE_file"
+	done	
+	sudo chmod 777 $THESANITIZEDREAL2FILE_file
+	sed -i 's/""//g' "$THESANITIZEDREAL2FILE_file"
+	sed -i 's/"//g' "$THESANITIZEDREAL2FILE_file"
+	sudo rm -f $THESTACKE2EFILE
+	sudo mv $THESANITIZEDREAL2FILE_file $THESTACKE2EFILE
+
+	THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo touch $BASE/tmp/$THEFILEFORNEWVAL
+	sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
+	CSVFILE_ENC_DYC "$THESTACKE2EFILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THEVISIONKEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
+	sudo rm -f $THESTACKE2EFILE
+	sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THESTACKE2EFILE
+
+	AIFCTR=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo '#!/bin/bash' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	sudo chmod 777 	$BASE/tmp/$AIFCTR
+	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		
+	while read -r line2; do
+		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 12 | head -n 1)
+		RND1XM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 12 | head -n 1)
+		
+		other_info=$(echo $line2 | jq -r '.OtherInfo')
+		IFS='├' read -ra other1_info <<< "$other_info"
+		the1val="${other1_info[0]}"
+		the2val="${other1_info[1]}"
+		the3val="${other1_info[2]}"
+		the4val="${other1_info[3]}"		
+		secrets_key=$(echo $line2 | jq -r '.SecretsKey')
+		secrets_file=$(echo $line2 | jq -r '.Secrets')
+		Scope1Id=$(echo $line2 | jq -r '.ScopeId')
+		Identity1Id=$(echo $line2 | jq -r '.Identity')
+		The1OS=$(echo $line2 | jq -r '.OS')
+		GlobalE2EPassword=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		PEM_FILE="$BASE/Output/Pem/e2e$RNDXM""v""$THEVISIONID""s""$Scope1Id""i""$Identity1Id"".pem"
+		
+		echo "nohup $BASE/Scripts/Cloud-MultiNode \"e2e$RNDXM├1├1├1├$secrets_file├$secrets_key├$the2val├v""$THEVISIONID""s""$Scope1Id""i""$Identity1Id""├$the1val├$the3val├$the4val├NA├ISAUTOMATION├$THEVISIONFOLDER├$GlobalE2EPassword├$Scope1Id├$Identity1Id├$The1OS├$THEVISIONKEY├$THESTACKFOLDERSYNC├$RND1XM├$PEM_FILE\" > $BASE/tmp/e2e$RNDXM-JOBLOG.out 2>&1 &" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		
+		echo "$THESTACKFOLDERSYNC/$RND1XM" | sudo tee -a $THESTACKFILESYNC > /dev/null				
+	done < <(echo "$filtered_json2" | jq -c '.[]')
+	
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+	
+	#cat $BASE/tmp/$AIFCTR
+	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKE2EFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDE2E1XM\" \"E2E\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"
+	#exit
+	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKE2EFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDE2E1XM" "E2E" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &					
 fi
 
 if [ "$TASKIDENTIFIER" == "gcp" ] ; then
