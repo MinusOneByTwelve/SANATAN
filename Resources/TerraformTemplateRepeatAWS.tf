@@ -63,6 +63,81 @@ data "aws_security_group" "THE1VAL1HASH_ssg" {
   name = "THE1VAL1HASH_sg"
 }
 
+resource "aws_s3_bucket" "THEREQUIREDINSTANCEs3b" {
+  bucket = "THEREQUIREDBUCKET"
+
+  tags = {
+    Name = "THEREQUIREDBUCKET"
+  }
+     
+  lifecycle {
+    prevent_destroy = false
+  }  
+}
+
+resource "aws_s3_object" "THEREQUIREDINSTANCEs3bdo" {
+  bucket = aws_s3_bucket.THEREQUIREDINSTANCEs3b.bucket
+  key    = "THEREQUIREDBUCKET"
+  content = "THEREQUIREDBUCKET"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+data "aws_iam_policy_document" "THEREQUIREDINSTANCEs3p" {
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      "arn:aws:s3:::THEREQUIREDBUCKET",
+      "arn:aws:s3:::THEREQUIREDBUCKET/*"
+    ]    
+  }
+}
+
+resource "aws_iam_policy" "THEREQUIREDINSTANCEs3p" {
+  name   = "THEREQUIREDINSTANCEs3p"
+  policy = data.aws_iam_policy_document.THEREQUIREDINSTANCEs3p.json
+}
+
+resource "aws_iam_role" "THEREQUIREDINSTANCEiamr" {
+  name = "THEREQUIREDINSTANCEiamr"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "THEREQUIREDINSTANCEiamr_AmazonEC2FullAccess" {
+  role       = aws_iam_role.THEREQUIREDINSTANCEiamr.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "THEREQUIREDINSTANCEiamr_THEREQUIREDINSTANCEs3p" {
+  role       = aws_iam_role.THEREQUIREDINSTANCEiamr.name
+  policy_arn = aws_iam_policy.THEREQUIREDINSTANCEs3p.arn
+}
+
+resource "aws_iam_instance_profile" "THEREQUIREDINSTANCEiamip" {
+  name = "THEREQUIREDINSTANCEiamip"
+  role = aws_iam_role.THEREQUIREDINSTANCEiamr.name
+}
+
 resource "aws_instance" "THEREQUIREDINSTANCE" {
   count                       = var.num_instances
   ami                         = "THEREQUIREDAMI"
@@ -72,6 +147,8 @@ resource "aws_instance" "THEREQUIREDINSTANCE" {
   vpc_security_group_ids      = [data.aws_security_group.THE1VAL1HASH_ssg.id]
   associate_public_ip_address = true
   availability_zone           = var.availability_zone  
+
+  iam_instance_profile = aws_iam_instance_profile.THEREQUIREDINSTANCEiamip.name
 
   tags = {
     Name     = "THEREQUIREDINSTANCE-${count.index + 1}"
