@@ -110,6 +110,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 				max_attempts=10
 
 				#while true; do
+				INTERCEPTED="NO"
 				while [[ $attempt_counter -lt $max_attempts ]]; do
 				    ((attempt_counter++))
 				    
@@ -117,6 +118,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 					"sudo touch /opt/WHOAMI && sudo chmod 777 /opt/WHOAMI && echo \"$tv6\" | sudo tee -a /opt/WHOAMI > /dev/null && [ -f /opt/WHOAMI ]"
 				    then
 					echo "File /opt/WHOAMI successfully created and verified on remote host."
+					INTERCEPTED="YES"
 					#notify-send -t 5000 "Progress" "ssh -p \"$tv31\" -o StrictHostKeyChecking=no -i \"$tv32\" \"$tv30@$tv6\" File /opt/WHOAMI successfully created and verified on remote host."
 					break
 				    else
@@ -136,6 +138,19 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	    cpu_cores=$(nproc); \
 	    echo "$total_ram├$free_ram├$cpu_cores"'
 				)
+							
+				if [ "$INTERCEPTED" == "YES" ]; then
+					if [ "$THEREQCLD" == "AWS" ]; then
+						if [ "$tv17" == "UBU" ]; then
+							tv36="s$tv0""i$tv1""s3rb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[2]}"						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi
+				fi
 				
 				IFS='├' read -ra _gi <<< "$sshinfo"
 				tv33="${_gi[0]}"				

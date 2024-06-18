@@ -253,6 +253,23 @@ CLD_IDENTITY_DELETE() {
 						gcpsafile=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.gcpsa" | head -n 1)
 						gcpsafilename=$(basename "$gcpsafile")
 					fi
+					
+					if [ "$AID4" == "AWS" ] ; then
+						tv17="${USERLISTVALS[17]}"
+						tv0="${USERLISTVALS[0]}"
+						tv1="${USERLISTVALS[1]}"
+						tv6="${USERLISTVALS[6]}"
+						tv22="${USERLISTVALS[22]}"
+						tv23="${USERLISTVALS[23]}"
+						tv25="${USERLISTVALS[25]}"						
+						tv36="s$tv0""i$tv1""s3rb"
+						tv30=$(NARASIMHA "decrypt" "$tv22" "$AID3")
+						tv31=$(NARASIMHA "decrypt" "$tv23" "$AID3")
+						tv32=$(NARASIMHA "decrypt" "$tv25" "$AID3")						
+						if [ "$tv17" == "UBU" ]; then						
+							$BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "B" "$tv32" "$tv30" "$tv6" "$tv31" "$tv36"
+						fi
+					fi					
 					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"	 | sudo tee -a /home/prathamos/Downloads/log > /dev/null				
 					RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
 					RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)					

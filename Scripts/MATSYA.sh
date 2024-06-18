@@ -574,6 +574,9 @@ deploy_instances() {
 			
 			FILESTOBEDELETED+=("$terraform_file")
 			
+			guid=$(echo "$guid" | tr -d '_')
+			guid=$(echo "$guid" | tr '[:upper:]' '[:lower:]')
+						
 			RANDOMSCOPEVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo '      {
         "Name": "'"$guid"'",
@@ -707,6 +710,9 @@ deploy_instances() {
 			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
 				THESCOPEID="${CHOICEVALS[10]}"
 				THEIDENTITYID="${CHOICEVALS[11]}"
+				
+				THEREQUIREDBUCKET="s$THESCOPEID""i$THEIDENTITYID""s3rb"
+				sed -i -e s~"THEREQUIREDBUCKET"~"$THEREQUIREDBUCKET"~g $terraform_file
 				
 				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,aws,$THEREQUIREDAMI├$THEREQUIREDTYPE├$THEREQUIREDREGION├$THEREQUIREDSUBREGION,$SECRETSTHEFILE,$SECRETTHEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,$THEBASEOSCHOICE,No,TBD,TBD,TBD,$THEBASEOSUSER,22,,$THEREQUIREDLOCPEMKEY/$THEREQUIREDPEMKEY.pem,N,N"
 			fi
