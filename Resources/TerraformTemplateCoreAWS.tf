@@ -56,3 +56,25 @@ THEAWSFIREWALLSETTINGS
   }
 }
 
+resource "aws_s3_bucket" "THE1VAL1HASHs3b" {
+  bucket = "awsTHEGLOBALBUCKET"
+
+  tags = {
+    Name = "awsTHEGLOBALBUCKET"
+  }
+     
+  lifecycle {
+    prevent_destroy = false
+  }  
+}
+
+resource "aws_s3_object" "THE1VAL1HASHs3bdo" {
+  bucket = aws_s3_bucket.THE1VAL1HASHs3b.bucket
+  key    = "THE1VAL1HASH"
+  content = "THE1VAL1HASH"
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+

@@ -63,6 +63,10 @@ data "aws_security_group" "THE1VAL1HASH_ssg" {
   name = "THE1VAL1HASH_sg"
 }
 
+data "aws_s3_bucket" "THEREQUIREDINSTANCETHE1VAL1HASH_egb" {
+  bucket = "awsTHEGLOBALBUCKET"
+}
+
 resource "aws_s3_bucket" "THEREQUIREDINSTANCEs3b" {
   bucket = "THEREQUIREDBUCKET"
 
@@ -85,7 +89,23 @@ resource "aws_s3_object" "THEREQUIREDINSTANCEs3bdo" {
   }
 }
 
-data "aws_iam_policy_document" "THEREQUIREDINSTANCEs3p" {
+data "aws_iam_policy_document" "THE1VAL1HASHs3dpTHEREQUIREDINSTANCE" {
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket"
+    ]
+
+    resources = [
+      "arn:aws:s3:::${data.aws_s3_bucket.THEREQUIREDINSTANCETHE1VAL1HASH_egb.bucket}",
+      "arn:aws:s3:::${data.aws_s3_bucket.THEREQUIREDINSTANCETHE1VAL1HASH_egb.bucket}/*"
+    ]    
+  }
+}
+
+data "aws_iam_policy_document" "THEREQUIREDINSTANCEs3dp" {
   statement {
     actions = [
       "s3:GetObject",
@@ -101,9 +121,14 @@ data "aws_iam_policy_document" "THEREQUIREDINSTANCEs3p" {
   }
 }
 
+resource "aws_iam_policy" "THE1VAL1HASHs3pTHEREQUIREDINSTANCE" {
+  name   = "THE1VAL1HASHs3pTHEREQUIREDINSTANCE"
+  policy = data.aws_iam_policy_document.THE1VAL1HASHs3dpTHEREQUIREDINSTANCE.json
+}
+
 resource "aws_iam_policy" "THEREQUIREDINSTANCEs3p" {
   name   = "THEREQUIREDINSTANCEs3p"
-  policy = data.aws_iam_policy_document.THEREQUIREDINSTANCEs3p.json
+  policy = data.aws_iam_policy_document.THEREQUIREDINSTANCEs3dp.json
 }
 
 resource "aws_iam_role" "THEREQUIREDINSTANCEiamr" {
@@ -126,6 +151,11 @@ resource "aws_iam_role" "THEREQUIREDINSTANCEiamr" {
 resource "aws_iam_role_policy_attachment" "THEREQUIREDINSTANCEiamr_AmazonEC2FullAccess" {
   role       = aws_iam_role.THEREQUIREDINSTANCEiamr.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "THEREQUIREDINSTANCEiamr_THE1VAL1HASHs3p" {
+  role       = aws_iam_role.THEREQUIREDINSTANCEiamr.name
+  policy_arn = aws_iam_policy.THE1VAL1HASHs3pTHEREQUIREDINSTANCE.arn
 }
 
 resource "aws_iam_role_policy_attachment" "THEREQUIREDINSTANCEiamr_THEREQUIREDINSTANCEs3p" {
