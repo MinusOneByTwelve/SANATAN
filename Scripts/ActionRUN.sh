@@ -27,6 +27,9 @@ USERINTERACTION="YES"
 USERVALS=""
 MANUALRUN="NO"
 
+AWSGLOBALDELETE="NO"
+AWSGLOBALDONEDELETE="NO"
+
 BASE="/opt/Matsya"
 sudo mkdir -p $BASE
 sudo mkdir -p $BASE/tmp
@@ -254,21 +257,43 @@ CLD_IDENTITY_DELETE() {
 						gcpsafilename=$(basename "$gcpsafile")
 					fi
 					
+					tv6="${USERLISTVALS[6]}"
+					if [ "$tv6" == "TBD" ] ; then
+						break
+					fi
+					
 					if [ "$AID4" == "AWS" ] ; then
 						tv17="${USERLISTVALS[17]}"
 						tv0="${USERLISTVALS[0]}"
-						tv1="${USERLISTVALS[1]}"
-						tv6="${USERLISTVALS[6]}"
+						tv1="${USERLISTVALS[1]}"						
 						tv22="${USERLISTVALS[22]}"
 						tv23="${USERLISTVALS[23]}"
 						tv25="${USERLISTVALS[25]}"						
 						tv36="s$tv0""i$tv1""s3rb"
 						tv30=$(NARASIMHA "decrypt" "$tv22" "$AID3")
 						tv31=$(NARASIMHA "decrypt" "$tv23" "$AID3")
-						tv32=$(NARASIMHA "decrypt" "$tv25" "$AID3")						
+						tv32=$(NARASIMHA "decrypt" "$tv25" "$AID3")
+			
+						if [ "$AWSGLOBALDELETE" == "YES" ]; then
+							if [ "$AWSGLOBALDONEDELETE" == "NO" ]; then
+								tv3="${USERLISTVALS[3]}"
+								IFS='├' read -ra _tv3 <<< "$tv3"
+								tv37="${_tv3[2]}"
+								tv39=$(echo -n "$tv37" | md5sum | awk '{print $1}')							
+								$BASE/Scripts/Cloud-Instance-Exec.sh "AWS" "GBD" "$tv32" "$tv30" "$tv6" "$tv31" "aws$tv39"
+								AWSGLOBALDONEDELETE="YES"
+							fi						
+						fi						
+															
 						if [ "$tv17" == "UBU" ]; then						
 							$BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "B" "$tv32" "$tv30" "$tv6" "$tv31" "$tv36"
 						fi
+						if [ "$tv17" == "AZL" ]; then						
+							$BASE/Scripts/Cloud-Instance-Exec.sh "AWS_AZL" "B" "$tv32" "$tv30" "$tv6" "$tv31" "$tv36"
+						fi
+						if [ "$tv17" == "ALMA" ]; then						
+							$BASE/Scripts/Cloud-Instance-Exec.sh "AWS_ALMA" "B" "$tv32" "$tv30" "$tv6" "$tv31" "$tv36"
+						fi												
 					fi					
 					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"	 | sudo tee -a /home/prathamos/Downloads/log > /dev/null				
 					RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
@@ -610,9 +635,10 @@ AWS_VPC_DELETE() {
 	
 	#echo ""
 	#echo "$SCPIDYMULTIPLE"
-	
+	AWSGLOBALDELETE="YES"	
 	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "AWS"	
-	
+	AWSGLOBALDELETE="NO"
+		
 	for file in "${z_files[@]}"; do
 		folder_name=$(dirname "$file")
 		VISION_TERRAFORM_DELETE "$folder_name" "$Vision1Key" "AWS"

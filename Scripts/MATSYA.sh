@@ -705,6 +705,9 @@ deploy_instances() {
 			#sed -i -e s~"THEREQUIREDSUBNET"~"$THEREQUIREDSUBNET"~g $terraform_file
 			#sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file	
 
+			trrmd5=$(echo -n "$THEREQUIREDREGION" | md5sum | awk '{print $1}')
+			sed -i -e s~"THEGLOBALBUCKET"~"$trrmd5"~g $terraform_file
+			
 			THESYNCCONTENT=""
 			
 			if [ "$THETFFILEISREPEAT" == "YES" ] ; then

@@ -144,12 +144,37 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 						if [ "$tv17" == "UBU" ]; then
 							tv36="s$tv0""i$tv1""s3rb"
 							IFS='├' read -ra _tv3 <<< "$tv3"
-							tv37="${_tv3[2]}"						
+							tv37="${_tv3[2]}"
+							tv39=$(echo -n "$tv37" | md5sum | awk '{print $1}')						
 							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 							
-							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" "aws$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
 						fi
 					fi
+					
+					if [ "$THEREQCLD" == "AWS" ]; then
+						if [ "$tv17" == "AZL" ]; then
+							tv36="s$tv0""i$tv1""s3rb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[2]}"
+							tv39=$(echo -n "$tv37" | md5sum | awk '{print $1}')						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_AZL" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" "aws$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi
+					
+					if [ "$THEREQCLD" == "AWS" ]; then
+						if [ "$tv17" == "ALMA" ]; then
+							tv36="s$tv0""i$tv1""s3rb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[2]}"
+							tv39=$(echo -n "$tv37" | md5sum | awk '{print $1}')						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_ALMA" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" "aws$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi										
 				fi
 				
 				IFS='├' read -ra _gi <<< "$sshinfo"
