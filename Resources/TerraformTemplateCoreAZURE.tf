@@ -72,3 +72,18 @@ resource "azurerm_subnet_network_security_group_association" "THE1VAL1HASHsga" {
   network_security_group_id = azurerm_network_security_group.THE1VAL1HASHnsg.id
 }
 
+resource "azurerm_storage_account" "THE1VAL1HASHsa" {
+  name                     = "THE1VAL1F22CHASHsa"
+  resource_group_name      = azurerm_resource_group.THE1VAL1HASHrg.name
+  location                 = azurerm_resource_group.THE1VAL1HASHrg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "THE1VAL1HASHsc" {
+  #name                  = "azTHEGLOBALCONTAINERgc"
+  name                  = "storage"
+  storage_account_name  = azurerm_storage_account.THE1VAL1HASHsa.name
+  container_access_type = "private"
+}
+

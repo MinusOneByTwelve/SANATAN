@@ -58,6 +58,32 @@ resource "azurerm_network_interface" "AZURESCOPEVALnic" {
   }
 }
 
+resource "azurerm_storage_account" "AZURESCOPEVALsa" {
+  name                     = "THEREQUIREDSTRGACC"
+  resource_group_name      = data.azurerm_resource_group.THE1VAL1HASHrg.name
+  location                 = data.azurerm_resource_group.THE1VAL1HASHrg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "AZURESCOPEVALsc" {
+  #name                  = "THEREQUIREDCONTAINER"
+  name                  = "storage"
+  storage_account_name  = azurerm_storage_account.AZURESCOPEVALsa.name
+  container_access_type = "private"
+}
+
+data "azurerm_storage_account" "THE1VAL1HASHsaAZURESCOPEVAL" {
+  name                = "THE1VAL1F22CHASHsa"
+  resource_group_name = data.azurerm_resource_group.THE1VAL1HASHrg.name
+}
+
+data "azurerm_storage_container" "THE1VAL1HASHscAZURESCOPEVAL" {
+  #name                  = "azTHEGLOBALCONTAINERgc"
+  name                  = "storage"
+  storage_account_name  = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.name
+}
+
 resource "azurerm_linux_virtual_machine" "AZURESCOPEVALvm" {
   count               = var.num_instances
   name                = "AZURESCOPEVAL${count.index + 1}"
@@ -75,7 +101,11 @@ resource "azurerm_linux_virtual_machine" "AZURESCOPEVALvm" {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
   }
-
+  
+  identity {
+    type = "SystemAssigned"
+  }
+  
   source_image_reference {
     publisher = "AZURESCOPE9VAL"
     offer     = "AZURESCOPE10VAL"
@@ -92,5 +122,19 @@ output "public_ips" {
 
 output "hostnames" {
   value = azurerm_linux_virtual_machine.AZURESCOPEVALvm[*].name
+}
+
+resource "azurerm_role_assignment" "AZURESCOPEVALra" {
+  scope                = azurerm_storage_account.AZURESCOPEVALsa.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage Blob Data Contributor"
+}
+
+resource "azurerm_role_assignment" "AZURESCOPEVALraTHE1VAL1HASH" {
+  scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage Blob Data Contributor"
 }
 
