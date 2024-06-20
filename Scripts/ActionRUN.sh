@@ -29,6 +29,7 @@ MANUALRUN="NO"
 
 AWSGLOBALDELETE="NO"
 AWSGLOBALDONEDELETE="NO"
+THEREQVISID="NA"
 
 BASE="/opt/Matsya"
 sudo mkdir -p $BASE
@@ -276,12 +277,17 @@ CLD_IDENTITY_DELETE() {
 			
 						if [ "$AWSGLOBALDELETE" == "YES" ]; then
 							if [ "$AWSGLOBALDONEDELETE" == "NO" ]; then
-								tv3="${USERLISTVALS[3]}"
-								IFS='├' read -ra _tv3 <<< "$tv3"
-								tv37="${_tv3[2]}"
-								tv39=$(echo -n "$tv37" | md5sum | awk '{print $1}')							
-								$BASE/Scripts/Cloud-Instance-Exec.sh "AWS" "GBD" "$tv32" "$tv30" "$tv6" "$tv31" "aws$tv39"
-								AWSGLOBALDONEDELETE="YES"
+								if [ "$THEREQVISID" == "NA" ]; then
+									ABC="XYZ"
+								else
+									tv3="${USERLISTVALS[3]}"
+									IFS='├' read -ra _tv3 <<< "$tv3"
+									tv37="${_tv3[2]}"
+									trr_md5="${THEREQVISID}├${tv37}"
+									tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')							
+									$BASE/Scripts/Cloud-Instance-Exec.sh "AWS" "GBD" "$tv32" "$tv30" "$tv6" "$tv31" "aws$tv39"
+									AWSGLOBALDONEDELETE="YES"
+								fi
 							fi						
 						fi						
 															
@@ -635,9 +641,11 @@ AWS_VPC_DELETE() {
 	
 	#echo ""
 	#echo "$SCPIDYMULTIPLE"
-	AWSGLOBALDELETE="YES"	
+	AWSGLOBALDELETE="YES"
+	THEREQVISID="$The1Vision1ID"	
 	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "AWS"	
 	AWSGLOBALDELETE="NO"
+	THEREQVISID="NA"
 		
 	for file in "${z_files[@]}"; do
 		folder_name=$(dirname "$file")

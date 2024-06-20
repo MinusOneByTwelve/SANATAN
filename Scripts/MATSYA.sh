@@ -143,6 +143,9 @@ deploy_instances_azure() {
 		AZURESCOPE3VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE3VAL?") && AZURESCOPE3VAL="${AZURESCOPE3VAL//$DoubleQuotes/$NoQuotes}"
 		AZURESCOPE4VAL=$(echo $THEACTUALSECRETS | jq -c ".MN.Cluster.Secrets[0].AZURESCOPE4VAL?") && AZURESCOPE4VAL="${AZURESCOPE4VAL//$DoubleQuotes/$NoQuotes}"
 		_AZURESCOPE5VAL="${CHOICEVALS[0]}"
+		
+		AS5VMD5=$(echo -n "$_AZURESCOPE5VAL" | md5sum | awk '{print $1}')
+		
 		AZURESCOPE5VAL=$(echo "$_AZURESCOPE5VAL" | sed 's@┼@ @g')
 
 		AZURESCOPE6VAL="$BASE/Output/Pem/$thevar3.pem"
@@ -169,7 +172,8 @@ deploy_instances_azure() {
 		sed -i -e s~"AZURESCOPE11VAL"~"$AZURESCOPE11VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE12VAL"~"$AZURESCOPE12VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE14VAL"~"$AZURESCOPE14VAL"~g $BASE/tmp/$AZNAME.tf
-
+		sed -i -e s~"THEGLOBALCONTAINER"~"$AS5VMD5"~g $BASE/tmp/$AZNAME.tf
+		
 		source_file="$BASE/tmp/$SECPORTFILE"
 		target_file="$BASE/tmp/$AZNAME.tf"
 		#line_number=69
@@ -339,7 +343,9 @@ deploy_instances() {
     local thevar2=$9
     local thevar3="${10}" 
     local THE1VAL1HASH="${11}" 
-    local THEVISIONXKEY="${12}"  
+    local THEVISIONXKEY="${12}" 
+    local THEREQVIS1ID="${13}" 
+     
     createnewtf="NA"
     if [ "$terraform_file" == "NA" ] ; then
     	THEREALTERRAFORMFILE="NA"
@@ -492,12 +498,18 @@ deploy_instances() {
 			SECRET1THEKEY="${CHOICE1VALS2[1]}"
 
 			IFS='¬' read -r -a CHVL <<< $thevar1
-
+			
+			THEREGREQ1="${CHVL[0]}"
 			THE1VAL1HASH="${CHVL[4]}"
 			THESTACKFOLDERSYNC="${CHVL[5]}"
 			RNDXM="${CHVL[6]}"
 
 			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+			
+			trr1_md5="${THEREQVIS1ID}├${THEREGREQ1}"
+			trrmd15=$(echo -n "$trr1_md5" | md5sum | awk '{print $1}')			
+			THE1VAL1F22CHASH="${trrmd15:0:22}"
+			sed -i -e s~"THE1VAL1F22CHASH"~"$THE1VAL1F22CHASH"~g $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
 			
 			THESYNCCONTENT=""
 			
@@ -505,6 +517,11 @@ deploy_instances() {
 				THESCOPEID="${CHVL[7]}"
 				THEIDENTITYID="${CHVL[8]}"
 				
+				THEREQUIREDCONTAINER="s$THESCOPEID""i$THEIDENTITYID""bsrc"
+				sed -i -e s~"THEREQUIREDCONTAINER"~"$THEREQUIREDCONTAINER"~g $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+				THEREQUIREDSTRGACC="s$THESCOPEID""i$THEIDENTITYID""bsa"
+				sed -i -e s~"THEREQUIREDSTRGACC"~"$THEREQUIREDSTRGACC"~g $BASE/tmp/$RANDOMINSTANCEAZNAME.tf
+												
 				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,azure,""${CHVL[0]}""├""${CHVL[1]}"",$SECRETS1THEFILE,$SECRET1THEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,""${CHVL[3]}"",No,TBD,TBD,TBD,""${CHVL[2]}"",22,,$BASE/Output/Pem/$guid.pem,N,N"
 			fi
 			
@@ -705,7 +722,8 @@ deploy_instances() {
 			#sed -i -e s~"THEREQUIREDSUBNET"~"$THEREQUIREDSUBNET"~g $terraform_file
 			#sed -i -e s~"THEREQUIREDSECGRP"~"$THEREQUIREDSECGRP"~g $terraform_file	
 
-			trrmd5=$(echo -n "$THEREQUIREDREGION" | md5sum | awk '{print $1}')
+			trr_md5="${THEREQVIS1ID}├${THEREQUIREDREGION}"
+			trrmd5=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')
 			sed -i -e s~"THEGLOBALBUCKET"~"$trrmd5"~g $terraform_file
 			
 			THESYNCCONTENT=""
@@ -1063,7 +1081,9 @@ GLOBALPARALLEL=$4
 GLOBALNAPARALLEL="NO"
 if [ "$AUTOMATEDRUN" == "YES" ] ; then
 	THEVISIONKEY=$5
-	THEVAL1HASH=$6
+	IFS="■" read -ra _VID <<< "$6"
+	THEVAL1HASH="${_VID[0]}"
+	THEREQVISID="${_VID[1]}"
 fi
 if [ ! -z "$GLOBALPARALLEL" ]; then
 	if [[ ! "$GLOBALPARALLEL" =~ ^[0-9]+$ ]]; then
@@ -1122,7 +1142,7 @@ for block in "${blocks[@]}"; do
         fi
     done
 
-    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST" "$THEVAL1HASH" "$THEVISIONKEY"
+    deploy_instances "${params[0]}" "${params[1]}" "${params[2]}" "${params[3]}" "${params[4]}" "$BASE/tmp/$ALLDIFFCLDLIST" "$BASE/tmp/$ALLDIFFCLDCOLLECTLIST" "${params[5]}" "${params[6]}" "$BASE/tmp/$ALLDIFFCLDCOLLECTSCOPESLIST" "$THEVAL1HASH" "$THEVISIONKEY" "$THEREQVISID"
 done
 
 THEORIGINALFOLDERLOC=$(pwd)

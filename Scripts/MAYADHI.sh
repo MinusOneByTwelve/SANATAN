@@ -469,7 +469,7 @@ if [ "$TASKIDENTIFIER" == "e2e" ] ; then
 	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKE2EFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDE2E1XM\" \"E2E\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"
 	#exit
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKE2EFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDE2E1XM" "E2E" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &					
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKE2EFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDE2E1XM" "E2E" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &					
 fi
 
 if [ "$TASKIDENTIFIER" == "gcp" ] ; then
@@ -683,7 +683,7 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 						
 		if [ "$THEREQMODE" == "NEW" ] ; then
-			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH■$THEVISIONID"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
 		fi
@@ -699,7 +699,7 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	
 	if [ "$THEREPEATITEMS" != "" ] ; then	
 		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH■$THEVISIONID\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 		TERRAVFILETRACKING+=("$RNDM1")
 	fi
@@ -716,7 +716,7 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKGCPFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDGCP1XM" "GCP" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKGCPFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDGCP1XM" "GCP" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKGCPFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDGCP1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
 fi
 
@@ -931,7 +931,7 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 						
 		if [ "$THEREQMODE" == "NEW" ] ; then
-			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH■$THEVISIONID"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
 		fi
@@ -947,7 +947,7 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	
 	if [ "$THEREPEATITEMS" != "" ] ; then	
 		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH■$THEVISIONID\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 		TERRAVFILETRACKING+=("$RNDM1")
 	fi
@@ -964,7 +964,7 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAZUREFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAZURE1XM" "AZURE" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAZUREFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAZURE1XM" "AZURE" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKAZUREFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDAZURE1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
 fi
 
@@ -1197,7 +1197,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 		RNDXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 						
 		if [ "$THEREQMODE" == "NEW" ] ; then
-			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+			echo "$BASE"'/Scripts/MATSYA.sh "1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM"'¤'"$THEVAL5"'¬'"$THEVAL6"'" "'"cv$THEVAL1""s$THEVAL2""i$THEVAL3"'" "YES" 5 "'"$THEVISIONKEY"'" "'"$THEVAL1HASH■$THEVISIONID"'"' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 			TERRAVFILETRACKING+=("cv$THEVAL1""s$THEVAL2""i$THEVAL3")
 		fi
@@ -1224,7 +1224,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	THEZONEITEMS="${THEZONEITEMS%├}"
 	if [ "$THEZONEITEMS" != "" ] ; then
 		RND1M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		echo "$BASE/Scripts/MATSYA.sh \"$THEZONEITEMS\" \"$RND1M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo "$BASE/Scripts/MATSYA.sh \"$THEZONEITEMS\" \"$RND1M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH■$THEVISIONID\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 		TERRAVFILETRACKING+=("$RND1M1")
 	fi
@@ -1240,7 +1240,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	
 	if [ "$THEREPEATITEMS" != "" ] ; then	
 		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+		echo "$BASE/Scripts/MATSYA.sh \"$THEREPEATITEMS\" \"$RNDM1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH■$THEVISIONID\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 		echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 		TERRAVFILETRACKING+=("$RNDM1")
 	fi
@@ -1257,7 +1257,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAWS1XM" "AWS" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAWSFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAWS1XM" "AWS" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
