@@ -418,14 +418,22 @@ deploy_instances() {
 			THE1VAL1HASH="${CHVL[6]}"
 			THESTACKFOLDERSYNC="${CHVL[7]}"
 			RNDXM="${CHVL[8]}"
+			REQGCPREG="${CHVL[4]}"
 
 			sed -i -e s~"THE1VAL1HASH"~"$THE1VAL1HASH"~g $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf
+
+			t1rr_md5="${THEREQVIS1ID}├${REQGCPREG}"
+			tr1r1md5=$(echo -n "$t1rr_md5" | md5sum | awk '{print $1}')
+			sed -i -e s~"THEGLOBALBUCKET"~"$tr1r1md5"~g $BASE/tmp/$RANDOMINSTANCEGCPNAME.tf
 			
 			THESYNCCONTENT=""
 			
 			if [ "$THETFFILEISREPEAT" == "YES" ] ; then
 				THESCOPEID="${CHVL[9]}"
 				THEIDENTITYID="${CHVL[10]}"
+
+				THEREQUIREDGCPBUCKET="s$THESCOPEID""i$THEIDENTITYID""gcsrb"
+				sed -i -e s~"THEREQUIREDGCPBUCKET"~"$THEREQUIREDGCPBUCKET"~g $terraform_file
 				
 				THESYNCCONTENT="$THESCOPEID,$THEIDENTITYID,gcp,""${CHVL[0]}""├""${CHVL[1]}""├""${CHVL[3]}""├""${CHVL[4]}"",$SECRETS1THEFILE,$SECRET1THEKEY,THEGENERATEDIP,,,,,,,,,No,THEGENERATEDNAME,""${CHVL[2]}"",No,TBD,TBD,TBD,""${CHVL[5]}"",22,,$BASE/Output/Pem/$THENAMEOFTHEGCPPEM.pem,N,N"
 			fi

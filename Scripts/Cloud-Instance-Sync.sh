@@ -141,6 +141,45 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 				)
 							
 				if [ "$INTERCEPTED" == "YES" ]; then
+					if [ "$THEREQCLD" == "GCP" ]; then
+						if [ "$tv17" == "UBU" ]; then
+							tv36="s$tv0""i$tv1""gcsrb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[3]}"
+							trr_md5="${THEREQVISID}├${tv37}"
+							tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "GCP_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "gcp$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi
+
+					if [ "$THEREQCLD" == "GCP" ]; then
+						if [ "$tv17" == "ALMA" ]; then
+							tv36="s$tv0""i$tv1""gcsrb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[3]}"
+							trr_md5="${THEREQVISID}├${tv37}"
+							tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "GCP_ALMA" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "gcp$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi
+
+					if [ "$THEREQCLD" == "GCP" ]; then
+						if [ "$tv17" == "ROCKY" ]; then
+							tv36="s$tv0""i$tv1""gcsrb"
+							IFS='├' read -ra _tv3 <<< "$tv3"
+							tv37="${_tv3[3]}"
+							trr_md5="${THEREQVISID}├${tv37}"
+							tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')						
+							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "GCP_ROCKY" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "gcp$tv39" > $BASE/tmp/$tv38-JOBLOG.out 2>&1 & 
+						fi
+					fi
+																			
 					if [ "$THEREQCLD" == "AZURE" ]; then
 						if [ "$tv17" == "UBU" ]; then
 							tv36="s$tv0""i$tv1""bsa"

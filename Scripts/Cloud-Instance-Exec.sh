@@ -9,11 +9,54 @@ THEREQUSR="$4"
 THEREQMAC="$5"
 THEREQPRT="$6"
 
-if [ "$CLOUD_OS" == "AWS" ]; then
-	if [ "$THEACTION" == "GBD" ]; then
-		THEREQGBK="$7"		
-		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "aws s3 rm s3://$THEREQGBK --recursive"		
-	fi
+if [ "$CLOUD_OS" == "GCP_UBU" ]; then
+	if [ "$THEACTION" == "A" ]; then
+		THEREQJLF="$7"
+		THEREQBUC="$8"
+		THEREQGBK="$9"
+		#echo "sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R matsya:matsya /shiva/local && sudo chmod -R u=rwx,g=,o= /shiva/local && sudo mkdir -p /shiva/local/storage && sudo chown -R matsya:matsya /shiva/local/storage && sudo chmod -R u=rwx,g=,o= /shiva/local/storage && sudo mkdir -p /shiva/global && sudo chown -R matsya:matsya /shiva/global && sudo chmod -R u=rwx,g=,o= /shiva/global && sudo mkdir -p /shiva/global/storage && sudo chown -R matsya:matsya /shiva/global/storage && sudo chmod -R u=rwx,g=,o= /shiva/global/storage && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt gcsfuse-jammy main\" | sudo tee /etc/apt/sources.list.d/gcsfuse.list > /dev/null && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc && sudo apt-get update -y && sudo apt-get install gcsfuse -y && gcsfuse $THEREQBUC \"/shiva/local/storage\" && gcsfuse $THEREQGBK \"/shiva/global/storage\" && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"		
+		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R matsya:matsya /shiva/local && sudo chmod -R u=rwx,g=,o= /shiva/local && sudo mkdir -p /shiva/local/storage && sudo chown -R matsya:matsya /shiva/local/storage && sudo chmod -R u=rwx,g=,o= /shiva/local/storage && sudo mkdir -p /shiva/global && sudo chown -R matsya:matsya /shiva/global && sudo chmod -R u=rwx,g=,o= /shiva/global && sudo mkdir -p /shiva/global/storage && sudo chown -R matsya:matsya /shiva/global/storage && sudo chmod -R u=rwx,g=,o= /shiva/global/storage && echo \"deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt gcsfuse-jammy main\" | sudo tee /etc/apt/sources.list.d/gcsfuse.list > /dev/null && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc && sudo apt-get update -y && sudo apt-get install gcsfuse -y && gcsfuse $THEREQBUC \"/shiva/local/storage\" && gcsfuse $THEREQGBK \"/shiva/global/storage\" && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"
+		
+		sudo rm -f $BASE/tmp/$THEREQJLF-JOBLOG.out
+	fi	
+fi
+
+if [ "$CLOUD_OS" == "GCP_ALMA" ]; then
+	if [ "$THEACTION" == "A" ]; then
+		THEREQJLF="$7"
+		THEREQBUC="$8"
+		THEREQGBK="$9"
+				
+		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R matsya:matsya /shiva/local && sudo chmod -R u=rwx,g=,o= /shiva/local && sudo mkdir -p /shiva/local/storage && sudo chown -R matsya:matsya /shiva/local/storage && sudo chmod -R u=rwx,g=,o= /shiva/local/storage && sudo mkdir -p /shiva/global && sudo chown -R matsya:matsya /shiva/global && sudo chmod -R u=rwx,g=,o= /shiva/global && sudo mkdir -p /shiva/global/storage && sudo chown -R matsya:matsya /shiva/global/storage && sudo chmod -R u=rwx,g=,o= /shiva/global/storage && echo \"[gcsfuse]
+name=gcsfuse (packages.cloud.google.com)
+baseurl=https://packages.cloud.google.com/yum/repos/gcsfuse-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+      https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg\" | sudo tee /etc/yum.repos.d/gcsfuse.repo > /dev/null && sudo yum install fuse gcsfuse -y && gcsfuse $THEREQBUC \"/shiva/local/storage\" && gcsfuse $THEREQGBK \"/shiva/global/storage\" && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"
+		
+		sudo rm -f $BASE/tmp/$THEREQJLF-JOBLOG.out
+	fi	
+fi
+
+if [ "$CLOUD_OS" == "GCP_ROCKY" ]; then
+	if [ "$THEACTION" == "A" ]; then
+		THEREQJLF="$7"
+		THEREQBUC="$8"
+		THEREQGBK="$9"
+				
+		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R matsya:matsya /shiva/local && sudo chmod -R u=rwx,g=,o= /shiva/local && sudo mkdir -p /shiva/local/storage && sudo chown -R matsya:matsya /shiva/local/storage && sudo chmod -R u=rwx,g=,o= /shiva/local/storage && sudo mkdir -p /shiva/global && sudo chown -R matsya:matsya /shiva/global && sudo chmod -R u=rwx,g=,o= /shiva/global && sudo mkdir -p /shiva/global/storage && sudo chown -R matsya:matsya /shiva/global/storage && sudo chmod -R u=rwx,g=,o= /shiva/global/storage && echo \"[gcsfuse]
+name=gcsfuse (packages.cloud.google.com)
+baseurl=https://packages.cloud.google.com/yum/repos/gcsfuse-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+      https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg\" | sudo tee /etc/yum.repos.d/gcsfuse.repo > /dev/null && sudo yum install fuse gcsfuse -y && gcsfuse $THEREQBUC \"/shiva/local/storage\" && gcsfuse $THEREQGBK \"/shiva/global/storage\" && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"
+		
+		sudo rm -f $BASE/tmp/$THEREQJLF-JOBLOG.out
+	fi	
 fi
 
 if [ "$CLOUD_OS" == "AZURE_ALMA" ]; then
@@ -162,6 +205,13 @@ azstorage:
 		
 		sudo rm -f $BASE/tmp/$THEREQJLF-JOBLOG.out
 	fi	
+fi
+
+if [ "$CLOUD_OS" == "AWS" ]; then
+	if [ "$THEACTION" == "GBD" ]; then
+		THEREQGBK="$7"		
+		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "aws s3 rm s3://$THEREQGBK --recursive"		
+	fi
 fi
 	
 if [ "$CLOUD_OS" == "AWS_UBU" ]; then
