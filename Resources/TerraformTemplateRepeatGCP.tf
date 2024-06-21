@@ -47,6 +47,65 @@ data "google_compute_subnetwork" "THE1VAL1HASHsnt" {
   name      = "THE1VAL1HASHsnt"
 }
 
+variable "THEREQUIREDINSTANCElbn" {
+  description = "Google Cloud Storage Local Bucket"
+  type        = string
+  default     = "THEREQUIREDGCPBUCKET"
+}
+
+variable "THE1VAL1HASHgbnTHEREQUIREDINSTANCE" {
+  description = "Google Cloud Storage Global Bucket"
+  type        = string
+  default     = "gcpTHEGLOBALBUCKET"
+}
+
+resource "google_storage_bucket" "THEREQUIREDINSTANCEgcb" {
+  name     = var.THEREQUIREDINSTANCElbn
+  location = var.region
+  force_destroy = true
+}
+
+resource "google_service_account" "THEREQUIREDINSTANCEgsa" {
+  account_id   = "THEREQUIREDINSTANCE-gsa"
+  display_name = "THEREQUIREDINSTANCE Instance Service Account"
+}
+
+resource "google_project_iam_custom_role" "THEREQUIREDINSTANCEiamcsr" {
+  role_id     = "THEREQUIREDINSTANCEiamcsr"
+  title       = "Custom Storage Role"
+  description = "THEREQUIREDINSTANCE Custom Storage Role"
+  permissions = [
+    "storage.objects.list",
+    "storage.objects.get",
+    "storage.objects.create",
+    "storage.objects.delete",
+    "storage.objects.update"
+  ]
+  project = "GCPSCOPE2VAL"
+}
+
+resource "google_storage_bucket_iam_binding" "THEREQUIREDINSTANCElbb" {
+  bucket = google_storage_bucket.THEREQUIREDINSTANCEgcb.name
+  #role   = "roles/storage.objectAdmin"
+  #role   = "projects/GCPSCOPE2VAL/roles/THEREQUIREDINSTANCEiamcsr"
+  role   = "projects/${google_project_iam_custom_role.THEREQUIREDINSTANCEiamcsr.project}/roles/${google_project_iam_custom_role.THEREQUIREDINSTANCEiamcsr.role_id}"
+  
+  members = [
+    "serviceAccount:${google_service_account.THEREQUIREDINSTANCEgsa.email}"
+  ]
+}
+
+resource "google_storage_bucket_iam_binding" "THEREQUIREDINSTANCEebb" {
+  bucket = var.THE1VAL1HASHgbnTHEREQUIREDINSTANCE
+  #role   = "roles/storage.objectAdmin"
+  #role   = "projects/GCPSCOPE2VAL/roles/THEREQUIREDINSTANCEiamcsr"
+  role   = "projects/${google_project_iam_custom_role.THEREQUIREDINSTANCEiamcsr.project}/roles/${google_project_iam_custom_role.THEREQUIREDINSTANCEiamcsr.role_id}"
+  
+  members = [
+    "serviceAccount:${google_service_account.THEREQUIREDINSTANCEgsa.email}"
+  ]
+}
+
 resource "google_compute_instance" "THEREQUIREDINSTANCEvm" {
   count        		= var.instance_count
   name         		= "THEREQUIREDINSTANCEvm-${count.index}"
@@ -77,7 +136,12 @@ resource "google_compute_instance" "THEREQUIREDINSTANCEvm" {
       
     }
   }
-
+  
+  service_account {
+    email  = google_service_account.THEREQUIREDINSTANCEgsa.email
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
+  
   metadata = {
     "startup-script" = <<-EOF
       #!/bin/bash

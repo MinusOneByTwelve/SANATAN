@@ -68,3 +68,15 @@ variable "region" {
   default     = "GCPSCOPE11VAL"
 }
 
+variable "THE1VAL1HASHgbn" {
+  description = "Google Cloud Storage Global Bucket"
+  type        = string
+  default     = "gcpTHEGLOBALBUCKET"
+}
+
+resource "google_storage_bucket" "THE1VAL1HASHgcb" {
+  name     = var.THE1VAL1HASHgbn
+  location = var.region
+  force_destroy = true
+}
+
