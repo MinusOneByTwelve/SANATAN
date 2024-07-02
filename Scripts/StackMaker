@@ -30,6 +30,9 @@ USERINTERACTION="YES"
 USERVALS=""
 MANUALRUN="NO"
 SOMECON="YES"
+ISAUTOMATION="NO"
+HOLDIT="NO"
+USRWITHPWD="home"
 
 BASE="/opt/Matsya"
 sudo mkdir -p $BASE
@@ -38,6 +41,22 @@ sudo mkdir -p $BASE/Scripts
 sudo mkdir -p $BASE/Secrets
 sudo mkdir -p $BASE/Resources
 sudo mkdir -p $BASE/Output
+sudo mkdir -p $BASE/Output/Terraform
+
+if [[ ! -d "$BASE/Output/Pem" ]]; then
+	sudo mkdir -p $BASE/Output/Pem
+	sudo chmod -R 777 $BASE/Output/Pem
+fi
+
+if [[ ! -d "$BASE/Output/Scope" ]]; then
+	sudo mkdir -p $BASE/Output/Scope
+	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
+if [[ ! -d "$BASE/Output/Vision" ]]; then
+	sudo mkdir -p $BASE/Output/Vision
+	sudo chmod -R 777 $BASE/Output/Vision
+fi
 
 source $BASE/Resources/StackVersioningAndMisc
 
@@ -84,10 +103,21 @@ else
 	K8SCONFIG="${USERLISTVALS[9]}"
 	TEMPVAR3="${USERLISTVALS[10]}"
 	NODEAVB="${USERLISTVALS[11]}"
-	GOFORIT="${USERLISTVALS[12]}"	
+	GOFORIT="${USERLISTVALS[12]}"
+	if [ "$GOFORIT" == "HOLDIT" ] ; then
+		HOLDIT="YES"
+	fi	
 	USERINPUTCOUNT=${#USERLISTVALS[@]}
 	if (( $USERINPUTCOUNT > 13 )) ; then
-		MANUALRUN="YES"
+		FROMVAMANA="${USERLISTVALS[13]}"
+		if [ "$FROMVAMANA" == "ISAUTOMATION" ] ; then
+			ISAUTOMATION="YES"
+			GBLPWD="${USERLISTVALS[14]}"
+			USRWITHPWD="opt/usrwithpwd"
+		fi
+		if [ "$FROMVAMANA" == "MANUALRUN" ] ; then
+			MANUALRUN="YES"
+		fi		
 	fi
 fi
 
@@ -368,12 +398,20 @@ ff02::3 ip6-allhosts
 		UN="${EACHSPLITNODE[3]}"
 		PW="${EACHSPLITNODE[4]}"
 		
-		OLDNAME=$(echo "${EACHSPLITNODE[1]}" | rev)
-		IFS='-' read -r -a _OLDNAME <<< $OLDNAME
-		NAMEOLD=$(echo "${_OLDNAME[1]}" | rev)
-		INSTANCEID="$NAMEOLD"
-		
-		GetCodeForNodeDelete "$INSTANCEID" "${EACHSPLITNODE[5]}" "${EACHSPLITNODE[7]}" "$BASE/tmp/$STACKDELETELIST"
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			UN="k8s"
+			PW="$GBLPWD"
+			PORT=$(NARASIMHA "decrypt" "$PORT" "$SECRETTHEKEY")
+		fi
+				
+		if [ "$ISAUTOMATION" == "NO" ] ; then
+			OLDNAME=$(echo "${EACHSPLITNODE[1]}" | rev)
+			IFS='-' read -r -a _OLDNAME <<< $OLDNAME
+			NAMEOLD=$(echo "${_OLDNAME[1]}" | rev)
+			INSTANCEID="$NAMEOLD"
+			
+			GetCodeForNodeDelete "$INSTANCEID" "${EACHSPLITNODE[5]}" "${EACHSPLITNODE[7]}" "$BASE/tmp/$STACKDELETELIST"
+		fi
 						
 		IFS='|' read -r -a CONFIGITEMSLIST <<< $K8SCONFIG
 		TempCounter2=0
@@ -429,9 +467,15 @@ ff02::3 ip6-allhosts
 		PORT="${EACHSPLITNODE[2]}"
 		UN="${EACHSPLITNODE[3]}"
 		PW="${EACHSPLITNODE[4]}"
-				
-		sshpass -p "$PW" scp -P $PORT $BASE/tmp/$HOSTSFILE $UN@$IP:/home/$UN
-		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo rm -rf /etc/hosts && sudo mv /home/$UN/$HOSTSFILE /etc/hosts"
+		
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			UN="k8s"
+			PW="$GBLPWD"
+			PORT=$(NARASIMHA "decrypt" "$PORT" "$SECRETTHEKEY")
+		fi
+						
+		sshpass -p "$PW" scp -P $PORT $BASE/tmp/$HOSTSFILE $UN@$IP:/$USRWITHPWD/$UN
+		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo rm -rf /etc/hosts && sudo mv /$USRWITHPWD/$UN/$HOSTSFILE /etc/hosts"
 	done
 	echo "$STACKLINELENGTHY"
 	
@@ -476,6 +520,12 @@ ff02::3 ip6-allhosts
 		NM="${EACHSPLITNODE[9]}"
 		STA1CK="${EACHSPLITNODE[10]}"
 		
+		if [ "$ISAUTOMATION" == "YES" ] ; then
+			UN="k8s"
+			PW="$GBLPWD"
+			PORT=$(NARASIMHA "decrypt" "$PORT" "$SECRETTHEKEY")
+		fi
+		
 		IFS=',' read -r -a _CIL_SUB <<< $STA1CK
 		for _CIL_SUB_ in "${_CIL_SUB[@]}"
 		do
@@ -484,14 +534,14 @@ ff02::3 ip6-allhosts
 			fi
 			if [ "$_CIL_SUB_" == "2" ] || [ "$_CIL_SUB_" == "3" ] ; then
 				K8SCOREVERSION="${ALLITEMINSTACKVERSIONLIST[$_CIL_SUB_]}"
-				echo "  - {name: $NM, address: $IP, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
+				echo "  - {name: $NM, address: $IP, port: $PORT, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
 				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE2 > /dev/null
 				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE3 > /dev/null
 				
 				K8SHACounter=$((K8SHACounter + 1))
 			fi
 			if [ "$_CIL_SUB_" == "4" ] ; then
-				echo "  - {name: $NM, address: $IP, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
+				echo "  - {name: $NM, address: $IP, port: $PORT, internalAddress: $IP, user: $UN, password: \"$PW\"}" | sudo tee -a $BASE/tmp/$K8SHELPERFILE1 > /dev/null
 				echo "    - $NM" | sudo tee -a $BASE/tmp/$K8SHELPERFILE4 > /dev/null
 			fi						
 		done						
@@ -532,20 +582,27 @@ ff02::3 ip6-allhosts
 	PORT="${EACHSPLITNODE[2]}"
 	UN="${EACHSPLITNODE[3]}"
 	PW="${EACHSPLITNODE[4]}"
+	
+	if [ "$ISAUTOMATION" == "YES" ] ; then
+		UN="k8s"
+		PW="$GBLPWD"
+		PORT=$(NARASIMHA "decrypt" "$PORT" "$SECRETTHEKEY")
+	fi
+		
 	echo ""	
 	echo "$STACKLINELENGTHY"
 	EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 	EXECUTE1SCRIPT='#!/bin/bash'"
 "
 	echo "$EXECUTE1SCRIPT" | sudo tee $BASE/tmp/$EXECUTESCRIPT > /dev/null	
-	echo "sudo -H -u root bash -c \"kk create -y cluster -f /home/$UN/$STACKNAME-KubeSphere-Config.yaml\"
-sudo rm -f /home/$UN/$STACKNAME-KubeSphere-Execute.sh
-sudo rm -f /home/$UN/$STACKNAME-KubeSphere-Config.yaml
+	echo "sudo -H -u root bash -c \"kk create -y cluster -f /$USRWITHPWD/$UN/$STACKNAME-KubeSphere-Config.yaml\"
+sudo rm -f /$USRWITHPWD/$UN/$STACKNAME-KubeSphere-Execute.sh
+sudo rm -f /$USRWITHPWD/$UN/$STACKNAME-KubeSphere-Config.yaml
 	" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null			
-	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$K8SHELPERFILE4REAL $UN@$IP:/home/$UN
-	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /home/$UN/$K8SHELPERFILE4REAL $STACKNAME-KubeSphere-Config.yaml"
-	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$EXECUTESCRIPT $UN@$IP:/home/$UN
-	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /home/$UN/$EXECUTESCRIPT $STACKNAME-KubeSphere-Execute.sh && sudo chmod 777 $STACKNAME-KubeSphere-Execute.sh"	
+	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$K8SHELPERFILE4REAL $UN@$IP:/$USRWITHPWD/$UN
+	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /$USRWITHPWD/$UN/$K8SHELPERFILE4REAL $STACKNAME-KubeSphere-Config.yaml"
+	sshpass -p "$PW" scp -P $PORT $BASE/tmp/$EXECUTESCRIPT $UN@$IP:/$USRWITHPWD/$UN
+	sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "sudo mv /$USRWITHPWD/$UN/$EXECUTESCRIPT $STACKNAME-KubeSphere-Execute.sh && sudo chmod 777 $STACKNAME-KubeSphere-Execute.sh"	
 
 	sudo rm -rf $BASE/tmp/$EXECUTESCRIPT
 	ITER=${SECRETTHEKEY:7:6}
@@ -555,7 +612,7 @@ sudo rm -f /home/$UN/$STACKNAME-KubeSphere-Config.yaml
 	fi
 		
 	if [ "$GOFORIT" == "ASSEMBLE" ] ; then
-		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "/home/$UN/$STACKNAME-KubeSphere-Execute.sh"
+		sshpass -p "$PW" ssh -o ConnectTimeout=15 $UN@$IP -p $PORT -o "StrictHostKeyChecking=no" "/$USRWITHPWD/$UN/$STACKNAME-KubeSphere-Execute.sh"
 		
 		sudo mkdir -p $BASE/Output/$STACKNAME
 		sudo rm -rf $BASE/Output/$STACKNAME/*
@@ -637,10 +694,12 @@ sudo rm -rf $BASE/Output/$STACKNAME
 	fi	
 	echo "$STACKLINELENGTHY"	
 	echo ""	
-
-	sudo rm -rf $BASE/tmp/$K8SHELPERFILE4REAL	
-	sudo rm -rf $BASE/tmp/$STACKDELETELIST
-	sudo rm -rf $BASE/tmp/$STACKNODELIST
+	
+	if [ "$HOLDIT" == "NO" ] ; then
+		sudo rm -rf $BASE/tmp/$K8SHELPERFILE4REAL	
+		sudo rm -rf $BASE/tmp/$STACKDELETELIST
+		sudo rm -rf $BASE/tmp/$STACKNODELIST
+	fi
 			
 	WHENJOBFIN=$(echo $(date +%H):$(date +%M))
 	SEC1=`date +%s -d ${WHENJOBBEGAN}`

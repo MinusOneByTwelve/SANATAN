@@ -310,7 +310,9 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	WIP_FOLDER="$3"
 	WIPX_LIST="$4"
 	THE1STACK1FILE="$5"
-	THE1VISION1KEY="$6"	
+	THE1VISION1KEY="$6"
+	SOFTSTACK="$7"
+		
 	source $BASE/Resources/StackVersioningAndMisc
 
 	file2_exists() {
@@ -339,17 +341,37 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		fi
 	    done
 
-	    if [[ "${#processed_files[@]}" -eq "${#files[@]}" ]]; then
-		sudo rm -rf $THEMAINJOBFOLDER						
-		sudo rm -rf /home/$CURRENTUSER/nohup.out
-		
+	    if [[ "${#processed_files[@]}" -eq "${#files[@]}" ]]; then	
 		THEFILEFORNEWVAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 		sudo touch $BASE/tmp/$THEFILEFORNEWVAL
 		sudo chmod 777 $BASE/tmp/$THEFILEFORNEWVAL 	
 		CSVFILE_ENC_DYC "$THE1STACK1FILE" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$THE1VISION1KEY" "1" "27" "$BASE/tmp/$THEFILEFORNEWVAL"
 		sudo rm -f $THE1STACK1FILE
 		sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THE1STACK1FILE
-			
+		
+		PART_1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		#sudo touch $BASE/tmp/$PART_1
+		#sudo chmod 777 $BASE/tmp/$PART_1		
+		cut -d ',' -f 1-28 $THE1STACK1FILE > $BASE/tmp/$PART_1.csv
+
+		PART_2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		#sudo touch $BASE/tmp/$PART_2
+		#sudo chmod 777 $BASE/tmp/$PART_2
+		awk -F ',' '{ for (i = 3; i <= NF; i++) printf "%s%s", $i, (i<NF ? "," : "\n") }' $SOFTSTACK > $BASE/tmp/$PART_2.csv
+
+		PART_3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		#sudo touch $BASE/tmp/$PART_3
+		#sudo chmod 777 $BASE/tmp/$PART_3
+		paste -d ',' $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv > $BASE/tmp/$PART_3.csv
+		
+		sudo rm -f $THE1STACK1FILE
+		sudo mv $BASE/tmp/$PART_3.csv $THE1STACK1FILE		
+
+		sudo rm $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv
+
+		sudo rm -rf $THEMAINJOBFOLDER						
+		sudo rm -rf /home/$CURRENTUSER/nohup.out
+							
 		echo "All files processed. Exiting."
 		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync B Function"
 				

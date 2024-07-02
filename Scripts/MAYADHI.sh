@@ -195,6 +195,73 @@ if [ "$TASKIDENTIFIER" == "KRISHNA" ] ; then
 	sudo $BASE/Scripts/KRISHNA.sh "$THEREALVAL■MAYADHI"
 fi
 
+if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
+	THEJSON=$2
+
+	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")
+
+	ALLWORKFOLDER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo mkdir $BASE/tmp/$ALLWORKFOLDER
+	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER
+		
+	# CREATE FILE FOR STACKMAKER
+	header=$(head -n 1 $THESTACKFILE)
+	csv_data=$(tail -n +2 $THESTACKFILE)
+	JSNDT1=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	JSNDT2=$(echo "$JSNDT1" | jq 'map(select(.IP != null and .IP != ""))')
+	JSNDT3=$(echo "$JSNDT2" | jq 'map(select(.IP != "TBD"))')
+	JSNDT4=$(echo "$JSNDT3" | jq 'map(select(.Encrypted != "N"))')
+	JSNDT5=$(echo "$JSNDT4" | jq 'map(select(.Deleted != "Y"))')	
+	JSNDT6=$(echo "$JSNDT5" | jq 'map(select(.IsEligibleForStack != "N"))')	
+		
+	THESFTSTK_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESFTSTKFILE="$BASE/tmp/$ALLWORKFOLDER/Stack_$THESFTSTK_FILE.csv"
+	header=$(echo "$JSNDT6" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESFTSTKFILE"
+	echo "$JSNDT6" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESFTSTKFILE"
+	done	
+	sudo chmod 777 $THESFTSTKFILE
+	sed -i 's/""//g' "$THESFTSTKFILE"
+	sed -i 's/"//g' "$THESFTSTKFILE"	
+	# CREATE FILE FOR STACKMAKER
+	
+	# CREATE FILE FOR INSTANCE INPUT FOR STACKMAKER
+	THE1SFTSTK_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THE1SFTSTKFILE="$BASE/tmp/$ALLWORKFOLDER/Stack_$THE1SFTSTK_FILE"
+	columns="7,17,24,23,25"
+	awk -F',' -v columns="$columns" '
+BEGIN {
+    split(columns, col, ",")
+    col_count = length(col)
+}
+NR > 1 {
+    output = ""
+    for (i = 1; i <= col_count; i++) {
+        output = output (i == 1 ? "" : "├") $col[i]
+    }
+    output = output "PWD├NA├NA├NA├SSHRSA"
+    print output
+}
+' "$THESFTSTKFILE" > "$THE1SFTSTKFILE"
+
+	THE1SFTRNDMSTK_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	THE1SFTRNDMSTK1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	THEFINALSFTSTKFILE="$BASE/tmp/$ALLWORKFOLDER/StackMaker_$THE1SFTRNDMSTK1_FILE"
+	$BASE/Scripts/SecretsFile-Encrypter "$THE1SFTSTKFILE├$THEFINALSFTSTKFILE├$THEVISIONKEY├$THE1SFTRNDMSTK_FILE"
+	sudo chmod 777 $THEFINALSFTSTKFILE
+	STACKID=$(awk -F',' 'NR==2 {print $30}' "$THESFTSTKFILE")
+	STACKNAME="v""$THEVISIONID""v""$STACKID"
+	K8SVALS=$(awk -F',' 'NR>1 {gsub("_", ",", $32); print $32}' "$THESFTSTKFILE" | paste -sd'|' -)
+	sudo rm -f $THE1SFTSTKFILE
+	#echo "$BASE/Scripts/StackMaker \"$BASE/Output├$THEVISIONKEY├2├├$THEFINALSFTSTKFILE├├├0├$STACKNAME├$K8SVALS├├3├HOLDIT├ISAUTOMATION├$THEVISIONKEY\""
+	#$BASE/Scripts/StackMaker "$BASE/Output├$THEVISIONKEY├2├├$THEFINALSFTSTKFILE├├├0├$STACKNAME├$K8SVALS├├3├ASSEMBLE├ISAUTOMATION├$THEVISIONKEY"
+	# CREATE FILE FOR INSTANCE INPUT FOR STACKMAKER
+fi	
+
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	THEJSON=$2
 
@@ -208,8 +275,57 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	sudo cp $THESTACKFILE $BASE/tmp/$ALLWORKFOLDER
 	THESTACK1_FILE=$(basename $THESTACKFILE)
 	THESTACK1FILE="$BASE/tmp/$ALLWORKFOLDER/$THESTACK1_FILE"
-	sudo chmod 777 $THESTACK1FILE	
+	sudo chmod 777 $THESTACK1FILE
 	
+	THECORE1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THECORE_1="$BASE/tmp/$ALLWORKFOLDER/$THECORE1"	
+	THECORE2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	SOFTSTACK="$BASE/tmp/$ALLWORKFOLDER/$THECORE2"	
+	
+	awk -F ',' '{print $1 "," $2 "," $3 "," $4 "," $5 "," $6 "," $7 "," $8 "," $9 "," $10 "," $11 "," $12 "," $13 "," $14 "," $15 "," $16 "," $17 "," $18 "," $19 "," $20 "," $21 "," $22 "," $23 "," $24 "," $25 "," $26 "," $27 "," $28}' $THESTACK1FILE > $THECORE_1
+
+	awk -F ',' '{
+    # Print columns 1 and 2
+    printf "%s,%s,", $1, $2
+
+    # Loop through columns starting from 29 until the end
+    for (i = 29; i <= NF; i++) {
+        printf "%s", $i
+        if (i < NF) {
+            printf ","
+        }
+    }
+    printf "\n"
+}' $THESTACK1FILE > $SOFTSTACK
+	
+	sudo rm -f $THESTACK1FILE
+	sudo mv $THECORE_1 $THESTACK1FILE		
+	sudo chmod 777 $THESTACK1FILE
+
+	# SANITIZE SOFTWARE FILE
+	header=$(head -n 1 $SOFTSTACK)
+	csv_data=$(tail -n +2 $SOFTSTACK)
+	#echo 'came here2'
+	j1son1_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	#echo 'came here3'
+	#echo "$j1son1_data"
+	fil1ter1ed_json=$(echo "$j1son1_data" | jq 'map(select(.IsEligibleForStack != null and .IsEligibleForStack != ""))')
+	#echo 'came here4'
+	THESOFTSTKREALFILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESOFTSTKREALFILE_file="$BASE/tmp/$ALLWORKFOLDER/$THESOFTSTKREALFILE__file"
+	header=$(echo "$fil1ter1ed_json" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESOFTSTKREALFILE_file"
+	echo "$fil1ter1ed_json" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESOFTSTKREALFILE_file"
+	done	
+	sudo chmod 777 $THESOFTSTKREALFILE_file
+	sed -i 's/""//g' "$THESOFTSTKREALFILE_file"
+	sed -i 's/"//g' "$THESOFTSTKREALFILE_file"
+	sudo rm -f $SOFTSTACK
+	sudo mv $THESOFTSTKREALFILE_file $SOFTSTACK		
+	# SANITIZE SOFTWARE FILE
+	#echo 'came here1'
 	# SANITIZE ORIGINAL FILE
 	header=$(head -n 1 $THESTACK1FILE)
 	csv_data=$(tail -n +2 $THESTACK1FILE)
@@ -228,7 +344,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	sed -i 's/""//g' "$THESANITIZEDREALFILE_file"
 	sed -i 's/"//g' "$THESANITIZEDREALFILE_file"
 	sudo rm -f $THESTACKFILE
-	sudo mv $THESANITIZEDREALFILE_file $THESTACKFILE
+	sudo mv $THESANITIZEDREALFILE_file $THESTACKFILE		
 	# SANITIZE ORIGINAL FILE
 		
 	# CREATE FILE WHERE IP IS NOT TBD
@@ -327,7 +443,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	sudo chmod 777 $BASE/tmp/$ALLWORKFOLDER/"$ALL1WORK-WIP_"
 	ALLWORKFOLDERSYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP"
 	ALLWORKFILESYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP_"
-	
+	#exit
 	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
 		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
 		
@@ -375,7 +491,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	done	
 	# INSTANCE TYPE BASED FILE ACTION
 	
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" 2>&1 &		
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" 2>&1 &		
 fi
 
 if [ "$TASKIDENTIFIER" == "e2e" ] ; then

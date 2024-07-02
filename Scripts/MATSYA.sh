@@ -278,18 +278,46 @@ deploy_instances_gcp() {
 		sed -i -e s~"GCPSCOPE1VAL"~"$BASE/tmp/.GCP-ServiceAccount-$thevar3"~g $BASE/tmp/$GCPNAME.tf
 		sed -i -e s~"GCPSCOPE2VAL"~"$GCPSCOPE2VAL"~g $BASE/tmp/$GCPNAME.tf
 		
-		GCPSCOPE3VAL=""
-		for portInfo in "${ALLSTACKOPENPORTS[@]}"; do
-			ports=$(echo "$portInfo" | awk -F'├' '{print $2}')
-			if [[ $ports == *-* ]]; then
-				GCPSCOPE3VAL+="\"$ports\", "
-			else
-				GCPSCOPE3VAL+="\"$ports\", "
-			fi
-		done
-		GCPSCOPE3VAL="${GCPSCOPE3VAL%, }"
+		#GCPSCOPE3VAL=""
+		#for portInfo in "${ALLSTACKOPENPORTS[@]}"; do
+		#	ports=$(echo "$portInfo" | awk -F'├' '{print $2}')
+		#	if [[ $ports == *-* ]]; then
+		#		GCPSCOPE3VAL+="\"$ports\", "
+		#	else
+		#		GCPSCOPE3VAL+="\"$ports\", "
+		#	fi
+		#done
+		#GCPSCOPE3VAL="${GCPSCOPE3VAL%, }"
 		
-		sed -i -e s~"GCPSCOPE3VAL"~"$GCPSCOPE3VAL"~g $BASE/tmp/$GCPNAME.tf		
+		GCPSCOPE3VAL=""
+		GCPSCOPEX3VAL=""
+
+		# Loop through each item in the array
+		for item in "${ALLSTACKOPENPORTS[@]}"; do
+		    protocol=$(echo "$item" | awk -F'├' '{print $1}')   # Extract protocol (Tcp or Udp)
+		    port_range=$(echo "$item" | awk -F'├' '{print $2}') # Extract port or port range
+
+		    if [[ "$protocol" == "Tcp" ]]; then
+			if [[ -z "$GCPSCOPE3VAL" ]]; then
+			    GCPSCOPE3VAL="$port_range"
+			else
+			    GCPSCOPE3VAL="$GCPSCOPE3VAL, $port_range"
+			fi
+		    elif [[ "$protocol" == "Udp" ]]; then
+			if [[ -z "$GCPSCOPEX3VAL" ]]; then
+			    GCPSCOPEX3VAL="$port_range"
+			else
+			    GCPSCOPEX3VAL="$GCPSCOPEX3VAL, $port_range"
+			fi
+		    fi
+		done
+
+		# Print the results
+		#echo "GCPSCOPE3VAL: $GCPSCOPE3VAL"
+		#echo "GCPSCOPEX3VAL: $GCPSCOPEX3VAL"
+				
+		sed -i -e s~"GCPSCOPE3VAL"~"$GCPSCOPE3VAL"~g $BASE/tmp/$GCPNAME.tf
+		sed -i -e s~"GCPSCOPEX3VAL"~"$GCPSCOPEX3VAL"~g $BASE/tmp/$GCPNAME.tf		
 		sed -i -e s~"GCPSCOPE4VAL"~"$SSKEYGENSH"~g $BASE/tmp/$GCPNAME.tf
 		sed -i -e s~"GCPSCOPE5VAL"~"$BASE/Output/Pem/$thevar3.pem"~g $BASE/tmp/$GCPNAME.tf
 		
