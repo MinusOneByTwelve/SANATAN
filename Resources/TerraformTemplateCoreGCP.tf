@@ -47,6 +47,11 @@ resource "google_compute_firewall" "THE1VAL1HASHfw1" {
   }
 
   allow {
+    protocol = "udp"
+    ports    = [GCPSCOPEX3VAL]
+  }
+  
+  allow {
     protocol = "icmp"
   }
 }

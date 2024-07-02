@@ -11,7 +11,7 @@ VBOXGENERICUBUNTU="https://app.vagrantup.com/Minus1By12/boxes/MATSYA-VagVBox-Gen
 #VBOXGENERICSTACKUBUNTU="vagrant-virtualbox-generic-ubuntu-2204.box"
 VBOXGENERICSTACKUBUNTU="minus1by12-vagrant-virtualbox-generic-ubuntu-2204-v1-0-0.box"
 
-ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├35000-65000├1004")
+ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├2377├1004" "Tcp├7946├1005" "Tcp├6789├1006" "Tcp├7480├1007" "Tcp├9283├1008" "Udp├7946├1009" "Udp├4789├1010" "Tcp├6800-7300├1011" "Tcp├16746-19478├1012")
 
 #https://documentation.ubuntu.com/azure/en/latest/azure-how-to/instances/find-ubuntu-images/
 AZUREOSCHOICE=("almalinux├almalinux-x86_64├9-gen2├latest" "Canonical├0001-com-ubuntu-server-jammy├22_04-lts-gen2├latest")

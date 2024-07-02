@@ -1,0 +1,117 @@
+#!/bin/bash
+
+CURRENTUSER=$(whoami)
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+OS="THEREQOS"
+DOCKER_DATA_DIR="THEREQDDD"
+CEPH_DATA_DIR="THEREQGDD"
+TLSSTUFF="THEREQTLS"
+PortainerAPort="THEREQAPORT"
+PortainerSPort="THEREQSPORT"
+    
+if [[ "$OS" == "UBU" ]]; then
+    sudo rm -f /etc/apt/sources.list.d/docker.list
+    sudo rm -f /etc/apt/keyrings/docker.gpg
+    sudo apt-get remove -y docker docker-engine docker.io containerd runc
+    sudo apt-get update -y
+    sudo NEEDRESTART_MODE=a apt-get install -y ca-certificates curl gnupg
+    sudo mkdir -m 0755 -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update -y
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+elif [[ "$OS" == "AZL" ]]; then
+    sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+    sudo yum install -y yum-utils
+    sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+elif [[ "$OS" == "ROCKY" || "$OS" == "ALMA" ]]; then
+    sudo dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+    sudo dnf -y install dnf-plugins-core
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+
+sudo mkdir -p $DOCKER_DATA_DIR
+sudo chown -R root:docker $DOCKER_DATA_DIR
+sudo chmod -R 755 $DOCKER_DATA_DIR
+
+sudo mkdir -p $CEPH_DATA_DIR
+sudo chown -R root:docker $CEPH_DATA_DIR
+sudo chmod -R 755 $CEPH_DATA_DIR
+
+sudo mkdir -p $CEPH_DATA_DIR/osd
+sudo chown -R root:docker $CEPH_DATA_DIR/osd
+sudo chmod -R 755 $CEPH_DATA_DIR/osd
+sudo mkdir -p $CEPH_DATA_DIR/etc
+sudo chown -R root:docker $CEPH_DATA_DIR/etc
+sudo chmod -R 755 $CEPH_DATA_DIR/etc
+sudo mkdir -p $CEPH_DATA_DIR/var
+sudo chown -R root:docker $CEPH_DATA_DIR/var
+sudo chmod -R 755 $CEPH_DATA_DIR/var
+
+sudo mkdir -p /etc/docker && sudo rm -rf /etc/docker/daemon.json
+echo '{
+  "data-root": "'"$DOCKER_DATA_DIR"'",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "storage-driver": "overlay2",
+  "hosts": ["unix:///var/run/docker.sock"]
+}' | sudo tee /etc/docker/daemon.json       
+sudo usermod -a -G docker $CURRENTUSER
+
+sudo rm -f /etc/systemd/system/docker.service
+echo '[Unit]
+Description=Docker Application Container Engine
+Documentation=https://docs.docker.com
+After=network-online.target firewalld.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/dockerd '"$TLSSTUFF"'--containerd=/run/containerd/containerd.sock
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+StartLimitBurst=3
+StartLimitInterval=60s
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+Delegate=yes
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target' | sudo tee /etc/systemd/system/docker.service > /dev/null
+
+sudo firewall-cmd --zone=public --add-port=$PortainerAPort/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=$PortainerSPort/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
+sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
+sudo firewall-cmd --zone=public --add-port=9333/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=8888/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=18080/tcp --permanent
+sudo firewall-cmd --zone=public --add-protocol=50 --permanent                
+sudo firewall-cmd --reload
+
+sudo systemctl daemon-reload
+sudo systemctl enable docker
+sudo systemctl restart docker
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+sudo rm -f /home/$CURRENTUSER/SetUpDocker.sh
+
