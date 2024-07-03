@@ -1,0 +1,68 @@
+version: '3.7'
+ 
+services:
+  agent:
+    image: portainer/agent
+    ports:
+      - "PortainerAPort:9001"
+    environment:
+      - AGENT_SECRET=REVERSED_PASSWORD
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock 
+    networks:
+      - STACKNAME-encrypted-overlay
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: 'C2ORE'
+          memory: 'R2AMM'
+                  
+  portainer:
+    image: portainer/portainer-ce
+    ports:
+      - "PortainerSPort:9443"
+    environment:
+      - AGENT_PORT=PortainerAPort
+      - AGENT_SECRET=REVERSED_PASSWORD
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.STACKNAMEportainerreplica == true
+          - node.role == manager
+      resources:
+        limits:
+          cpus: 'C1ORE'
+          memory: 'R1AMM'
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock 
+      - type: bind
+        source: DOCKER_VOLUME_NAME
+        target: /data
+      - type: bind
+        source: CERTS_DIR/docker/STACKNAME.pem
+        target: /certs/sca.pem
+        read_only: true
+      - type: bind
+        source: CERTS_DIR/docker/STACKNAME-server-cert.pem
+        target: /certs/scert.pem
+        read_only: true
+      - type: bind
+        source: CERTS_DIR/docker/STACKNAME-server-key.pem
+        target: /certs/skey.pem 
+        read_only: true                       
+    command: -H tcp://tasks.agent:PortainerAPort --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem
+    networks:
+      - STACKNAME-encrypted-overlay    
+    cap_add:
+      - ALL
+   
+networks:
+  STACKNAME-encrypted-overlay:
+    external: true
+              

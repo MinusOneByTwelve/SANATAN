@@ -6,13 +6,21 @@ sudo rm -rf /root/.ssh/known_hosts
 sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
 
+THEIP="THEREQIP"
+THEHOST="THEREQHOSTNAME"
 OS="THEREQOS"
 DOCKER_DATA_DIR="THEREQDDD"
-CEPH_DATA_DIR="THEREQGDD"
+DFS_DATA_DIR="THEREQDFS"
 TLSSTUFF="THEREQTLS"
 PortainerAPort="THEREQAPORT"
 PortainerSPort="THEREQSPORT"
-    
+STACKNAME="THECURSTACK"
+
+sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
+sudo hostnamectl set-hostname $THEHOST --static
+sudo hostnamectl set-hostname $THEHOST --transient
+sudo hostnamectl set-hostname "$THEHOST" --pretty
+   
 if [[ "$OS" == "UBU" ]]; then
     sudo rm -f /etc/apt/sources.list.d/docker.list
     sudo rm -f /etc/apt/keyrings/docker.gpg
@@ -23,36 +31,56 @@ if [[ "$OS" == "UBU" ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
 elif [[ "$OS" == "AZL" ]]; then
     sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     sudo yum install -y yum-utils
     sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
 elif [[ "$OS" == "ROCKY" || "$OS" == "ALMA" ]]; then
     sudo dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     sudo dnf -y install dnf-plugins-core
     sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
 fi
 
 sudo mkdir -p $DOCKER_DATA_DIR
 sudo chown -R root:docker $DOCKER_DATA_DIR
 sudo chmod -R 755 $DOCKER_DATA_DIR
 
-sudo mkdir -p $CEPH_DATA_DIR
-sudo chown -R root:docker $CEPH_DATA_DIR
-sudo chmod -R 755 $CEPH_DATA_DIR
+sudo mkdir -p $DFS_DATA_DIR
+sudo chown -R root:root $DFS_DATA_DIR
+sudo chmod -R 777 $DFS_DATA_DIR
 
-sudo mkdir -p $CEPH_DATA_DIR/osd
-sudo chown -R root:docker $CEPH_DATA_DIR/osd
-sudo chmod -R 755 $CEPH_DATA_DIR/osd
-sudo mkdir -p $CEPH_DATA_DIR/etc
-sudo chown -R root:docker $CEPH_DATA_DIR/etc
-sudo chmod -R 755 $CEPH_DATA_DIR/etc
-sudo mkdir -p $CEPH_DATA_DIR/var
-sudo chown -R root:docker $CEPH_DATA_DIR/var
-sudo chmod -R 755 $CEPH_DATA_DIR/var
+sudo mkdir -p $DFS_DATA_DIR/$STACKNAME
+sudo chown -R gluster:gluster $DFS_DATA_DIR/$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/$STACKNAME
+
+sudo mkdir -p $DFS_DATA_DIR/Portainer$STACKNAME
+sudo chown -R root:root $DFS_DATA_DIR/Portainer$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/Portainer$STACKNAME
+
+sudo mkdir -p /etc/glusterfs && sudo rm -rf /etc/glusterfs/glusterd.vol
+echo 'volume management
+    type mgmt/glusterd
+    option working-directory /var/lib/glusterd
+    option transport-type socket
+    option transport.socket.keepalive-time 10
+    option transport.socket.keepalive-interval 2
+    option transport.socket.read-fail-log off
+    option transport.socket.listen-port 24007
+    option ping-timeout 0
+    option event-threads 1
+#   option lock-timer 180
+#   option transport.address-family inet6
+    option base-port 49152
+    option max-port  60999
+end-volume' | sudo tee /etc/glusterfs/glusterd.vol
+
+if [ -f /usr/sbin/glusterfs ]; then
+	sudo systemctl restart glusterd
+	sudo systemctl enable glusterd
+fi
 
 sudo mkdir -p /etc/docker && sudo rm -rf /etc/docker/daemon.json
 echo '{
@@ -95,15 +123,18 @@ WantedBy=multi-user.target' | sudo tee /etc/systemd/system/docker.service > /dev
 
 sudo firewall-cmd --zone=public --add-port=$PortainerAPort/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=$PortainerSPort/tcp --permanent
+
 sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
 sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
-sudo firewall-cmd --zone=public --add-port=9333/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=8888/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=18080/tcp --permanent
-sudo firewall-cmd --zone=public --add-protocol=50 --permanent                
+
+sudo firewall-cmd --zone=public --add-port=24007/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=24008/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
+
+sudo firewall-cmd --zone=public --add-protocol=50 --permanent
+                
 sudo firewall-cmd --reload
 
 sudo systemctl daemon-reload
@@ -113,5 +144,6 @@ sudo systemctl restart docker
 sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
 
+sudo rm -f /home/$CURRENTUSER/SetUpHosts.sh
 sudo rm -f /home/$CURRENTUSER/SetUpDocker.sh
 
