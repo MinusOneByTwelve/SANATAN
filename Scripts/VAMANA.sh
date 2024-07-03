@@ -80,12 +80,9 @@ THECHOICE="$1"
 if [ "$THECHOICE" == "CORE" ] ; then
 # Path to the dynamic instance details file
 INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_mBRE2gHRfCtOxbY"
-DOCKER_DATA_DIR="/shiva/local/storage/s5jdfdfsdf"
-CEPH_DATA_DIR="/shiva/local/storage/khkj5hdfjkh"
-CERTS_DIR="/shiva/local/storage/certs"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
 THEVISIONID="23"
-CLUSTERID="ipifj5odpi"
+CLUSTERID="rj2982"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -100,10 +97,19 @@ UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
 WJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dswjt"
 REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
-	
+DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
+DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
+CERTS_DIR="/shiva/local/storage/certs$STACKNAME"
+
+EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
+EXECUTE1SCRIPT='#!/bin/bash'"
+"
+echo "$EXECUTE1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		
 # Arrays to hold manager and worker details
 declare -a MANAGER_IPS
 declare -a WORKER_IPS
+declare -A HOST_NAMES
 declare -A PEM_FILES
 declare -A PORTS
 declare -A OS_TYPES
@@ -113,19 +119,28 @@ declare -A APP_CORE
 
 # Function to parse the instance details file
 parse_instance_details() {
-    while IFS='├' read -r IP HOSTNAME PORT PEM ROLE OS U1SER M1EM C1ORE; do
+    echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    while IFS='├' read -r SCPID INSTID IP HOSTNAME PORT PEM ROLE OS U1SER M1EM C1ORE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
         OS_TYPES["$IP"]="$OS"
         LOGIN_USERS["$IP"]="$U1SER"
         APP_MEM["$IP"]="$M1EM"
-        APP_CORE["$IP"]="$C1ORE"     
+        APP_CORE["$IP"]="$C1ORE"        
+        echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                     
         if [ "$ROLE" == "MANAGER" ]; then
             MANAGER_IPS+=("$IP")
+            HOST_NAMES["$IP"]="v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         elif [ "$ROLE" == "WORKER" ]; then
             WORKER_IPS+=("$IP")
-        fi
+            HOST_NAMES["$IP"]="v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+        fi                
     done < "$INSTANCE_DETAILS_FILE"
+    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 }
 
 # Function to run commands on remote hosts
@@ -262,6 +277,7 @@ install_docker() {
     local P1ORT=${PORTS[$IP]}
     local THE1REQUSER=${LOGIN_USERS[$IP]}
     local THE1REQPEM=${PEM_FILES[$IP]}
+    local THE1HOST1NAME=${HOST_NAMES[$IP]}
         
     TLSSTUFF=""
     local IPHF="$STACKNAME"
@@ -275,14 +291,35 @@ install_docker() {
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerSetUpTemplate $BASE/tmp/$DOCKERTEMPLATE
 
+    sed -i -e s~"THEREQIP"~"$IP"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THEREQHOSTNAME"~"$THE1HOST1NAME"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQOS"~"$OS"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQDDD"~"$DOCKER_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE
-    sed -i -e s~"THEREQGDD"~"$CEPH_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE    
+    sed -i -e s~"THEREQDFS"~"$DFS_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE    
     sed -i -e s~"THEREQTLS"~"$TLSSTUFF"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQAPORT"~"$PortainerAPort"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQSPORT"~"$PortainerSPort"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERTEMPLATE
     
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
+
+    max_attempts=5
+    attempt=0
+    while true; do
+    	attempt=$((attempt + 1))
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$EXECUTESCRIPT" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
+        status=$?
+        if [ $status -eq 0 ]; then
+            ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/SetUpHosts.sh && sudo mv /home/$THE1REQUSER/$EXECUTESCRIPT /home/$THE1REQUSER/SetUpHosts.sh && sudo chmod 777 /home/$THE1REQUSER/SetUpHosts.sh && /home/$THE1REQUSER/SetUpHosts.sh"
+            break
+        else
+            if [ $attempt -ge $max_attempts ]; then
+                echo "Maximum attempts reached. Exiting."
+                exit 1
+            fi
+            sleep 5
+        fi
+    done
      
     max_attempts=5
     attempt=0
@@ -320,6 +357,7 @@ done
 for IP in "${WORKER_IPS[@]}"; do
     install_docker "W" $IP
 done
+sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 
 # Initialize Docker Swarm with custom ports and autolock on the first manager node
 run_remote ${MANAGER_IPS[0]} "docker swarm init --advertise-addr ${MANAGER_IPS[0]} --autolock"
@@ -364,159 +402,39 @@ done
 
 create_encrypted_overlay_network
 
-DOCKER_VOLUME_NAME="$STACKNAME""portainerdata"
-
 P1O1R1T=${PORTS[${MANAGER_IPS[0]}]}
 THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
 SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
 echo "Using Subnet $SUBNET ..."
 
-open_firewall_ports_for_seaweedfs() {
-    local filer_port_start=8888
-    local filer_port_end=$((filer_port_start + ${#MANAGER_IPS[@]} - 1))
-    local volume_port_start=8080
-    local volume_port_end=$((volume_port_start + ${#MANAGER_IPS[@]} + ${#WORKER_IPS[@]} - 1))
-    local volume_meta_port_start=18080
-    local volume_meta_port_end=$((volume_meta_port_start + ${#MANAGER_IPS[@]} + ${#WORKER_IPS[@]} - 1))
-    local master_port_start=9333
-    local master_port_end=$((master_port_start + ${#MANAGER_IPS[@]} - 1))
-    local raft_port_start=9383
-    local raft_port_end=$((raft_port_start + ${#MANAGER_IPS[@]} - 1))
+primary_ip=${MANAGER_IPS[0]}
+peer_ips=("${MANAGER_IPS[@]:1}")
+peer_probe_cmds=""
+for ip in "${peer_ips[@]}"; do
+	H1O1S1T=${HOST_NAMES[$ip]}
+	peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
+done
+volume_create_cmd="sudo gluster volume create ${STACKNAME} replica ${#MANAGER_IPS[@]} "
+for ip in "${MANAGER_IPS[@]}"; do
+	H1O1S11T=${HOST_NAMES[$ip]}
+	volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/$STACKNAME "
+done
+volume_create_cmd+="force"  
+run_remote ${MANAGER_IPS[0]} "
+$peer_probe_cmds
+$volume_create_cmd
+sudo gluster volume start $STACKNAME
+"
+glusterfs_addresses=""
+for ip in "${MANAGER_IPS[@]}"; do
+	H11O1S11T=${HOST_NAMES[$ip]}
+	glusterfs_addresses+="$H11O1S11T,"
+done
+glusterfs_addresses=${glusterfs_addresses%,}
+for IP in "${MANAGER_IPS[@]}"; do
+    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_DATA_DIR/Portainer$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
+done
 
-    for IP in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}"; do
-        run_remote $IP "
-            sudo firewall-cmd --zone=public --permanent --add-port=${master_port_start}-${master_port_end}/tcp
-            sudo firewall-cmd --zone=public --permanent --add-port=${volume_port_start}-${volume_port_end}/tcp
-            sudo firewall-cmd --zone=public --permanent --add-port=${volume_meta_port_start}-${volume_meta_port_end}/tcp
-            sudo firewall-cmd --zone=public --permanent --add-port=${filer_port_start}-${filer_port_end}/tcp
-            sudo firewall-cmd --zone=public --permanent --add-port=${raft_port_start}-${raft_port_end}/tcp
-            sudo firewall-cmd --reload
-        "
-    done
-}
-get_node_id() {
-    local ip=$1
-    local node_id=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "docker node ls --format '{{.ID}} {{.Hostname}}' | grep \$(getent hosts $ip | awk '{ print \$2 }') | awk '{ print \$1 }'")
-    echo $node_id
-}
-label_nodes() {
-    local index=1
-    for IP in "${MANAGER_IPS[@]}"; do
-        node_id=$(get_node_id $IP)
-        ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "echo \"camehere1\" && hostname && docker node update --label-add seaweedfs.master=true --label-add seaweedfs.index=$index $node_id"
-        index=$((index+1))
-    done
-
-    index=1
-    for IP in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}"; do
-        node_id=$(get_node_id $IP)
-        ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "echo \"camehere2\" && hostname && docker node update --label-add seaweedfs.volume=true --label-add seaweedfs.index=$index $node_id"
-        index=$((index+1))
-    done
-}
-deploy_seaweedfs_master() {
-    local master_ips=(${MANAGER_IPS[@]})
-    local master_ip_count=${#master_ips[@]}
-    local master_peers=""
-    local index=0
-
-    for IP in "${master_ips[@]}"; do
-        master_peers+="$IP:$((9383 + index)),"
-        index=$((index+1))
-    done
-    master_peers=${master_peers%,}
-
-    index=0
-    for IP in "${MANAGER_IPS[@]}"; do
-        ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "
-            echo \"camehere3\" && hostname && docker service create \
-                --name seaweedfs-master-$index \
-                --network $STACKNAME-encrypted-overlay \
-                --replicas 1 \
-                --constraint 'node.labels.seaweedfs.master == true' \
-                --publish $((9333 + index)):$((9333 + index)) \
-                --publish $((9383 + index)):$((9383 + index)) \
-                chrislusf/seaweedfs:latest master -ip $IP -peers $master_peers
-        "
-        index=$((index+1))
-    done
-}
-deploy_seaweedfs_volume() {
-    local master_mounts=""
-    local index=0
-    for IP in "${MANAGER_IPS[@]}"; do
-        master_mounts+="$IP:$((9333 + index)),"
-        index=$((index+1))
-    done
-    master_mounts=${master_mounts%,}
-
-    index=0
-    for IP in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}"; do
-        ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "
-            echo \"camehere4\" && hostname && docker service create \
-                --name seaweedfs-volume-$index \
-                --network $STACKNAME-encrypted-overlay \
-                --mode global \
-                --constraint 'node.labels.seaweedfs.volume == true' \
-                --publish $((8080 + index)):8080 \
-                --publish $((18080 + index)):18080 \
-                --mount type=bind,src=/mnt/seaweedfs/data,dst=/data \
-                chrislusf/seaweedfs:latest volume -mserver $master_mounts -ip $IP
-        "
-        index=$((index+1))
-    done
-}
-deploy_seaweedfs_filer() {
-    local master_mounts=""
-    local index=0
-    for IP in "${MANAGER_IPS[@]}"; do
-        master_mounts+="$IP:$((9333 + index)),"
-        index=$((index+1))
-    done
-    master_mounts=${master_mounts%,}
-
-    index=0
-    for IP in "${MANAGER_IPS[@]}"; do
-        local port=$((8888 + index))
-        ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "
-            echo \"camehere5\" && hostname && docker service create \
-                --name seaweedfs-filer-$index \
-                --network $STACKNAME-encrypted-overlay \
-                --replicas 1 \
-                --constraint 'node.labels.seaweedfs.master == true' \
-                --publish ${port}:${port} \
-                chrislusf/seaweedfs:latest filer -master=$master_mounts -port=${port}
-        "
-        index=$((index+1))
-    done
-}
-create_fuse_mount() {
-    for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}"; do
-        ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo apt-get update -y && sudo apt-get install -y fuse && sudo modprobe fuse && sudo groupadd fuse && sudo usermod -aG fuse \$(whoami) && sudo rm -f /usr/local/bin/weed && THEVERSION=\$(curl -s https://api.github.com/repos/seaweedfs/seaweedfs/releases/latest | grep tag_name | cut -d '\"' -f 4) && wget https://github.com/seaweedfs/seaweedfs/releases/download/\$THEVERSION/linux_amd64.tar.gz && tar xf linux_amd64.tar.gz && rm -f linux_amd64.tar.gz && sudo mv weed /usr/local/bin/weed && sudo chmod +x /usr/local/bin/weed && sudo mkdir -p /mnt/seaweedfs/fuse && sudo chmod -R 777 /mnt/seaweedfs/fuse"
-    done
-    local filer_mounts=""
-    local index=0
-    for IP in "${MANAGER_IPS[@]}"; do
-        local port=$((8888 + index))
-        filer_mounts+="${IP}:${port},"
-        index=$((index+1))
-    done
-    filer_mounts=${filer_mounts%,}
-
-    for IP in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}"; do
-        run_remote $IP "sudo weed mount -filer=${filer_mounts} -dir=/mnt/seaweedfs/fuse -filer.path=/fuse"
-    done
-}
-
-open_firewall_ports_for_seaweedfs
-label_nodes
-deploy_seaweedfs_master
-deploy_seaweedfs_volume
-deploy_seaweedfs_filer
-create_fuse_mount
-
-#NUM_MANAGERS=${#MANAGER_IPS[@]}
-NUM_MANAGERS="1"
 THEMANGIP="${MANAGER_IPS[0]}"
 THE1RAM=${APP_MEM[$THEMANGIP]}
 R1AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
@@ -532,22 +450,50 @@ for IP in "${MANAGER_IPS[@]}"; do
 	fi
 done
 
-echo "" && echo "Install Portainer..."
-# Deploy Portainer on the manager nodes with HTTPS --mount type=volume,src=$DOCKER_VOLUME_NAME,dst=/data \
-run_remote ${MANAGER_IPS[0]} "
-    docker service create \
-        --name $STACKNAME""portainer \
-        --network $STACKNAME-encrypted-overlay \
-        --replicas $NUM_MANAGERS \
-        --publish $PortainerSPort:9443 \
-        --constraint 'node.labels.$STACKNAME""portainerreplica == true' \
-        --constraint 'node.role == manager' \
-        --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
-        --mount type=bind,src=/mnt/seaweedfs/fuse,dst=/data \
-        --mount type=bind,src=$CERTS_DIR/docker/$STACKNAME.pem,dst=/certs/sca.pem,readonly \
-        --mount type=bind,src=$CERTS_DIR/docker/$STACKNAME-server-cert.pem,dst=/certs/scert.pem,readonly \
-        --mount type=bind,src=$CERTS_DIR/docker/$STACKNAME-server-key.pem,dst=/certs/skey.pem,readonly \
-        --limit-cpu $C1ORE --limit-memory $R1AM""M -e \"AGENT_PORT=$PortainerAPort\" portainer/portainer-ce --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem --agent-secret $REVERSED_PASSWORD"
+DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+sudo cp $BASE/Resources/DockerPortainer.yml $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"PortainerSPort"~"$PortainerSPort"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"PortainerAPort"~"$PortainerAPort"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"REVERSED_PASSWORD"~"$REVERSED_PASSWORD"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"STACKNAME"~"$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"C1ORE"~"$C1ORE"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"R1AM"~"$R1AM"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"DOCKER_VOLUME_NAME"~"$DFS_DATA_DIR/Portainer$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"CERTS_DIR"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERPTEMPLATE
+IWP="${WORKER_IPS[0]}"
+THE1RAM=${APP_MEM[$IWP]}
+R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
+THE1CORE=${APP_CORE[$IWP]}
+C2ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
+sed -i -e s~"C2ORE"~"$C2ORE"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"R2AM"~"$R2AM"~g $BASE/tmp/$DOCKERPTEMPLATE
+
+sudo chmod 777 $BASE/tmp/$DOCKERPTEMPLATE
+READYTOROCK="NO"
+max_attempts=5
+attempt=0
+while true; do
+attempt=$((attempt + 1))
+scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERPTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
+status=$?
+if [ $status -eq 0 ]; then
+    READYTOROCK="YES"
+    sudo rm -f $BASE/tmp/$DOCKERPTEMPLATE
+    break
+else
+    if [ $attempt -ge $max_attempts ]; then
+        echo "Maximum attempts reached. Exiting."
+        exit 1
+    fi
+    sleep 5
+fi
+done
+    
+echo "" && echo "Install Portainer & Agent..."
+# Deploy Portainer on the manager nodes with HTTPS
+if [ "$READYTOROCK" == "YES" ] ; then
+	run_remote ${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml $STACKNAME && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml"
+fi
 
 PORTAINER_URL="https://${MANAGER_IPS[0]}:$PortainerSPort/api"
 USERNAME="admin"
@@ -591,29 +537,9 @@ fi
 
 set_admin_password
 
-echo "" && echo "Install Portainer Agent..."
-# Deploy Portainer agent on all nodes (both managers and workers)
-for IP in "${MANAGER_IPS[0]}"; do
-    IPHF="$STACKNAME"
-    IWP="${WORKER_IPS[0]}"
-    THE1RAM=${APP_MEM[$IWP]}
-    R1AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
-    THE1CORE=${APP_CORE[$IWP]}
-    C1ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" )    
-    run_remote $IP "
-        docker service create \
-            --name $STACKNAME""portaineragent \
-            --network $STACKNAME-encrypted-overlay \
-            --mode global \
-            --publish $PortainerAPort:9001 \
-            --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
-            --limit-cpu $C1ORE \
-            --limit-memory $R1AM""M portainer/agent --secret $REVERSED_PASSWORD"
-done
+PortainerGUI=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker service ps $STACKNAME""_portainer --filter 'desired-state=running' --format '{{.Node}} {{.CurrentState}}' | grep 'Running' | sort -k2 -r | head -n 1 | awk '{print \$1}'")
 
-#run_remote ${MANAGER_IPS[0]} "docker service update --replicas 3 --constraint-add 'node.labels.$STACKNAME""portainerreplica == true' $STACKNAME""portainer"
-
-echo "Docker Swarm setup completed successfully.Ports List ${PORTSLIST[@]}.URL : https://${MANAGER_IPS[0]}:$PortainerSPort"
+echo "Docker Swarm setup completed successfully.Ports List ${PORTSLIST[@]}.URL : https://$PortainerGUI:$PortainerSPort"
 
 simulate_first_login() {
     TOKEN=$(curl -k -s -X POST "$PORTAINER_URL/auth" \
@@ -653,4 +579,9 @@ fi
 
 sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+#https://github.com/portainer/portainer/issues/523
+#https://github.com/portainer/portainer/issues/1205
+#https://www.portainer.io/blog/monitoring-a-swarm-cluster-with-prometheus-and-grafana
+#https://portainer-notes.readthedocs.io/en/latest/deployment.html
 
