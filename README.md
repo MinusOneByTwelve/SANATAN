@@ -18,3 +18,4 @@ Ultimate Framework for Expert Comprehensive Administration of Distributed Open S
 11) K.A.L.K.I             : Kinetic Actix Layer Kickstarting Integration
 12) H.A.N.U               : Hard Actual Nerve Unit
 -----------------------------------------------------------------------------------------
+![My first design 100](https://github.com/MinusOneByTwelve/SANATAN/assets/50650979/3cc33a05-390d-423d-b001-2cf9e41b14a7)
