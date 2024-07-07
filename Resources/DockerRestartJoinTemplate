@@ -1,0 +1,82 @@
+#!/bin/bash
+
+CURRENTUSER=$(whoami)
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+declare -a MANAGER_IPS
+MGRIPS="$1"
+IFS=',' read -r -a MANAGER_IPS <<< "$MGRIPS"
+STACKNAME="$2"
+SCRIPTFILELOC="$3"
+UNLOCK_KEY_FILE="/var/lib/.dsuk$STACKNAME"
+JOIN_TOKEN_FILE="/var/lib/.dsjt$STACKNAME"
+SWARM_JOIN_TOKEN=$(cat $JOIN_TOKEN_FILE)
+
+THENEWFUNC='#!/bin/bash'"
+
+declare -a MANAGER_IPS
+MGRIPS=\"$1\"
+IFS=',' read -r -a MANAGER_IPS <<< \"\$MGRIPS\"
+
+get_node_id() {
+    docker info -f '{{.Swarm.NodeID}}'
+}
+
+if ! docker node inspect \$(get_node_id) &> /dev/null; then
+    echo \"Node is not part of the swarm. Attempting to rejoin...\"
+    if [[ -f $UNLOCK_KEY_FILE ]]; then
+        SWARM_UNLOCK_KEY=\$(cat $UNLOCK_KEY_FILE)
+        SWARM_JOIN_TOKEN=\$(cat $JOIN_TOKEN_FILE)
+        echo \"\$SWARM_UNLOCK_KEY\" | docker swarm unlock
+        for MANAGER_IP in \"\${MANAGER_IPS[@]}\"; do
+            if docker swarm join --token \$SWARM_JOIN_TOKEN \$MANAGER_IP:2377; then
+                echo \"Successfully joined the swarm via manager \$MANAGER_IP\"
+                exit 0
+            fi
+        done        
+        echo \"Failed to join the swarm. All manager IPs are unreachable.\"
+    else
+        echo \"Unlock key file not found. Cannot rejoin the swarm.\"
+    fi
+else
+    echo \"Node is part of the swarm.\"
+fi
+"
+echo "$THENEWFUNC" | sudo tee $SCRIPTFILELOC/CheckSwarm$STACKNAME.sh > /dev/null
+sudo chmod 777 $SCRIPTFILELOC/CheckSwarm$STACKNAME.sh
+
+echo "[Unit]
+Description=Check and Rejoin Docker Swarm
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=$SCRIPTFILELOC/CheckSwarm$STACKNAME.sh" | sudo tee /etc/systemd/system/CheckSwarm$STACKNAME.service > /dev/null
+
+echo "[Unit]
+Description=Run Check Swarm Script at boot and periodically
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=15min
+Unit=CheckSwarm$STACKNAME.service
+
+[Install]
+WantedBy=timers.target
+" | sudo tee /etc/systemd/system/CheckSwarm$STACKNAME.timer > /dev/null
+
+sudo systemctl enable CheckSwarm$STACKNAME.timer
+sudo systemctl start CheckSwarm$STACKNAME.timer
+
+sudo systemctl status CheckSwarm$STACKNAME.timer
+sudo systemctl status CheckSwarm$STACKNAME.service
+
+echo "Setup completed. The node will now automatically attempt to rejoin the swarm if disconnected."
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
