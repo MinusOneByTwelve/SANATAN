@@ -80,8 +80,8 @@ if [ "$THECHOICE" == "CORE" ] ; then
 INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_mBRE2gHRfCtOxbY"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
 THEVISIONID="33"
-CLUSTERID="2047"
-STACKPRETTYNAME="DataAnalytics33"
+CLUSTERID="2050"
+STACKPRETTYNAME="DataAnalytics36"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -392,7 +392,13 @@ install_docker() {
             fi
             sleep 5
         fi
-    done        
+    done 
+    
+    DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER2TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
+    ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate && sudo mv /home/$THE1REQUSER/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME"
+    sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE           
 }
 
 # Function to create an encrypted overlay network
@@ -570,6 +576,7 @@ echo $SWARM_UNLOCK_KEY > $BASE/tmp/$ULFP1_FILE
 $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$ULFP1_FILE├$UNLOCKFILEPATH├$ADMIN_PASSWORD├$ULFP_FILE"
 sudo chmod 777 $UNLOCKFILEPATH
 sudo rm -f $BASE/tmp/$ULFP1_FILE
+MGR1IPS=$(IFS=','; echo "${MANAGER_IPS[*]}")
 
 # Get the join token for manager and worker nodes
 MANAGER_JOIN_TOKEN=$(run_remote ${MANAGER_IPS[0]} "docker swarm join-token manager -q")
@@ -587,19 +594,24 @@ $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$WJTFP1_FILE├$WJTFILEPATH├$AD
 sudo chmod 777 $WJTFILEPATH
 sudo rm -f $BASE/tmp/$WJTFP1_FILE
 
+echo "$DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 # Join remaining manager nodes to the Swarm
 for IP in "${MANAGER_IPS[@]:1}"; do
-    run_remote $IP "docker swarm join --token $MANAGER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377"
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $MANAGER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+done
+
+for IP in "${MANAGER_IPS[0]}"; do
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
 # Join worker nodes to the Swarm
 for IP in "${WORKER_IPS[@]}"; do
-    run_remote $IP "docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377"
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 # Join router nodes to the Swarm
 for IP in "${ROUTER_IPS[@]}"; do
-    run_remote $IP "docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377"
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 create_encrypted_overlay_network
