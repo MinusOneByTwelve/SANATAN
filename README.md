@@ -1,4 +1,4 @@
-# Udemy1
-Masterclass : Deploy Agnostic Large Scale Cluster Management
+# SANATAN
+Strategic Architecture for Nucleated Applications, Technology & Analytics Network
 
-Ultimate Course in Expert Comprehensive Administration of Distributed Open Source Big Data and ML Tools + Ops
+Ultimate Framework for Expert Comprehensive Administration of Distributed Open Source Big Data and ML Tools + Ops
