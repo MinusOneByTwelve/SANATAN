@@ -11,15 +11,146 @@ THEHOST="THEREQHOSTNAME"
 OS="THEREQOS"
 DOCKER_DATA_DIR="THEREQDDD"
 DFS_DATA_DIR="THEREQDFS"
+DFS_DATA2_DIR="THEREQCD2FS"
+DFS_CLUSTER_DIR="THEREQCDFS"
 TLSSTUFF="THEREQTLS"
 PortainerAPort="THEREQAPORT"
 PortainerSPort="THEREQSPORT"
 STACKNAME="THECURSTACK"
+STACKPRETTYNAME="THECURPNSTACK"
+VarahaPort1="9090"
+VarahaPort2="VP2"
+VarahaPort3="VP3"
+VarahaPort4="VP4"
+TheReqRL="THEREQROLE"
 
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
 sudo hostnamectl set-hostname $THEHOST --transient
 sudo hostnamectl set-hostname "$THEHOST" --pretty
+
+setup_http_server() {
+    sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
+    sudo chown -R root:root $DFS_DATA2_DIR/Static$STACKNAME
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    echo "CDN For $STACKPRETTYNAME" | sudo tee $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    sudo chmod -R 777 $DFS_DATA2_DIR/Static$STACKNAME
+    
+    sudo rm -f /etc/systemd/system/CDN$STACKNAME.service
+    
+    SERVICES=$(systemctl list-units --type=service --state=running | grep 'CDN' | awk '{print $1}')
+    if [ -z "$SERVICES" ]; then
+        echo "No services starting with CDN found."
+    fi
+    for service in $SERVICES; do
+        echo "Stopping and disabling $service..."
+        sudo systemctl stop "$service"
+        sudo systemctl disable "$service"
+        echo "$service stopped and disabled."
+    done    
+    
+    echo '[Unit]
+Description=CDN For '"$STACKPRETTYNAME"'
+After=network.target
+
+[Service]
+User=nobody
+WorkingDirectory='"$DFS_DATA2_DIR/Static$STACKNAME"'
+ExecStart=/usr/bin/python3 -m http.server '"$VarahaPort1"'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target' | sudo tee /etc/systemd/system/CDN$STACKNAME.service > /dev/null
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable CDN$STACKNAME
+    sudo systemctl start CDN$STACKNAME
+}
+
+create_error_files() {
+    sudo mkdir -p $DFS_DATA_DIR/Errors$STACKNAME
+    sudo rm -f $DFS_DATA_DIR/Errors$STACKNAME/*.http
+    
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/400.http
+HTTP/1.0 400 Bad Request
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>400 Bad Request</h1>
+Your browser sent a request that this server could not understand.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/403.http
+HTTP/1.0 403 Forbidden
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>403 Forbidden</h1>
+You don't have permission to access this resource.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/408.http
+HTTP/1.0 408 Request Timeout
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>408 Request Timeout</h1>
+Your browser sent a request that this server could not understand.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/500.http
+HTTP/1.0 500 Internal Server Error
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>500 Internal Server Error</h1>
+The server encountered an internal error or misconfiguration and was unable to complete your request.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/502.http
+HTTP/1.0 502 Bad Gateway
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>502 Bad Gateway</h1>
+The server received an invalid response from the upstream server.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/503.http
+HTTP/1.0 503 Service Unavailable
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>503 Service Unavailable</h1>
+The server is currently unable to handle the request due to a temporary overload or maintenance.<br />
+</body></html>
+EOF
+
+    cat <<EOF > $DFS_DATA_DIR/Errors$STACKNAME/504.http
+HTTP/1.0 504 Gateway Timeout
+Cache-Control: no-cache
+Connection: close
+Content-Type: text/html
+
+<html><body><h1>504 Gateway Timeout</h1>
+The server did not receive a timely response from the upstream server.<br />
+</body></html>
+EOF
+
+sudo chown -R root:root $DFS_DATA_DIR/Errors$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/Errors$STACKNAME
+}
    
 if [[ "$OS" == "UBU" ]]; then
     sudo rm -f /etc/apt/sources.list.d/docker.list
@@ -52,14 +183,72 @@ sudo mkdir -p $DFS_DATA_DIR
 sudo chown -R root:root $DFS_DATA_DIR
 sudo chmod -R 777 $DFS_DATA_DIR
 
-sudo mkdir -p $DFS_DATA_DIR/$STACKNAME
-sudo chown -R gluster:gluster $DFS_DATA_DIR/$STACKNAME
-sudo chmod -R 777 $DFS_DATA_DIR/$STACKNAME
+sudo mkdir -p $DFS_CLUSTER_DIR
+sudo chown -R root:root $DFS_CLUSTER_DIR
+sudo chmod -R 777 $DFS_CLUSTER_DIR
+
+sudo mkdir -p $DFS_DATA2_DIR
+sudo chown -R root:root $DFS_DATA2_DIR
+sudo chmod -R 777 $DFS_DATA2_DIR
+
+sudo mkdir -p $DFS_DATA2_DIR/$STACKNAME
+sudo chown -R gluster:gluster $DFS_DATA2_DIR/$STACKNAME
+sudo chmod -R 777 $DFS_DATA2_DIR/$STACKNAME
+
+sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
+sudo chown -R gluster:gluster $DFS_DATA2_DIR/Static$STACKNAME
+sudo chmod -R 777 $DFS_DATA2_DIR/Static$STACKNAME
+
+sudo mkdir -p $DFS_DATA2_DIR/Mnt$STACKNAME
+sudo chown -R root:root $DFS_DATA2_DIR/Mnt$STACKNAME
+sudo chmod -R 777 $DFS_DATA2_DIR/Mnt$STACKNAME
+sudo ln -s $DFS_DATA2_DIR/Mnt$STACKNAME /$STACKPRETTYNAME 
 
 sudo mkdir -p $DFS_DATA_DIR/Portainer$STACKNAME
-sudo chown -R root:root $DFS_DATA_DIR/Portainer$STACKNAME
+sudo chown -R gluster:gluster $DFS_DATA_DIR/Portainer$STACKNAME
 sudo chmod -R 777 $DFS_DATA_DIR/Portainer$STACKNAME
 
+sudo mkdir -p $DFS_DATA_DIR/PortainerMnt$STACKNAME
+sudo chown -R root:root $DFS_DATA_DIR/PortainerMnt$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/PortainerMnt$STACKNAME
+
+sudo mkdir -p $DFS_DATA_DIR/Tmp$STACKNAME
+sudo chown -R root:root $DFS_DATA_DIR/Tmp$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/Tmp$STACKNAME
+
+sudo mkdir -p $DFS_DATA_DIR/Errors$STACKNAME
+sudo chown -R root:root $DFS_DATA_DIR/Errors$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/Errors$STACKNAME
+
+sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME
+sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME
+sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME
+
+if [ "$TheReqRL" == "R" ] ; then
+	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
+	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
+	
+	create_error_files
+	setup_http_server
+	
+	if ! python3 -c "import PIL" &> /dev/null; then
+	    echo "Pillow is not installed. Installing now..."
+	    pip3 install Pillow
+	else
+	    echo "Pillow is already installed."
+	fi
+	sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Logo$STACKNAME.png
+	#cat /home/$CURRENTUSER/ImageMaker.py
+	python3 /home/$CURRENTUSER/ImageMaker.py
+	sudo rm -f /home/$CURRENTUSER/ImageMaker.py
+	sudo rm -f /home/$CURRENTUSER/CoreFont.ttf
+fi
+
+sudo systemctl stop glusterd
+sudo rm -rf /var/lib/glusterd/*
+sudo rm -rf /etc/glusterfs/*
+sudo rm -rf /var/log/glusterfs/*
 sudo mkdir -p /etc/glusterfs && sudo rm -rf /etc/glusterfs/glusterd.vol
 echo 'volume management
     type mgmt/glusterd
@@ -124,6 +313,11 @@ WantedBy=multi-user.target' | sudo tee /etc/systemd/system/docker.service > /dev
 sudo firewall-cmd --zone=public --add-port=$PortainerAPort/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=$PortainerSPort/tcp --permanent
 
+#sudo firewall-cmd --zone=public --add-port=$VarahaPort1/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=$VarahaPort2/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=$VarahaPort3/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=$VarahaPort4/tcp --permanent
+
 sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
@@ -134,6 +328,8 @@ sudo firewall-cmd --zone=public --add-port=24008/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
 
 sudo firewall-cmd --zone=public --add-protocol=50 --permanent
+
+sudo firewall-cmd --zone=public --add-port=16746-19478/tcp --permanent
                 
 sudo firewall-cmd --reload
 

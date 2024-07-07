@@ -2,7 +2,7 @@ version: '3.7'
  
 services:
   agent:
-    image: portainer/agent
+    image: portainer/agent:WRKRVER
     ports:
       - "PortainerAPort:9001"
     environment:
@@ -21,7 +21,7 @@ services:
           memory: 'R2AMM'
                   
   portainer:
-    image: portainer/portainer-ce
+    image: portainer/portainer-ce:MGRVER
     ports:
       - "PortainerSPort:9443"
     environment:
@@ -56,7 +56,7 @@ services:
         source: CERTS_DIR/docker/STACKNAME-server-key.pem
         target: /certs/skey.pem 
         read_only: true                       
-    command: -H tcp://tasks.agent:PortainerAPort --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem
+    command: -H tcp://tasks.agent:PortainerAPort --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem --logo "https://ROUTERNAME:ROUTERPORT/LogoSTACKNAME.png"
     networks:
       - STACKNAME-encrypted-overlay    
     cap_add:
