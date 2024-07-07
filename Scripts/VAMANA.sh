@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 clear
 
 CURRENTUSER=$(whoami)
@@ -81,8 +79,9 @@ if [ "$THECHOICE" == "CORE" ] ; then
 # Path to the dynamic instance details file
 INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_mBRE2gHRfCtOxbY"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
-THEVISIONID="23"
-CLUSTERID="rj2982"
+THEVISIONID="33"
+CLUSTERID="2047"
+STACKPRETTYNAME="DataAnalytics33"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -92,6 +91,10 @@ fi
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort")
 PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort")
+VarahaPort1=$(GetNewPort) && PORTSLIST+=("$VarahaPort1")
+VarahaPort2=$(GetNewPort) && PORTSLIST+=("$VarahaPort2")
+VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3")
+VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4")
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
@@ -99,6 +102,8 @@ WJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dswjt"
 REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
+DFS_DATA2_DIR="/shiva/local/storage/dfs$STACKNAME"
+DFS_CLUSTER_DIR="/shiva/global/storage/dfs$STACKNAME"
 CERTS_DIR="/shiva/local/storage/certs$STACKNAME"
 
 EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
@@ -109,6 +114,7 @@ echo "$EXECUTE1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 # Arrays to hold manager and worker details
 declare -a MANAGER_IPS
 declare -a WORKER_IPS
+declare -a ROUTER_IPS
 declare -A HOST_NAMES
 declare -A PEM_FILES
 declare -A PORTS
@@ -116,18 +122,22 @@ declare -A OS_TYPES
 declare -A LOGIN_USERS
 declare -A APP_MEM
 declare -A APP_CORE
+declare -A CLUSTER_TYPE
+NATIVE="1"
 
 # Function to parse the instance details file
 parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
-    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
-    while IFS='├' read -r SCPID INSTID IP HOSTNAME PORT PEM ROLE OS U1SER M1EM C1ORE; do
+    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    while IFS='├' read -r SCPID INSTID IP HOSTNAME PORT PEM ROLE OS U1SER M1EM C1ORE C1TYPE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
         OS_TYPES["$IP"]="$OS"
         LOGIN_USERS["$IP"]="$U1SER"
         APP_MEM["$IP"]="$M1EM"
-        APP_CORE["$IP"]="$C1ORE"        
+        APP_CORE["$IP"]="$C1ORE" 
+        CLUSTER_TYPE["$IP"]="$C1TYPE"
+                       
         echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                     
         if [ "$ROLE" == "MANAGER" ]; then
             MANAGER_IPS+=("$IP")
@@ -137,10 +147,21 @@ parse_instance_details() {
             WORKER_IPS+=("$IP")
             HOST_NAMES["$IP"]="v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+        elif [ "$ROLE" == "ROUTER" ]; then
+            ROUTER_IPS+=("$IP")
+            HOST_NAMES["$IP"]="v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         fi                
     done < "$INSTANCE_DETAILS_FILE"
-    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+    
+    for ip in "${!CLUSTER_TYPE[@]}"; do
+        if [[ "${CLUSTER_TYPE[$ip]}" == "ONPREM" ]]; then
+            NATIVE="2"
+            break
+        fi
+    done    
 }
 
 # Function to run commands on remote hosts
@@ -173,15 +194,18 @@ generate_ssl_certificates() {
         openssl req -x509 -new -nodes -key $IPHF-key.pem -sha256 -days 3650 -out $IPHF.pem -subj '/CN=vamana-swarm'
         openssl genpkey -algorithm RSA -out $IPHF-server-key.pem
         openssl req -new -key $IPHF-server-key.pem -out $IPHF.csr -subj '/CN=$IP'
-        openssl x509 -req -in $IPHF.csr -CA $IPHF.pem -CAkey $IPHF-key.pem -CAcreateserial -out $IPHF-server-cert.pem -days 3650 -sha256                
+        openssl x509 -req -in $IPHF.csr -CA $IPHF.pem -CAkey $IPHF-key.pem -CAcreateserial -out $IPHF-server-cert.pem -days 3650 -sha256  
+        cat $IPHF-server-cert.pem $IPHF-server-key.pem > $IPHF-VARAHA.pem
+                      
         sudo mkdir -p $CERTS_DIR/docker && sudo chmod -R 777 $CERTS_DIR/docker
         sudo rm -f $CERTS_DIR/docker/*
-        sudo cp $IPHF.pem $IPHF-server-cert.pem $IPHF-server-key.pem $CERTS_DIR/docker/
+        sudo cp $IPHF.pem $IPHF-server-cert.pem $IPHF-server-key.pem $IPHF-VARAHA.pem $CERTS_DIR/docker/
         sudo rm -f $IPHF-key.pem
         sudo rm -f $IPHF.pem
         sudo rm -f $IPHF-server-key.pem
         sudo rm -f $IPHF.csr
         sudo rm -f $IPHF-server-cert.pem
+        sudo rm -f $IPHF-VARAHA.pem        
         cd ~
     "
 }
@@ -195,22 +219,27 @@ copy_ssl_certificates() {
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-        
+    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
+            
     # Download certificates from the first manager to the local machine
     run_remote $SRC_IP "
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-key.pem
+        sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem        
     "    
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
     run_remote $SRC_IP "
         sudo chown root:root $CERTS_DIR/docker/$IPHF.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-cert.pem
-        sudo chown root:root $CERTS_DIR/docker/$IPHF-server-key.pem    
+        sudo chown root:root $CERTS_DIR/docker/$IPHF-server-key.pem  
+        sudo chown root:root $CERTS_DIR/docker/$IPHF-VARAHA.pem   
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
+        sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem
         sudo chmod 600 $CERTS_DIR/docker/$IPHF-server-key.pem
     " 
         
@@ -218,13 +247,15 @@ copy_ssl_certificates() {
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    for IP in "${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}"; do
+    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
+    for IP in "${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
         local THEREQUSER=${LOGIN_USERS[$IP]}
         
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF.pem
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-cert.pem
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-key.pem
-        
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-VARAHA.pem
+                
         # Move the certificates to the correct location on the target manager
         I1PHF="$STACKNAME"
         run_remote $IP "
@@ -233,15 +264,19 @@ copy_ssl_certificates() {
             sudo mv /home/$THEREQUSER/$IPHF.pem $CERTS_DIR/docker/$I1PHF.pem
             sudo mv /home/$THEREQUSER/$IPHF-server-key.pem $CERTS_DIR/docker/$I1PHF-server-key.pem
             sudo mv /home/$THEREQUSER/$IPHF-server-cert.pem $CERTS_DIR/docker/$I1PHF-server-cert.pem
+            sudo mv /home/$THEREQUSER/$IPHF-VARAHA.pem $CERTS_DIR/docker/$I1PHF-VARAHA.pem            
             sudo chown root:root $CERTS_DIR/docker/$I1PHF.pem
             sudo chown root:root $CERTS_DIR/docker/$I1PHF-server-cert.pem
-            sudo chown root:root $CERTS_DIR/docker/$I1PHF-server-key.pem                        
+            sudo chown root:root $CERTS_DIR/docker/$I1PHF-server-key.pem       
+            sudo chown root:root $CERTS_DIR/docker/$I1PHF-VARAHA.pem                              
             sudo chmod 644 $CERTS_DIR/docker/$I1PHF.pem
             sudo chmod 644 $CERTS_DIR/docker/$I1PHF-server-cert.pem
-            sudo chmod 600 $CERTS_DIR/docker/$I1PHF-server-key.pem            
+            sudo chmod 600 $CERTS_DIR/docker/$I1PHF-server-key.pem    
+            sudo chmod 644 $CERTS_DIR/docker/$I1PHF-VARAHA.pem                    
             sudo rm -f /home/$THEREQUSER/$IPHF.pem
             sudo rm -f /home/$THEREQUSER/$IPHF-server-key.pem
-            sudo rm -f /home/$THEREQUSER/$IPHF-server-cert.pem            
+            sudo rm -f /home/$THEREQUSER/$IPHF-server-cert.pem 
+            sudo rm -f /home/$THEREQUSER/$IPHF-VARAHA.pem                       
         "
     done
     MGR=$(echo "${MANAGER_IPS[0]}" | sed 's/\./-/g')
@@ -249,23 +284,14 @@ copy_ssl_certificates() {
             sudo mv $CERTS_DIR/docker/$MGR.pem $CERTS_DIR/docker/$STACKNAME.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-key.pem $CERTS_DIR/docker/$STACKNAME-server-key.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-cert.pem $CERTS_DIR/docker/$STACKNAME-server-cert.pem
+            sudo mv $CERTS_DIR/docker/$MGR-VARAHA.pem $CERTS_DIR/docker/$STACKNAME-VARAHA.pem            
     "      
     
     # Clean up local files
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-}
-
-# Function to create an encrypted overlay network
-create_encrypted_overlay_network() {
-    run_remote ${MANAGER_IPS[0]} "
-        docker network create \
-          --driver overlay \
-          --attachable \
-          --opt encrypted \
-          $STACKNAME-encrypted-overlay
-    "
+    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
 }
 
 # Function to setup Docker
@@ -280,14 +306,21 @@ install_docker() {
     local THE1HOST1NAME=${HOST_NAMES[$IP]}
         
     TLSSTUFF=""
+    TheReqRL=""
     local IPHF="$STACKNAME"
     if [ "$MACTYPE" == "M" ] ; then
     	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
+    	TheReqRL="M"
     fi
     if [ "$MACTYPE" == "W" ] ; then
     	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
+    	TheReqRL="W"
     fi
-        
+    if [ "$MACTYPE" == "R" ] ; then
+    	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
+    	TheReqRL="R"
+    fi
+            
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerSetUpTemplate $BASE/tmp/$DOCKERTEMPLATE
 
@@ -295,14 +328,35 @@ install_docker() {
     sed -i -e s~"THEREQHOSTNAME"~"$THE1HOST1NAME"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQOS"~"$OS"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQDDD"~"$DOCKER_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE
-    sed -i -e s~"THEREQDFS"~"$DFS_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE    
+    sed -i -e s~"THEREQDFS"~"$DFS_DATA_DIR"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"THEREQCD2FS"~"$DFS_DATA2_DIR"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"THEREQCDFS"~"$DFS_CLUSTER_DIR"~g $BASE/tmp/$DOCKERTEMPLATE   
     sed -i -e s~"THEREQTLS"~"$TLSSTUFF"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQAPORT"~"$PortainerAPort"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQSPORT"~"$PortainerSPort"~g $BASE/tmp/$DOCKERTEMPLATE
-    sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERTEMPLATE
-    
+    sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"THECURPNSTACK"~"$STACKPRETTYNAME"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"VP1"~"$VarahaPort1"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"VP2"~"$VarahaPort2"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"VP3"~"$VarahaPort3"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"VP4"~"$VarahaPort4"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THEREQROLE"~"$TheReqRL"~g $BASE/tmp/$DOCKERTEMPLATE
+        
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
 
+    if [ "$MACTYPE" == "R" ] ; then
+	    DOCKER1TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    sudo cp $BASE/Resources/ImageMaker.py $BASE/tmp/$DOCKER1TEMPLATE
+	    sed -i -e s~"THEREQHEADER"~"$STACKPRETTYNAME"~g $BASE/tmp/$DOCKER1TEMPLATE
+	    sed -i -e s~"THEREQFONT"~"/home/$THE1REQUSER/CoreFont.ttf"~g $BASE/tmp/$DOCKER1TEMPLATE
+	    sed -i -e s~"THEREQLOC"~"$DFS_DATA2_DIR/Static$STACKNAME/Logo$STACKNAME.png"~g $BASE/tmp/$DOCKER1TEMPLATE        
+	    sudo chmod 777 $BASE/tmp/$DOCKER1TEMPLATE
+	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER1TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
+	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/CoreFont.ttf" "$THE1REQUSER@$IP:/home/$THE1REQUSER/CoreFont.ttf"
+	    ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/ImageMaker.py && sudo mv /home/$THE1REQUSER/$DOCKER1TEMPLATE /home/$THE1REQUSER/ImageMaker.py && sudo chmod 777 /home/$THE1REQUSER/ImageMaker.py"
+	    sudo rm -f $BASE/tmp/$DOCKER1TEMPLATE
+    fi
+    
     max_attempts=5
     attempt=0
     while true; do
@@ -341,6 +395,144 @@ install_docker() {
     done        
 }
 
+# Function to create an encrypted overlay network
+create_encrypted_overlay_network() {
+    run_remote ${MANAGER_IPS[0]} "
+        docker network create \
+          --driver overlay \
+          --attachable \
+          --opt encrypted \
+          $STACKNAME-encrypted-overlay
+    "
+}
+
+# Function to create cluster glusterfs volume
+create_glusterfs_volume_cluster() {
+	peer_probe_cmds=""
+	
+	ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	total_nodes=${#ALL_IPS[@]}
+	max_nodes=$(( (total_nodes / NATIVE) * NATIVE ))
+	peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
+	
+	for ip in "${peer_ips[@]}"; do
+		H1O1S1T=${HOST_NAMES[$ip]}
+		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
+	done
+	volume_create_cmd="sudo gluster volume create $STACKNAME replica $NATIVE "
+	for ip in "${peer_ips[@]}"; do
+		H1O1S11T=${HOST_NAMES[$ip]}
+		volume_create_cmd+="$H1O1S11T:$DFS_DATA2_DIR/$STACKNAME "
+	done		
+	volume_create_cmd+="force" 
+	echo "create_glusterfs_volume_cluster : $peer_probe_cmds"
+	echo "create_glusterfs_volume_cluster : $volume_create_cmd"  
+	run_remote ${MANAGER_IPS[0]} "
+	$peer_probe_cmds
+	$volume_create_cmd
+	sudo gluster volume start $STACKNAME
+	"
+	glusterfs_addresses=""
+	for ip in "${peer_ips[@]}"; do
+		H11O1S11T=${HOST_NAMES[$ip]}
+		glusterfs_addresses+="$H11O1S11T,"
+	done		
+	glusterfs_addresses=${glusterfs_addresses%,}
+	for IP in "${ALL_IPS[@]}"; do
+	    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_DATA2_DIR/Mnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/$STACKNAME-mount.log"
+	done
+}
+
+# Function to create portainer glusterfs volume
+create_glusterfs_volume_portainer() {
+	primary_ip=${MANAGER_IPS[0]}
+	peer_ips=("${MANAGER_IPS[@]:1}")
+	peer_probe_cmds=""
+	for ip in "${peer_ips[@]}"; do
+		H1O1S1T=${HOST_NAMES[$ip]}
+		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
+	done
+	volume_create_cmd="sudo gluster volume create Portainer$STACKNAME replica ${#MANAGER_IPS[@]} "
+	for ip in "${MANAGER_IPS[@]}"; do
+		H1O1S11T=${HOST_NAMES[$ip]}
+		volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
+	done
+	volume_create_cmd+="force" 
+	echo "create_glusterfs_volume_portainer : $peer_probe_cmds"
+	echo "create_glusterfs_volume_portainer : $volume_create_cmd" 
+	run_remote ${MANAGER_IPS[0]} "
+	$peer_probe_cmds
+	$volume_create_cmd
+	sudo gluster volume start Portainer$STACKNAME
+	"
+	glusterfs_addresses=""
+	for ip in "${MANAGER_IPS[@]}"; do
+		H11O1S11T=${HOST_NAMES[$ip]}
+		glusterfs_addresses+="$H11O1S11T,"
+	done
+	glusterfs_addresses=${glusterfs_addresses%,}
+	for IP in "${MANAGER_IPS[@]}"; do
+	    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$STACKNAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
+	done
+}
+
+# Function to create swarm labels
+create_swarm_labels() {
+	for IP in "${MANAGER_IPS[@]}"; do
+		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
+		if [ -n "$NODE_ID" ]; then
+		    run_remote $IP "docker node update --label-add $STACKNAME""portainerreplica=true $NODE_ID"
+		else
+		    echo "Node $IP is not part of a Swarm"
+		fi
+	done
+	for IP in "${ROUTER_IPS[@]}"; do
+		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
+		if [ -n "$NODE_ID" ]; then
+		    run_remote ${MANAGER_IPS[0]} "docker node update --label-add $STACKNAME""routerreplica=true $NODE_ID"
+		else
+		    echo "Node $IP is not part of a Swarm"
+		fi
+	done
+}
+
+# Function to create cluster level cdn & proxy
+create_cluster_cdn_proxy() {
+    DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Scripts/VARAHA.sh $BASE/tmp/$DOCKERTEMPLATE
+
+    MGRIPS=$(IFS=','; echo "${MANAGER_IPS[*]}")
+    THECFGPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    THEDCYPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)    
+    IWP="${ROUTER_IPS[0]}"
+    THE1RAM=${APP_MEM[$IWP]}
+    R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
+    THE1CORE=${APP_CORE[$IWP]}
+    C2ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
+   
+    sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
+     
+    max_attempts=5
+    attempt=0
+    while true; do
+    	attempt=$((attempt + 1))
+        scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
+        status=$?
+        if [ $status -eq 0 ]; then
+            echo "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"${HOST_NAMES[${ROUTER_IPS[0]}]}\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
+            break
+        else
+            if [ $attempt -ge $max_attempts ]; then
+                echo "Maximum attempts reached. Exiting."
+                exit 1
+            fi
+            sleep 5
+        fi
+    done 
+}
+
 # Parse instance details
 parse_instance_details
 
@@ -357,6 +549,11 @@ done
 for IP in "${WORKER_IPS[@]}"; do
     install_docker "W" $IP
 done
+for IP in "${ROUTER_IPS[@]}"; do
+    install_docker "R" $IP
+done
+sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
+$BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 
 # Initialize Docker Swarm with custom ports and autolock on the first manager node
@@ -400,55 +597,30 @@ for IP in "${WORKER_IPS[@]}"; do
     run_remote $IP "docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377"
 done
 
+# Join router nodes to the Swarm
+for IP in "${ROUTER_IPS[@]}"; do
+    run_remote $IP "docker swarm join --token $WORKER_JOIN_TOKEN ${MANAGER_IPS[0]}:2377"
+done
+
 create_encrypted_overlay_network
-
-P1O1R1T=${PORTS[${MANAGER_IPS[0]}]}
-THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
-SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
-echo "Using Subnet $SUBNET ..."
-
-primary_ip=${MANAGER_IPS[0]}
-peer_ips=("${MANAGER_IPS[@]:1}")
-peer_probe_cmds=""
-for ip in "${peer_ips[@]}"; do
-	H1O1S1T=${HOST_NAMES[$ip]}
-	peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
-done
-volume_create_cmd="sudo gluster volume create ${STACKNAME} replica ${#MANAGER_IPS[@]} "
-for ip in "${MANAGER_IPS[@]}"; do
-	H1O1S11T=${HOST_NAMES[$ip]}
-	volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/$STACKNAME "
-done
-volume_create_cmd+="force"  
-run_remote ${MANAGER_IPS[0]} "
-$peer_probe_cmds
-$volume_create_cmd
-sudo gluster volume start $STACKNAME
-"
-glusterfs_addresses=""
-for ip in "${MANAGER_IPS[@]}"; do
-	H11O1S11T=${HOST_NAMES[$ip]}
-	glusterfs_addresses+="$H11O1S11T,"
-done
-glusterfs_addresses=${glusterfs_addresses%,}
-for IP in "${MANAGER_IPS[@]}"; do
-    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_DATA_DIR/Portainer$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
-done
 
 THEMANGIP="${MANAGER_IPS[0]}"
 THE1RAM=${APP_MEM[$THEMANGIP]}
 R1AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
 THE1CORE=${APP_CORE[$THEMANGIP]}
 C1ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
+P1O1R1T=${PORTS[${MANAGER_IPS[0]}]}
+THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
+SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
+echo "Using Subnet $SUBNET ..."
+
+create_glusterfs_volume_cluster
+
+create_glusterfs_volume_portainer
     
-for IP in "${MANAGER_IPS[@]}"; do
-	NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
-	if [ -n "$NODE_ID" ]; then
-	    run_remote $IP "docker node update --label-add $STACKNAME""portainerreplica=true $NODE_ID"
-	else
-	    echo "Node $IP is not part of a Swarm"
-	fi
-done
+create_swarm_labels
+
+create_cluster_cdn_proxy
 
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 sudo cp $BASE/Resources/DockerPortainer.yml $BASE/tmp/$DOCKERPTEMPLATE
@@ -458,8 +630,13 @@ sed -i -e s~"REVERSED_PASSWORD"~"$REVERSED_PASSWORD"~g $BASE/tmp/$DOCKERPTEMPLAT
 sed -i -e s~"STACKNAME"~"$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"C1ORE"~"$C1ORE"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"R1AM"~"$R1AM"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"DOCKER_VOLUME_NAME"~"$DFS_DATA_DIR/Portainer$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"DOCKER_VOLUME_NAME"~"$DFS_DATA_DIR/PortainerMnt$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"CERTS_DIR"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"ROUTERNAME"~"${HOST_NAMES[${ROUTER_IPS[0]}]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"ROUTERPORT"~"$VarahaPort2"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"WRKRVER"~"${CLUSTERAPPSMAPPING["WORKER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"MGRVER"~"${CLUSTERAPPSMAPPING["MANAGER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+
 IWP="${WORKER_IPS[0]}"
 THE1RAM=${APP_MEM[$IWP]}
 R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
@@ -494,19 +671,24 @@ echo "" && echo "Install Portainer & Agent..."
 if [ "$READYTOROCK" == "YES" ] ; then
 	run_remote ${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml $STACKNAME && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml"
 fi
+             
+echo "Portainer Proxy : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort3"
+echo "Portainer Admin : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort4"
+echo "Static Local : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort1"
+echo "Static Global : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort2"
 
 PORTAINER_URL="https://${MANAGER_IPS[0]}:$PortainerSPort/api"
 USERNAME="admin"
 MAX_RETRIES=100
 SLEEP_INTERVAL=5
-THENEW1ENV="$STACKNAME"
+THENEW1ENV="$STACKPRETTYNAME"
 set_admin_password() {
     curl -k -X POST "$PORTAINER_URL/users/admin/init" \
     -H "Content-Type: application/json" \
     --data "{\"Username\": \"$USERNAME\", \"Password\": \"$ADMIN_PASSWORD\"}"
 }
 is_portainer_up() {
-    curl -k -s -o /dev/null -w "%{http_code}" "$PORTAINER_URL/status" | grep -q "200"
+    curl -k -s -o /dev/null -w "%{http_code}" "$PORTAINER_URL/system/status" | grep -q "200"
 }
 rename_environment() {
 	THEORG1ENV="local"    
@@ -542,20 +724,27 @@ PortainerGUI=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking
 echo "Docker Swarm setup completed successfully.Ports List ${PORTSLIST[@]}.URL : https://$PortainerGUI:$PortainerSPort"
 
 simulate_first_login() {
+    echo "camehere1"
     TOKEN=$(curl -k -s -X POST "$PORTAINER_URL/auth" \
     -H "Content-Type: application/json" \
     --data "{\"Username\": \"$USERNAME\", \"Password\": \"$ADMIN_PASSWORD\"}" | jq -r '.jwt')
+    echo "camehere2 $TOKEN"
+    if [ -z "$TOKEN" ]; then
     curl -k -s -X GET "$PORTAINER_URL/endpoints" \
         -H "Content-Type: application/json" \
         --header "Authorization: Bearer $TOKEN"
+    fi
 }
 is_environment_ready() {
+	echo "camehere3"
 	TOKEN=$(curl -k -s -X POST "$PORTAINER_URL/auth" \
     -H "Content-Type: application/json" \
-    --data "{\"Username\": \"$USERNAME\", \"Password\": \"$ADMIN_PASSWORD\"}" | jq -r '.jwt')    
+    --data "{\"Username\": \"$USERNAME\", \"Password\": \"$ADMIN_PASSWORD\"}" | jq -r '.jwt') 
+    echo "camehere4 $TOKEN"   
 	ENV_ID=$(curl -k -s -X GET "$PORTAINER_URL/endpoints" \
         -H "Content-Type: application/json" \
-        --header "Authorization: Bearer $TOKEN" | jq -r '.[] | select(.Name=="local").Id')   
+        --header "Authorization: Bearer $TOKEN" | jq -r '.[] | select(.Name=="local").Id')  
+        echo "camehere5 $ENV_ID" 
     if [ -z "$ENV_ID" ]; then
         return 1
     else
