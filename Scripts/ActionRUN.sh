@@ -225,7 +225,7 @@ CLD_IDENTITY_DELETE() {
 		sc1id="${scid[0]}"
 		sc2id="${scid[1]}"
 		sc3id="s""$sc1id""i""$sc2id"
-		
+		#echo "scopeidy : $scopeidy  search_result : $search_result  sc1id : $sc1id  sc2id : $sc2id  sc3id : $sc3id" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 		if [ -n "$search_result" ]; then
 			line_number=$(echo "$search_result" | awk -F ':' 'NR==1 {print $1}')
 			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
@@ -631,7 +631,7 @@ AWS_VPC_DELETE() {
 
 	for file in "${r_files[@]}"; do
 	    folder_name=$(basename "$(dirname "$file")")
-	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    scpid=$(echo "$folder_name" | sed -E 's/^v[0-9]+s([0-9]+)i([0-9]+).*/\1,\2/')
 	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
 		SCPIDYMULTIPLE+="|$scpid"
 	    else
@@ -639,8 +639,8 @@ AWS_VPC_DELETE() {
 	    fi
 	done
 	
-	#echo ""
-	#echo "$SCPIDYMULTIPLE"
+	echo ""
+	echo "$SCPIDYMULTIPLE"
 	AWSGLOBALDELETE="YES"
 	THEREQVISID="$The1Vision1ID"	
 	CLD_IDENTITY_DELETE "$SCPIDYMULTIPLE" "$TheScope1File" "$Vision1Key" "AWS"	
@@ -704,7 +704,7 @@ AZURE_VPC_DELETE() {
 
 	for file in "${r_files[@]}"; do
 	    folder_name=$(basename "$(dirname "$file")")
-	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    scpid=$(echo "$folder_name" | sed -E 's/^v[0-9]+s([0-9]+)i([0-9]+).*/\1,\2/')
 	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
 		SCPIDYMULTIPLE+="|$scpid"
 	    else
@@ -769,7 +769,7 @@ GCP_VPC_DELETE() {
 
 	for file in "${r_files[@]}"; do
 	    folder_name=$(basename "$(dirname "$file")")
-	    scpid=$(echo "$folder_name" | sed -E 's/^v23s([0-9]+)i([0-9]+).*/\1,\2/')
+	    scpid=$(echo "$folder_name" | sed -E 's/^v[0-9]+s([0-9]+)i([0-9]+).*/\1,\2/')
 	    if [[ -n "$SCPIDYMULTIPLE" ]]; then
 		SCPIDYMULTIPLE+="|$scpid"
 	    else

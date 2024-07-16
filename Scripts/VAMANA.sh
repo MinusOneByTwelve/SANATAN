@@ -60,6 +60,14 @@ function GetNewPort {
     echo $FreshPort
 }
 
+function GetNewPortRange {
+    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 9100 9500)
+    if printf '%s\0' "${PORTSLIST[@]}" | grep -Fxqz -- $FreshPortRange; then
+    	GetNewPortRange
+    fi
+    echo $FreshPortRange
+}
+
 echo -e "${ORANGE}=============================================================${NC}"
 echo -e "\x1b[1;34mV\x1b[mersatile \x1b[1;34mA\x1b[mutomation \x1b[1;34mM\x1b[managing \x1b[1;34mA\x1b[mssorted \x1b[1;34mN\x1b[metworked \x1b[1;34mA\x1b[mpplications"
 echo -e "${GREEN}=============================================================${NC}"
@@ -77,11 +85,11 @@ THECHOICE="$1"
 
 if [ "$THECHOICE" == "CORE" ] ; then
 # Path to the dynamic instance details file
-INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_mBRE2gHRfCtOxbY"
+INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_aws"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
-THEVISIONID="33"
-CLUSTERID="2050"
-STACKPRETTYNAME="DataAnalytics36"
+THEVISIONID="2024"
+CLUSTERID="2066"
+STACKPRETTYNAME="DataAnalytics52"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -91,7 +99,7 @@ fi
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort")
 PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort")
-VarahaPort1=$(GetNewPort) && PORTSLIST+=("$VarahaPort1")
+VarahaPort1=$(GetNewPortRange) && PORTSLIST+=("$VarahaPort1")
 VarahaPort2=$(GetNewPort) && PORTSLIST+=("$VarahaPort2")
 VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3")
 VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4")
@@ -103,6 +111,7 @@ REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
 DFS_DATA2_DIR="/shiva/local/storage/dfs$STACKNAME"
+#DFS_DATA2_DIR="/shiva/global/storage/dfs$STACKNAME"
 DFS_CLUSTER_DIR="/shiva/global/storage/dfs$STACKNAME"
 CERTS_DIR="/shiva/local/storage/certs$STACKNAME"
 
@@ -123,6 +132,7 @@ declare -A LOGIN_USERS
 declare -A APP_MEM
 declare -A APP_CORE
 declare -A CLUSTER_TYPE
+declare -A INTERNAL_IPS
 NATIVE="1"
 
 # Function to parse the instance details file
@@ -423,11 +433,18 @@ create_glusterfs_volume_cluster() {
 	
 	for ip in "${peer_ips[@]}"; do
 		H1O1S1T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H1O1S1T=${INTERNAL_IPS[$ip]}
+		fi
 		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
 	done
-	volume_create_cmd="sudo gluster volume create $STACKNAME replica $NATIVE "
+	#volume_create_cmd="sudo gluster volume create $STACKNAME replica $NATIVE "
+	volume_create_cmd="sudo gluster volume create $STACKNAME replica 2 "
 	for ip in "${peer_ips[@]}"; do
 		H1O1S11T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H1O1S11T=${INTERNAL_IPS[$ip]}
+		fi
 		volume_create_cmd+="$H1O1S11T:$DFS_DATA2_DIR/$STACKNAME "
 	done		
 	volume_create_cmd+="force" 
@@ -441,6 +458,9 @@ create_glusterfs_volume_cluster() {
 	glusterfs_addresses=""
 	for ip in "${peer_ips[@]}"; do
 		H11O1S11T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H11O1S11T=${INTERNAL_IPS[$ip]}
+		fi
 		glusterfs_addresses+="$H11O1S11T,"
 	done		
 	glusterfs_addresses=${glusterfs_addresses%,}
@@ -456,11 +476,17 @@ create_glusterfs_volume_portainer() {
 	peer_probe_cmds=""
 	for ip in "${peer_ips[@]}"; do
 		H1O1S1T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H1O1S1T=${INTERNAL_IPS[$ip]}
+		fi
 		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
 	done
 	volume_create_cmd="sudo gluster volume create Portainer$STACKNAME replica ${#MANAGER_IPS[@]} "
 	for ip in "${MANAGER_IPS[@]}"; do
 		H1O1S11T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H1O1S11T=${INTERNAL_IPS[$ip]}
+		fi
 		volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
 	done
 	volume_create_cmd+="force" 
@@ -474,6 +500,9 @@ create_glusterfs_volume_portainer() {
 	glusterfs_addresses=""
 	for ip in "${MANAGER_IPS[@]}"; do
 		H11O1S11T=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+			H11O1S11T=${INTERNAL_IPS[$ip]}
+		fi
 		glusterfs_addresses+="$H11O1S11T,"
 	done
 	glusterfs_addresses=${glusterfs_addresses%,}
@@ -515,6 +544,13 @@ create_cluster_cdn_proxy() {
     R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
     THE1CORE=${APP_CORE[$IWP]}
     C2ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
+
+    THEREQROUTER="${ROUTER_IPS[0]}"
+    SYNCWITHIFCONFIG="N"
+    if [ "$NATIVE" -lt 2 ]; then
+    	THEREQROUTER="${INTERNAL_IPS[${ROUTER_IPS[0]}]}"
+    	SYNCWITHIFCONFIG="Y"
+    fi
    
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
      
@@ -525,8 +561,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            echo "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
-            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"${HOST_NAMES[${ROUTER_IPS[0]}]}\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -626,6 +661,24 @@ THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
 SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
 echo "Using Subnet $SUBNET ..."
 
+fetch_internal_ip() {
+    local IP=$1
+    local PORT=${PORTS[$IP]}
+    local THEREQUSER=${LOGIN_USERS[$IP]}
+    local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI2") 
+    echo $internal_ip   
+}
+
+if [ "$NATIVE" -lt 2 ]; then
+	for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+	    internal_ip=$(fetch_internal_ip $ip)
+	    INTERNAL_IPS["$ip"]="$internal_ip"
+	done
+	for ip in "${!INTERNAL_IPS[@]}"; do
+	    echo "$ip : ${INTERNAL_IPS[$ip]}"
+	done  
+fi
+
 create_glusterfs_volume_cluster
 
 create_glusterfs_volume_portainer
@@ -648,6 +701,8 @@ sed -i -e s~"ROUTERNAME"~"${HOST_NAMES[${ROUTER_IPS[0]}]}"~g $BASE/tmp/$DOCKERPT
 sed -i -e s~"ROUTERPORT"~"$VarahaPort2"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"WRKRVER"~"${CLUSTERAPPSMAPPING["WORKER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"MGRVER"~"${CLUSTERAPPSMAPPING["MANAGER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"WRKR1VER"~"${CLUSTER_APP_SMAPPING["WORKER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"MGR1VER"~"${CLUSTER_APP_SMAPPING["MANAGER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
 
 IWP="${WORKER_IPS[0]}"
 THE1RAM=${APP_MEM[$IWP]}

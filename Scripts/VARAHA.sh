@@ -43,7 +43,7 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	STACKNAME="$3"
 	STACKPRETTYNAME="$4"	
 	STATIC_CONTENT_PATH="$5"
-	LOCALCDNPORT="9090" #LOCALCDNPORT="$6"
+	LOCALCDNPORT="$6"
 	GLOBALCDNPORT="$7"
 	THECFGPATH="$8"
 	PortainerWPort="$9"
@@ -57,7 +57,12 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	ERRORS_DIR="${17}"	
 	MISC_DIR="${18}"
 	THEROUTER="${19}" 
-	THEVERROUTER="${20}"   							
+	THEVERROUTER="${20}" 
+	THEVER1ROUTER="${21}"
+	SYNCWITHIFCONFIG="${22}"
+	if [ "$SYNCWITHIFCONFIG" == "Y" ]; then	
+		THEROUTER=$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)  
+	fi							
 fi
 
 # Generate the HAProxy configuration
@@ -138,7 +143,7 @@ create_docker_compose_file() {
  
 services:                 
   haproxy:
-    image: haproxy:'"$THEVERROUTER"'
+    image: '"$THEVER1ROUTER"':'"$THEVERROUTER"'
     configs:
       - source: '"CDN$STACKNAME"'.cfg
         target: /usr/local/etc/haproxy/haproxy.cfg    

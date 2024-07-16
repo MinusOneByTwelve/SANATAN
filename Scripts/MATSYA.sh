@@ -761,6 +761,16 @@ deploy_instances() {
 			trr_md5="${THEREQVIS1ID}├${THEREQUIREDREGION}"
 			trrmd5=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')
 			sed -i -e s~"THEGLOBALBUCKET"~"$trrmd5"~g $terraform_file
+			sed -i -e s~"THEGLOBALEFS"~"$trrmd5"~g $terraform_file
+
+			EXECUTEEFSSCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			touch $BASE/tmp/$EXECUTEEFSSCRIPT
+			sudo chmod 777 $BASE/tmp/$EXECUTEEFSSCRIPT
+			EXECUTEEFS1SCRIPT='#!/bin/bash'"
+		"
+			echo "$EXECUTEEFS1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTEEFSSCRIPT > /dev/null
+			echo "echo \"\${efs_dns_name}\" > /home/$THEBASEOSUSER/EDN" | sudo tee -a $BASE/tmp/$EXECUTEEFSSCRIPT > /dev/null
+			sed -i -e s~"THEPATHFOREFSTEMPLATE"~"$BASE/Output/Terraform/$guid"~g $terraform_file
 			
 			THESYNCCONTENT=""
 			
@@ -789,6 +799,10 @@ deploy_instances() {
         echo "    sudo cp $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
     else    
     	echo "    sudo mv $terraform_file $BASE/Output/Terraform/$guid" | sudo tee -a $flnmofcldp > /dev/null
+    fi
+    
+    if [ "$cloud_provider" == "aws" ] ; then
+    	echo "    sudo mv $BASE/tmp/$EXECUTEEFSSCRIPT $BASE/Output/Terraform/$guid/template.sh.tpl && sudo chmod 777 $BASE/Output/Terraform/$guid/template.sh.tpl" | sudo tee -a $flnmofcldp > /dev/null
     fi
     
     if [ "$cloud_provider" == "gcp" ] ; then
