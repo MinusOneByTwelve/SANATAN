@@ -40,3 +40,19 @@ resource "aws_route_table_association" "THE1VAL2HASH_rta" {
   route_table_id = data.aws_route_table.THE1VAL1HASH_srt.id
 }
 
+data "aws_security_group" "THE1VAL1HASH_ssg" {
+  name = "THE1VAL1HASH_sg"
+}
+
+data "aws_efs_file_system" "THE1VAL1HASH_efs" {
+  tags = {
+    Name = "THE1VAL1HASH_efs"
+  }
+}
+
+resource "aws_efs_mount_target" "THE1VAL1HASH_emt" {
+  file_system_id  = data.aws_efs_file_system.THE1VAL1HASH_efs.id
+  subnet_id       = aws_subnet.THE1VAL2HASH_subnet.id
+  security_groups = [data.aws_security_group.THE1VAL1HASH_ssg.id]
+}
+

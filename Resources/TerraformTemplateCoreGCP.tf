@@ -54,6 +54,10 @@ resource "google_compute_firewall" "THE1VAL1HASHfw1" {
   allow {
     protocol = "icmp"
   }
+  
+  allow {
+    protocol = "50"
+  }  
 }
 
 resource "google_compute_firewall" "THE1VAL1HASHfw2" {

@@ -53,7 +53,19 @@ AZURESCOPE13VAL
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
-    
+  
+  security_rule {
+    name                       = "AllowIPSecESPIngress"
+    priority                   = 3003
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "50"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+      
   security_rule {
     name                       = "AllowAllOutbound"
     priority                   = 2001

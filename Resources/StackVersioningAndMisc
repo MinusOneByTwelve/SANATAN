@@ -11,7 +11,7 @@ VBOXGENERICUBUNTU="https://app.vagrantup.com/Minus1By12/boxes/MATSYA-VagVBox-Gen
 #VBOXGENERICSTACKUBUNTU="vagrant-virtualbox-generic-ubuntu-2204.box"
 VBOXGENERICSTACKUBUNTU="minus1by12-vagrant-virtualbox-generic-ubuntu-2204-v1-0-0.box"
 
-ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├2377├1004" "Tcp├7946├1005" "Tcp├24007├1006" "Tcp├24008├1007" "Udp├7946├1008" "Udp├4789├1009" "Tcp├49152-60999├1010" "Tcp├16746-19478├1011")
+ALLSTACKOPENPORTS=("Tcp├80├1002" "Tcp├443├1003" "Tcp├2377├1004" "Tcp├7946├1005" "Tcp├24007├1006" "Tcp├24008├1007" "Tcp├111├1008" "Tcp├2049├1009" "Tcp├53├1010" "Udp├7946├1011" "Udp├4789├1012" "Udp├53├1013" "Udp├111├1014" "Tcp├35000-65000├1015" "Tcp├16746-19478├1016" "Udp├35000-65000├1017")
 
 #https://documentation.ubuntu.com/azure/en/latest/azure-how-to/instances/find-ubuntu-images/
 AZUREOSCHOICE=("almalinux├almalinux-x86_64├9-gen2├latest" "Canonical├0001-com-ubuntu-server-jammy├22_04-lts-gen2├latest")
@@ -19,6 +19,11 @@ AWSOSCHOICE=("UBU├ubuntu" "AZL├ec2-user" "ALMA├ec2-user")
 #https://cloud.google.com/compute/docs/machine-resource
 #https://cloud.google.com/compute/docs/regions-zones
 GCPOSCHOICE=("ROCKY├projects/rocky-linux-cloud/global/images/rocky-linux-9-optimized-gcp-v20240415" "ALMA├projects/almalinux-cloud/global/images/almalinux-9-v20221206" "UBU├projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20240319")
+
+declare -A CLUSTER_APP_SMAPPING
+CLUSTER_APP_SMAPPING["MANAGER"]="portainer/portainer-ce"
+CLUSTER_APP_SMAPPING["WORKER"]="portainer/agent"
+CLUSTER_APP_SMAPPING["ROUTER"]="haproxy"
 
 declare -A CLUSTERAPPSMAPPING
 CLUSTERAPPSMAPPING["MANAGER"]="2.20.3"

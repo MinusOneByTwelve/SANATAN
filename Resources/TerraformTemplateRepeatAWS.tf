@@ -168,6 +168,20 @@ resource "aws_iam_instance_profile" "THEREQUIREDINSTANCEiamip" {
   role = aws_iam_role.THEREQUIREDINSTANCEiamr.name
 }
 
+data "aws_efs_file_system" "THE1VAL1HASH_efs" {
+  tags = {
+    Name = "THE1VAL1HASH_efs"
+  }
+}
+
+data "template_file" "init_script" {
+  template = file("THEPATHFOREFSTEMPLATE/template.sh.tpl")
+
+  vars = {
+    efs_dns_name = data.aws_efs_file_system.THE1VAL1HASH_efs.dns_name
+  }
+}
+
 resource "aws_instance" "THEREQUIREDINSTANCE" {
   count                       = var.num_instances
   ami                         = "THEREQUIREDAMI"
@@ -184,6 +198,14 @@ resource "aws_instance" "THEREQUIREDINSTANCE" {
     Name     = "THEREQUIREDINSTANCE-${count.index + 1}"
     Hostname = "THEREQUIREDINSTANCE-${count.index + 1}"
   }
+  
+  root_block_device {
+    volume_size = 50
+    volume_type = "gp3"
+    delete_on_termination = true
+  } 
+  
+  user_data = data.template_file.init_script.rendered 
 }
 
 output "public_ips" {

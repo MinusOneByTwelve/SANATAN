@@ -6,6 +6,8 @@ provider "aws" {
 
 resource "aws_vpc" "THE1VAL1HASH_vpc" {
   cidr_block = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
   tags = {
     Name = "THE1VAL1HASH_vpc"
   }   
@@ -47,7 +49,14 @@ THEAWSFIREWALLSETTINGS
     protocol    = "icmp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  
+
+  ingress {
+    from_port   = -1
+    to_port     = -1
+    protocol    = "50"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+ 
   egress {
     from_port   = 0
     to_port     = 0
@@ -75,6 +84,14 @@ resource "aws_s3_object" "THE1VAL1HASHs3bdo" {
 
   lifecycle {
     prevent_destroy = false
+  }
+}
+
+resource "aws_efs_file_system" "THE1VAL1HASH_efs" {
+  creation_token = "THE1VAL1HASH_efs"
+
+  tags = {
+    Name = "THE1VAL1HASH_efs"
   }
 }
 

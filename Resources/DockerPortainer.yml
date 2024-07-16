@@ -2,7 +2,7 @@ version: '3.7'
  
 services:
   agent:
-    image: portainer/agent:WRKRVER
+    image: WRKR1VER:WRKRVER
     ports:
       - "PortainerAPort:9001"
     environment:
@@ -21,7 +21,7 @@ services:
           memory: 'R2AMM'
                   
   portainer:
-    image: portainer/portainer-ce:MGRVER
+    image: MGR1VER:MGRVER
     ports:
       - "PortainerSPort:9443"
     environment:

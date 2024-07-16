@@ -18,7 +18,7 @@ PortainerAPort="THEREQAPORT"
 PortainerSPort="THEREQSPORT"
 STACKNAME="THECURSTACK"
 STACKPRETTYNAME="THECURPNSTACK"
-VarahaPort1="9090"
+VarahaPort1="VP1"
 VarahaPort2="VP2"
 VarahaPort3="VP3"
 VarahaPort4="VP4"
@@ -54,7 +54,7 @@ Description=CDN For '"$STACKPRETTYNAME"'
 After=network.target
 
 [Service]
-User=nobody
+User=root
 WorkingDirectory='"$DFS_DATA2_DIR/Static$STACKNAME"'
 ExecStart=/usr/bin/python3 -m http.server '"$VarahaPort1"'
 Restart=always
@@ -151,7 +151,106 @@ EOF
 sudo chown -R root:root $DFS_DATA_DIR/Errors$STACKNAME
 sudo chmod -R 777 $DFS_DATA_DIR/Errors$STACKNAME
 }
-   
+
+disable_selinux_temporary() {
+    # Check current SELinux status
+    echo "Current SELinux status:"
+    sestatus | grep "SELinux status:"
+
+    # Disable SELinux for the current session
+    sudo setenforce 0
+    sudo -H -u root bash -c 'setenforce 0'
+    
+    # Confirm SELinux status change
+    echo "Updated SELinux status (temporary):"
+    sestatus | grep "SELinux status:"
+}
+
+disable_selinux_permanent() {
+    # Edit SELinux configuration file
+    sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
+
+    # Confirm configuration change
+    echo "SELinux permanently disabled in /etc/selinux/config:"
+    grep "^SELINUX=" /etc/selinux/config
+}
+
+# Function to install and configure firewalld
+install_firewalld() {
+    echo "Installing firewalld..."
+    if [[ "$OS" == "UBU" ]]; then
+        sudo NEEDRESTART_MODE=a $PKG_MANAGER install -y firewalld    
+    else
+        sudo $PKG_MANAGER install -y firewalld
+    fi
+    sudo systemctl start firewalld
+    sudo systemctl enable firewalld
+    echo "Configuring firewall rules explicitly in the public zone..."
+    sudo firewall-cmd --zone=public --permanent --add-service=ssh
+    sudo firewall-cmd --zone=public --permanent --add-service=http
+    sudo firewall-cmd --zone=public --permanent --add-service=https
+    sudo firewall-cmd --reload
+}
+
+# Function to install Python3 and pip
+install_python() {
+    echo "Installing Python3 and pip..."
+    if [[ "$OS" == "UBU" ]]; then
+        sudo NEEDRESTART_MODE=a $PKG_MANAGER install -y python3 python3-pip    
+    else
+        sudo $PKG_MANAGER install -y python3 python3-pip 
+    fi
+}
+
+if [ ! -f /opt/CLD ]; then
+	echo 'ON PREMISE'
+else
+	# Check if both /opt/LCL and /opt/GBL files exist
+	if [ ! -f /opt/LCL ] || [ ! -f /opt/GBL ]; then
+	    echo "One or both files do not exist."
+	    exit 1
+	else
+	    echo "Both files exist."
+	fi
+
+	# Read the first line from each file
+	LCLVAL=$(head -n 1 /opt/LCL)
+	GBLVAL=$(head -n 1 /opt/GBL)
+
+	# Default values for software and file checks
+	SOFTVAL="Y"
+	FILEVAL="Y"
+
+	# Check if s3fs and awscli are installed
+	if ! which s3fs >/dev/null || ! which aws >/dev/null; then
+	    SOFTVAL="N"
+	fi
+
+	# Check if specific files exist based on the values from LCL and GBL
+	if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
+	    FILEVAL="N"
+	fi
+
+	# Execute scripts based on the checks
+	if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+	    if [ -f /opt/EXEC1ON ]; then
+		sleep 5
+		/opt/EXEC1ON
+	    elif [ -f /opt/EXEC1DONE ]; then
+		sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+		/opt/EXEC1ON
+	    fi
+	fi
+	
+	DNS_NAME_FILE="/opt/EDN"
+	EFS_DNS_NAME=$(cat "$DNS_NAME_FILE")
+	MOUNT_POINT="/shiva/global/storage"
+	sudo mount -t nfs4 -o nfsvers=4.1 "$EFS_DNS_NAME":/ "$MOUNT_POINT"
+	
+	INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+	sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+fi
+
 if [[ "$OS" == "UBU" ]]; then
     sudo rm -f /etc/apt/sources.list.d/docker.list
     sudo rm -f /etc/apt/keyrings/docker.gpg
@@ -162,17 +261,67 @@ if [[ "$OS" == "UBU" ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common
 elif [[ "$OS" == "AZL" ]]; then
+    #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
+    #sudo yum install -y yum-utils
+    #sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    #sudo yum update -y
+    #sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
     sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
-    sudo yum install -y yum-utils
-    sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
+    sudo yum install -y docker
 elif [[ "$OS" == "ROCKY" || "$OS" == "ALMA" ]]; then
     sudo dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     sudo dnf -y install dnf-plugins-core
     sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
     sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client
+fi
+
+disable_selinux_temporary
+disable_selinux_permanent
+
+# Detect the package manager and disable other firewalls
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    case $ID in
+        ubuntu)
+            PKG_MANAGER="apt-get"
+            echo "Disabling UFW and iptables..."
+            sudo systemctl stop ufw
+            sudo systemctl disable ufw
+            sudo apt-get remove -y ufw
+            sudo iptables -F
+            ;;
+        amzn)
+            PKG_MANAGER="yum"
+            echo "Disabling iptables..."
+            sudo systemctl stop iptables
+            sudo systemctl disable iptables
+            sudo yum remove -y iptables-services
+            ;;
+        rocky|almalinux)
+            PKG_MANAGER="dnf"
+            echo "Disabling iptables..."
+            sudo systemctl stop iptables
+            sudo systemctl disable iptables
+            sudo dnf remove -y iptables-services
+            ;;
+        *)
+            echo "Unsupported OS"
+            exit 1
+            ;;
+    esac
+
+    # Install and configure firewalld
+    install_firewalld
+
+    # Install Python3 and pip
+    install_python
+
+    echo "Setup completed successfully."
+else
+    echo "Cannot identify the OS."
+    exit 1
 fi
 
 sudo mkdir -p $DOCKER_DATA_DIR
@@ -272,6 +421,7 @@ if [ -f /usr/sbin/glusterfs ]; then
 fi
 
 sudo mkdir -p /etc/docker && sudo rm -rf /etc/docker/daemon.json
+if [ ! -f /opt/CLD ]; then
 echo '{
   "data-root": "'"$DOCKER_DATA_DIR"'",
   "exec-opts": ["native.cgroupdriver=systemd"],
@@ -281,7 +431,18 @@ echo '{
   },
   "storage-driver": "overlay2",
   "hosts": ["unix:///var/run/docker.sock"]
-}' | sudo tee /etc/docker/daemon.json       
+}' | sudo tee /etc/docker/daemon.json
+else
+echo '{
+  "data-root": "'"$DOCKER_DATA_DIR"'",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m"
+  },
+  "hosts": ["unix:///var/run/docker.sock"]
+}' | sudo tee /etc/docker/daemon.json
+fi       
 sudo usermod -a -G docker $CURRENTUSER
 
 sudo rm -f /etc/systemd/system/docker.service
@@ -322,16 +483,30 @@ sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
 sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
+sudo firewall-cmd --zone=public --add-port=53/udp --permanent
 
+sudo firewall-cmd --zone=public --add-port=111/udp --permanent
+sudo firewall-cmd --zone=public --add-port=111/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=24007/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=24008/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
+#sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=35000-65000/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=35000-65000/udp --permanent
 
 sudo firewall-cmd --zone=public --add-protocol=50 --permanent
 
 sudo firewall-cmd --zone=public --add-port=16746-19478/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=2049/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=53/tcp --permanent
                 
 sudo firewall-cmd --reload
+
+if [ ! -f /opt/CLD ]; then
+    echo 'Firewall On'
+else
+    sudo systemctl stop firewalld
+    sudo systemctl disable firewalld
+fi
 
 sudo systemctl daemon-reload
 sudo systemctl enable docker
