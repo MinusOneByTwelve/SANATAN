@@ -139,7 +139,7 @@ if [ "$CLOUD_OS" == "AZURE_UBU" ]; then
 		THEREQLSC="$8"
 		THEREQGSC="$9"
 				
-		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir -p /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R matsya:matsya /shiva/local && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/local && sudo mkdir -p /shiva/global && sudo chown -R matsya:matsya /shiva/global && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/global && sudo mkdir -p /shiva/filecachelocal && sudo chown -R matsya:matsya /shiva/filecachelocal && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/filecachelocal && sudo mkdir -p /shiva/filecacheglobal && sudo chown -R matsya:matsya /shiva/filecacheglobal && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/filecacheglobal && sudo wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo rm -f packages-microsoft-prod.deb && sudo apt-get update -y && sudo apt-get install libfuse3-dev fuse3 blobfuse2 -y && sudo touch /opt/localSC.yaml && echo \"
+		ssh $THEREQUSR@$THEREQMAC -p $THEREQPRT -o StrictHostKeyChecking=no -i "$THEREQPEM" "sudo touch /opt/CLD && sudo chmod 777 /opt/CLD && echo \"AZURE_UBU\" | sudo tee -a /opt/CLD > /dev/null && sudo touch /opt/LCL && sudo chmod 777 /opt/LCL && echo \"$THEREQLSC\" | sudo tee -a /opt/LCL > /dev/null && sudo touch /opt/GBL && sudo chmod 777 /opt/GBL && echo \"$THEREQGSC\" | sudo tee -a /opt/GBL > /dev/null && sudo touch /opt/EXEC1ON && sudo chmod 777 /opt/EXEC1ON && sudo mkdir -p /shiva && sudo chmod -R 777 /shiva && sudo mkdir -p /shiva/local && sudo chown -R root:root /shiva/local && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/local && sudo mkdir -p /shiva/global && sudo chown -R root:root /shiva/global && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/global && sudo mkdir -p /shiva/filecachelocal && sudo chown -R root:root /shiva/filecachelocal && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/filecachelocal && sudo mkdir -p /shiva/filecacheglobal && sudo chown -R root:root /shiva/filecacheglobal && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/filecacheglobal && sudo mkdir -p /shiva/local/storage && sudo chown -R root:root /shiva/local/storage && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/local/storage && sudo mkdir -p /shiva/global/storage && sudo chown -R root:root /shiva/global/storage && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/global/storage && sudo touch /opt/localSC.yaml && echo \"
 allow-other: true
 
 logging:
@@ -166,9 +166,9 @@ attr_cache:
   timeout-sec: 7200
 
 azstorage:
-  type: block
+  type: adls
   account-name: $THEREQLSC
-  endpoint: https://$THEREQLSC.blob.core.windows.net
+  endpoint: https://$THEREQLSC.dfs.core.windows.net
   mode: MSI
 \" | sudo tee -a /opt/localSC.yaml > /dev/null && sudo touch /opt/globalSC.yaml && echo \"
 allow-other: true
@@ -197,11 +197,11 @@ attr_cache:
   timeout-sec: 7200
 
 azstorage:
-  type: block
+  type: adls
   account-name: $THEREQGSC
-  endpoint: https://$THEREQGSC.blob.core.windows.net
+  endpoint: https://$THEREQGSC.dfs.core.windows.net
   mode: MSI
-\" | sudo tee -a /opt/globalSC.yaml > /dev/null && sudo chmod 777 /opt/localSC.yaml && sudo chmod 777 /opt/globalSC.yaml && sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"
+\" | sudo tee -a /opt/globalSC.yaml > /dev/null && sudo chmod 777 /opt/localSC.yaml && sudo chmod 777 /opt/globalSC.yaml && sudo wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo rm -f packages-microsoft-prod.deb && sudo apt-get update -y && sudo apt-get install libfuse3-dev fuse3 blobfuse2 cifs-utils jq -y && sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE"
 		
 		sudo rm -f $BASE/tmp/$THEREQJLF-CIE.out
 	fi	
