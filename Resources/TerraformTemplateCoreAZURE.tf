@@ -59,7 +59,7 @@ AZURESCOPE13VAL
     priority                   = 3003
     direction                  = "Inbound"
     access                     = "Allow"
-    protocol                   = "50"
+    protocol                   = "Esp"
     source_port_range          = "*"
     destination_port_range     = "*"
     source_address_prefix      = "*"
@@ -90,12 +90,19 @@ resource "azurerm_storage_account" "THE1VAL1HASHsa" {
   location                 = azurerm_resource_group.THE1VAL1HASHrg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  is_hns_enabled           = true
 }
 
 resource "azurerm_storage_container" "THE1VAL1HASHsc" {
   #name                  = "azTHEGLOBALCONTAINERgc"
-  name                  = "storage"
+  name                  = "bucket"
   storage_account_name  = azurerm_storage_account.THE1VAL1HASHsa.name
   container_access_type = "private"
+}
+
+resource "azurerm_storage_share" "THE1VAL1HASHstgs" {
+  name                 = "THE1VAL1F22CHASHsa"
+  storage_account_name  = azurerm_storage_account.THE1VAL1HASHsa.name
+  quota                = 16000
 }
 

@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Define the storage account name
+STORAGE_ACCOUNT_NAME="THESTORAGEACCOUNTNAME"
+STORAGE_LOCATION="THESTORAGELOCATION"
+
+# Fetch access token
+ACCESS_TOKEN=$(curl -H "Metadata: true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F" | jq -r '.access_token')
+
+# List all subscriptions
+SUBSCRIPTIONS_JSON=$(curl -X GET \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  "https://management.azure.com/subscriptions?api-version=2020-01-01")
+
+# Extract subscription IDs
+SUBSCRIPTIONS=$(echo $SUBSCRIPTIONS_JSON | jq -r '.value[].id')
+
+# Loop through subscriptions to find the storage account
+for SUBSCRIPTION in $SUBSCRIPTIONS; do
+    echo "Processing subscription: $SUBSCRIPTION"
+
+    # Encode the URL parameters
+    FILTER="resourceType eq 'Microsoft.Storage/storageAccounts' and name eq '$STORAGE_ACCOUNT_NAME'"
+    ENCODED_FILTER=$(echo $FILTER | jq -sRr @uri)
+
+    # Formulate the URL
+    URL="https://management.azure.com${SUBSCRIPTION}/resources?api-version=2021-04-01&\$filter=$ENCODED_FILTER"
+
+    # Make the API call
+    STORAGE_ACCOUNT_JSON=$(curl -X GET \
+      -H "Authorization: Bearer $ACCESS_TOKEN" \
+      -H "Content-Type: application/json" \
+      "$URL")
+
+    # Check if the storage account exists in this subscription
+    STORAGE_ACCOUNT_ID=$(echo $STORAGE_ACCOUNT_JSON | jq -r '.value[]? | select(.name=="'$STORAGE_ACCOUNT_NAME'") | .id // empty')
+    if [[ ! -z "$STORAGE_ACCOUNT_ID" ]]; then
+        echo "Found Storage Account ID: $STORAGE_ACCOUNT_ID"
+        break
+    fi
+done
+
+# Extract the Subscription ID and Resource Group from the storage account ID
+if [[ ! -z "$STORAGE_ACCOUNT_ID" ]]; then
+	SUBSCRIPTION_ID=$(echo $STORAGE_ACCOUNT_ID | cut -d '/' -f3)
+	RESOURCE_GROUP=$(echo $STORAGE_ACCOUNT_ID | cut -d '/' -f5)
+	echo "Subscription ID: $SUBSCRIPTION_ID"
+	echo "Resource Group: $RESOURCE_GROUP"
+
+	# Fetch access token
+	ACCESS_TOKEN=$(curl -H "Metadata: true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F" | jq -r '.access_token')
+
+	# Make the POST request to list keys with an empty JSON body
+	STORAGE_KEYS_JSON=$(curl -X POST \
+	-H "Authorization: Bearer $ACCESS_TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{}' \
+	"https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.Storage/storageAccounts/$STORAGE_ACCOUNT_NAME/listKeys?api-version=2019-06-01")
+	echo $STORAGE_KEYS_JSON
+
+	# Extract the key
+	STORAGE_KEY=$(echo $STORAGE_KEYS_JSON | jq -r '.keys[0].value')
+	echo $STORAGE_KEY
+
+	sudo mount -t cifs //$STORAGE_ACCOUNT_NAME.file.core.windows.net/$STORAGE_ACCOUNT_NAME $STORAGE_LOCATION -o vers=3.0,username=$STORAGE_ACCOUNT_NAME,password=$STORAGE_KEY,dir_mode=0777,file_mode=0777,serverino            
+else
+    echo "Storage account not found."
+fi
+

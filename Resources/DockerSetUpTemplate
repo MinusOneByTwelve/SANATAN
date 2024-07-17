@@ -153,29 +153,23 @@ sudo chmod -R 777 $DFS_DATA_DIR/Errors$STACKNAME
 }
 
 disable_selinux_temporary() {
-    # Check current SELinux status
     echo "Current SELinux status:"
     sestatus | grep "SELinux status:"
 
-    # Disable SELinux for the current session
     sudo setenforce 0
     sudo -H -u root bash -c 'setenforce 0'
     
-    # Confirm SELinux status change
     echo "Updated SELinux status (temporary):"
     sestatus | grep "SELinux status:"
 }
 
 disable_selinux_permanent() {
-    # Edit SELinux configuration file
     sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
 
-    # Confirm configuration change
     echo "SELinux permanently disabled in /etc/selinux/config:"
     grep "^SELINUX=" /etc/selinux/config
 }
 
-# Function to install and configure firewalld
 install_firewalld() {
     echo "Installing firewalld..."
     if [[ "$OS" == "UBU" ]]; then
@@ -192,7 +186,6 @@ install_firewalld() {
     sudo firewall-cmd --reload
 }
 
-# Function to install Python3 and pip
 install_python() {
     echo "Installing Python3 and pip..."
     if [[ "$OS" == "UBU" ]]; then
@@ -205,7 +198,8 @@ install_python() {
 if [ ! -f /opt/CLD ]; then
 	echo 'ON PREMISE'
 else
-	# Check if both /opt/LCL and /opt/GBL files exist
+	THEOSCHOICE=$(head -n 1 /opt/CLD)
+	
 	if [ ! -f /opt/LCL ] || [ ! -f /opt/GBL ]; then
 	    echo "One or both files do not exist."
 	    exit 1
@@ -213,42 +207,58 @@ else
 	    echo "Both files exist."
 	fi
 
-	# Read the first line from each file
-	LCLVAL=$(head -n 1 /opt/LCL)
-	GBLVAL=$(head -n 1 /opt/GBL)
-
-	# Default values for software and file checks
-	SOFTVAL="Y"
-	FILEVAL="Y"
-
-	# Check if s3fs and awscli are installed
-	if ! which s3fs >/dev/null || ! which aws >/dev/null; then
-	    SOFTVAL="N"
-	fi
-
-	# Check if specific files exist based on the values from LCL and GBL
-	if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
-	    FILEVAL="N"
-	fi
-
-	# Execute scripts based on the checks
-	if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
-	    if [ -f /opt/EXEC1ON ]; then
-		sleep 5
-		/opt/EXEC1ON
-	    elif [ -f /opt/EXEC1DONE ]; then
-		sudo mv /opt/EXEC1DONE /opt/EXEC1ON
-		/opt/EXEC1ON
-	    fi
+	if [[ "$THEOSCHOICE" == "AWS_UBU" ]]; then
+		LCLVAL=$(head -n 1 /opt/LCL)
+		GBLVAL=$(head -n 1 /opt/GBL)
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which s3fs >/dev/null || ! which aws >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
+		    FILEVAL="N"
+		fi
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 15
+			/opt/EXEC1ON
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+			/opt/EXEC1ON
+		    fi
+		fi	
+		DNS_NAME_FILE="/opt/EDN"
+		EFS_DNS_NAME=$(cat "$DNS_NAME_FILE")
+		MOUNT_POINT="/shiva/global/storage"
+		sudo mount -t nfs4 -o nfsvers=4.1 "$EFS_DNS_NAME":/ "$MOUNT_POINT"	
+		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
 	fi
 	
-	DNS_NAME_FILE="/opt/EDN"
-	EFS_DNS_NAME=$(cat "$DNS_NAME_FILE")
-	MOUNT_POINT="/shiva/global/storage"
-	sudo mount -t nfs4 -o nfsvers=4.1 "$EFS_DNS_NAME":/ "$MOUNT_POINT"
-	
-	INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
-	sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+	if [[ "$THEOSCHOICE" == "AZURE_UBU" ]]; then
+		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which blobfuse2 >/dev/null || ! which blobfuse2 >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -d "/shiva/local/bucket" ] || [ ! -d "/shiva/global/bucket" ]; then
+		    FILEVAL="N"
+		fi		
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 15
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+		    fi
+		    
+		    sudo wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo rm -f packages-microsoft-prod.deb && sudo apt-get update -y && sudo apt-get install libfuse3-dev fuse3 blobfuse2 cifs-utils jq -y
+		    
+		    sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE
+		fi									
+	fi	
 fi
 
 if [[ "$OS" == "UBU" ]]; then
@@ -261,7 +271,7 @@ if [[ "$OS" == "UBU" ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     #sudo yum install -y yum-utils

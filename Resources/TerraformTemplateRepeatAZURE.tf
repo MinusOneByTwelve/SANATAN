@@ -64,11 +64,12 @@ resource "azurerm_storage_account" "AZURESCOPEVALsa" {
   location                 = data.azurerm_resource_group.THE1VAL1HASHrg.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  is_hns_enabled           = true
 }
 
 resource "azurerm_storage_container" "AZURESCOPEVALsc" {
   #name                  = "THEREQUIREDCONTAINER"
-  name                  = "storage"
+  name                  = "bucket"
   storage_account_name  = azurerm_storage_account.AZURESCOPEVALsa.name
   container_access_type = "private"
 }
@@ -80,7 +81,7 @@ data "azurerm_storage_account" "THE1VAL1HASHsaAZURESCOPEVAL" {
 
 data "azurerm_storage_container" "THE1VAL1HASHscAZURESCOPEVAL" {
   #name                  = "azTHEGLOBALCONTAINERgc"
-  name                  = "storage"
+  name                  = "bucket"
   storage_account_name  = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.name
 }
 
@@ -100,6 +101,7 @@ resource "azurerm_linux_virtual_machine" "AZURESCOPEVALvm" {
   os_disk {
     caching              = "ReadWrite"
     storage_account_type = "Standard_LRS"
+    disk_size_gb         = 50
   }
   
   identity {
@@ -130,11 +132,41 @@ resource "azurerm_role_assignment" "AZURESCOPEVALra" {
   principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
   role_definition_name = "Storage Blob Data Contributor"
 }
+resource "azurerm_role_assignment" "AZURESCOPEVALra2" {
+  scope                = azurerm_storage_account.AZURESCOPEVALsa.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage Blob Data Owner"
+}
 
 resource "azurerm_role_assignment" "AZURESCOPEVALraTHE1VAL1HASH" {
   scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
   count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
   principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
   role_definition_name = "Storage Blob Data Contributor"
+}
+resource "azurerm_role_assignment" "AZURESCOPEVALra2THE1VAL1HASH" {
+  scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage Blob Data Owner"
+}
+resource "azurerm_role_assignment" "AZURESCOPEVALra3THE1VAL1HASH" {
+  scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage File Data SMB Share Contributor"
+}
+resource "azurerm_role_assignment" "AZURESCOPEVALra4THE1VAL1HASH" {
+  scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage File Data SMB Share Elevated Contributor"
+}
+resource "azurerm_role_assignment" "AZURESCOPEVALra5THE1VAL1HASH" {
+  scope                = data.azurerm_storage_account.THE1VAL1HASHsaAZURESCOPEVAL.id
+  count 	       = length(azurerm_linux_virtual_machine.AZURESCOPEVALvm)
+  principal_id         = azurerm_linux_virtual_machine.AZURESCOPEVALvm[count.index].identity[0].principal_id
+  role_definition_name = "Storage Account Contributor"
 }
 
