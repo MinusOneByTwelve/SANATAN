@@ -23,6 +23,11 @@ VarahaPort2="VP2"
 VarahaPort3="VP3"
 VarahaPort4="VP4"
 TheReqRL="THEREQROLE"
+BDD_PASSWORD="BDDPASSWORD"
+BDDPort1="BDD1"
+BDDPort2="BDD2"
+BDD_HOSTS="BDDHOSTS"
+CERTS_DIR="THECERTS"
 
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
@@ -195,6 +200,80 @@ install_python() {
     fi
 }
 
+install_minio() {
+	sudo rm -f /usr/bin/mc
+	wget https://dl.min.io/client/mc/release/linux-amd64/mc
+	chmod +x mc
+	sudo mv mc /usr/bin
+	
+	wget https://dl.min.io/server/minio/release/linux-amd64/minio
+	chmod +x minio
+	sudo mv minio /usr/bin
+	
+	sudo mkdir -p $DFS_DATA_DIR/MINIO
+	sudo chown -R root:root $DFS_DATA_DIR/MINIO
+	sudo chmod -R 777 $DFS_DATA_DIR/MINIO
+	sudo mkdir -p $DFS_DATA_DIR/MINIO/DATA
+	sudo chown -R root:root $DFS_DATA_DIR/MINIO/DATA
+	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/DATA
+	sudo mkdir -p $DFS_DATA_DIR/MINIO/CERTS
+	sudo chown -R root:root $DFS_DATA_DIR/MINIO/CERTS
+	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/CERTS
+	sudo mkdir -p $DFS_DATA_DIR/MINIO/CA
+	sudo chown -R root:root $DFS_DATA_DIR/MINIO/CA
+	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/CA	
+	sudo cp $CERTS_DIR/docker/$STACKNAME-server-key.pem $DFS_DATA_DIR/MINIO/CERTS/private.key
+	sudo cp $CERTS_DIR/docker/$STACKNAME-server-cert.pem $DFS_DATA_DIR/MINIO/CERTS/public.crt
+	sudo cp $CERTS_DIR/docker/$STACKNAME.pem $DFS_DATA_DIR/MINIO/CA/ca.crt	
+	sudo chmod 644 $DFS_DATA_DIR/MINIO/CERTS/public.crt
+	sudo chmod 600 $DFS_DATA_DIR/MINIO/CERTS/private.key
+	sudo chmod 644 $DFS_DATA_DIR/MINIO/CA/ca.crt
+		
+	sudo rm -f /etc/systemd/system/BDDMinio$STACKNAME.service
+	SERVICES=$(systemctl list-units --type=service --state=running | grep 'BDDMinio' | awk '{print $1}')
+	if [ -z "$SERVICES" ]; then
+		echo "No services starting with BDDMinio found."
+	fi
+	for service in $SERVICES; do
+		echo "Stopping and disabling $service..."
+		sudo systemctl stop "$service"
+		sudo systemctl disable "$service"
+		echo "$service stopped and disabled."
+	done
+	
+	DATAFOLDER="$DFS_DATA_DIR/MINIO/DATA"	
+	IFS=',' read -r -a hosts <<< "$BDD_HOSTS"
+	command="minio server"
+	for host in "${hosts[@]}"; do
+	    command="${command} https://${host}:${BDDPort1}${DATAFOLDER}"
+	done
+	command="${command} --console-address :${BDDPort2}"
+	echo "$command"
+	
+	echo '[Unit]
+Description=BDDMinio For '"$STACKPRETTYNAME"'
+After=network.target
+
+[Service]
+User=root
+ExecStart='"$command"'
+Environment="MINIO_ROOT_USER=admin"
+Environment="MINIO_ROOT_PASSWORD='"$BDD_PASSWORD"'"
+Environment="MINIO_CERTS_DIR='"$DFS_DATA_DIR/MINIO/CERTS"'"
+Environment="MINIO_CERTS_CAS_DIR='"$DFS_DATA_DIR/MINIO/CA"'"
+Restart=always
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+' | sudo tee /etc/systemd/system/BDDMinio$STACKNAME.service > /dev/null
+	sudo systemctl daemon-reload
+	sudo systemctl enable BDDMinio$STACKNAME
+	sudo systemctl start BDDMinio$STACKNAME	
+	
+	pip3 install s3ql
+}
+
 if [ ! -f /opt/CLD ]; then
 	echo 'ON PREMISE'
 else
@@ -234,7 +313,42 @@ else
 		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
 	fi
-	
+
+	if [[ "$THEOSCHOICE" == "GCP_UBU" ]]; then
+		INTERNALIP=$(ip addr show ens4 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		
+		LCLVAL=$(head -n 1 /opt/LCL)
+		GBLVAL=$(head -n 1 /opt/GBL)
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which gcsfuse >/dev/null || ! which gcsfuse >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
+		    FILEVAL="N"
+		fi
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 5
+			/opt/EXEC1ON
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+			sudo rm -f /etc/apt/sources.list.d/gcsfuse.list
+			sudo rm -f /usr/share/keyrings/cloud.google.asc
+			echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt gcsfuse-jammy main" | sudo tee /etc/apt/sources.list.d/gcsfuse.list > /dev/null
+			curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc
+			sudo apt-get update -y
+			sudo apt-get install gcsfuse -y
+			sudo gcsfuse --file-mode 777 --dir-mode 777 $LCLVAL "/shiva/local/bucket"
+			sudo gcsfuse --file-mode 777 --dir-mode 777 $GBLVAL "/shiva/global/bucket"
+			sudo touch /shiva/local/bucket/$LCLVAL
+			sudo touch /shiva/global/bucket/$GBLVAL
+			sudo mv /opt/EXEC1ON /opt/EXEC1DONE
+		    fi
+		fi		
+	fi
+		
 	if [[ "$THEOSCHOICE" == "AZURE_UBU" ]]; then
 		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
@@ -256,7 +370,7 @@ else
 		    
 		    sudo wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo rm -f packages-microsoft-prod.deb && sudo apt-get update -y && sudo apt-get install libfuse3-dev fuse3 blobfuse2 cifs-utils jq -y
 		    
-		    sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE
+		    /opt/EDN && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE
 		fi									
 	fi	
 fi
@@ -271,7 +385,7 @@ if [[ "$OS" == "UBU" ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
-    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     #sudo yum install -y yum-utils
@@ -489,6 +603,9 @@ sudo firewall-cmd --zone=public --add-port=$VarahaPort2/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=$VarahaPort3/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=$VarahaPort4/tcp --permanent
 
+sudo firewall-cmd --zone=public --add-port=$BDDPort1/tcp --permanent
+sudo firewall-cmd --zone=public --add-port=$BDDPort2/tcp --permanent
+
 sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
@@ -522,6 +639,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable docker
 sudo systemctl restart docker
 
+#install_minio
+
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
 sudo rm -rf /root/.bash_history
 sudo rm -rf /home/$CURRENTUSER/.bash_history
 

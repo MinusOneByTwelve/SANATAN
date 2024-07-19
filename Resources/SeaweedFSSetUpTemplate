@@ -1,0 +1,144 @@
+#!/bin/bash
+
+# Configuration arrays
+declare -a master_ips=("master_ip1" "master_ip2" "master_ip3")
+
+# Current Version
+current_version="3.69"
+
+# Current server IP
+current_ip="this_server_ip"
+
+# Security files
+ssl_key="/path/to/seaweedfs.key"
+ssl_cert="/path/to/seaweedfs.crt"
+ca_cert="/path/to/ca.crt"
+security_config="/path/to/security.toml"
+
+# Installation flags (yes/no)
+install_master="yes"
+install_filer="yes"
+install_volume="yes"
+mount_folder="yes"
+
+# Ports configuration
+master_port="9333"
+filer_port="8888"
+volume_port="8080"
+
+# Folder to mount SeaweedFS
+mount_point="/mnt/seaweedfs"
+
+# Specify custom directories
+master_data_dir="/custom/path/for/master"
+volume_data_dir="/custom/path/for/volume"
+
+# Security key for JWT
+security_key="your_super_secret_key_here"
+
+# Define IP addresses for HAProxy (load balancer)
+haproxy_ip="haproxy_ip_here"
+haproxy_port="haproxy_port_here"
+
+# Function to create security.toml
+create_security_toml() {
+    cat > $security_config <<EOF
+[jwt.signing]
+key = "$security_key"
+
+[jwt.expires]
+seconds = 3600
+
+[jwt.read]
+expire_seconds = 30
+
+[jwt.write]
+expire_seconds = 30
+EOF
+}
+
+# Function to install SeaweedFS
+install_seaweedfs() {
+    wget https://github.com/seaweedfs/seaweedfs/releases/download/$current_version/linux_amd64.tar.gz
+    tar -xzf linux_amd64.tar.gz
+    sudo mv weed /usr/local/bin
+    rm -f linux_amd64.tar.gz
+}
+
+# Function to configure master
+configure_master() {
+    peer_string=$(printf ",%s:$master_port" "${master_ips[@]}")
+    peer_string="${peer_string:1}"
+    sudo tee /etc/systemd/system/weed-master.service > /dev/null <<EOF
+[Unit]
+Description=SeaweedFS Master Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/weed master -ip=$current_ip -mdir=$master_data_dir -port=$master_port -peers=$peer_string -key.file=$ssl_key -cert.file=$ssl_cert -defaultReplication=002 -securityConf=$security_config
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo systemctl enable weed-master
+    sudo systemctl start weed-master
+}
+
+# Function to configure filer
+configure_filer() {
+    master_peers=$(printf ",%s:$master_port" "${master_ips[@]}")
+    master_peers="${master_peers:1}"    
+    sudo tee /etc/systemd/system/weed-filer.service > /dev/null <<EOF
+[Unit]
+Description=SeaweedFS Filer
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/weed filer -master=$master_peers -ip=$current_ip -port=$filer_port -key.file=$ssl_key -cert.file=$ssl_cert -caCert=$ca_cert -securityConf=$security_config
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo systemctl enable weed-filer
+    sudo systemctl start weed-filer
+}
+
+# Function to configure volume
+configure_volume() {
+    master_peers=$(printf ",%s:$master_port" "${master_ips[@]}")
+    master_peers="${master_peers:1}" 
+    sudo tee /etc/systemd/system/weed-volume.service > /dev/null <<EOF
+[Unit]
+Description=SeaweedFS Volume Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/weed volume -dir=$volume_data_dir -mserver=$master_peers -port=$volume_port -ip=$current_ip -publicUrl=$current_ip:$volume_port -key.file=$ssl_key -cert.file=$ssl_cert -securityConf=$security_config
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    sudo systemctl enable weed-volume
+    sudo systemctl start weed-volume
+}
+
+# Function to mount folder
+mount_folder() {
+    sudo apt-get install -y fuse
+    weed mount -filer=$haproxy_ip:$haproxy_port -dir=$mount_point -filerTLS -ca="$ca_cert" -cert="$ssl_cert" -key="$ssl_key" -config="$security_config"
+}
+
+# Install SeaweedFS binaries
+install_seaweedfs
+
+create_security_toml
+
+# Configure components based on flags
+[[ $install_master == "YES" ]] && configure_master
+[[ $install_filer == "YES" ]] && configure_filer
+[[ $install_volume == "YES" ]] && configure_volume
+[[ $mount_folder == "YES" ]] && mount_folder
+
