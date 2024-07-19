@@ -190,6 +190,14 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 							tv39="${tv_3_9:0:22}""sa"						
 							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 							
+							RANDOMAFSMT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							sudo cp $BASE/Resources/AzureFileShareMountTemplate $BASE/tmp/$RANDOMAFSMT
+							sed -i -e s~"THESTORAGEACCOUNTNAME"~"$tv39"~g $BASE/tmp/$RANDOMAFSMT
+							sed -i -e s~"THESTORAGELOCATION"~"/shiva/global/storage"~g $BASE/tmp/$RANDOMAFSMT
+							sudo chmod 777 $BASE/tmp/$RANDOMAFSMT
+							scp -i "$tv32" -o StrictHostKeyChecking=no -P $tv31 "$BASE/tmp/$RANDOMAFSMT" "$tv30@$tv6:/home/$tv30/EDN"
+							sudo rm -f $BASE/tmp/$RANDOMAFSMT
+							
 							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AZURE_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv39" > $BASE/tmp/$tv38-CIE.out 2>&1 & 
 						fi
 					fi
