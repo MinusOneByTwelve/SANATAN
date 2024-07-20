@@ -85,11 +85,11 @@ THECHOICE="$1"
 
 if [ "$THECHOICE" == "CORE" ] ; then
 # Path to the dynamic instance details file
-INSTANCE_DETAILS_FILE="/opt/Matsya/tmp/47Y3ax5kc0Zbhx0/Stack_gcp"
+INSTANCE_DETAILS_FILE="/opt/Matsya/Repo/Stack/UdemyCourse/WIP/47Y3ax5kc0Zbhx0/Stack_gcp"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
 THEVISIONID="2024"
-CLUSTERID="2075"
-STACKPRETTYNAME="DataAnalytics61"
+CLUSTERID="2076"
+STACKPRETTYNAME="DataAnalytics62"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -126,7 +126,9 @@ echo "$EXECUTE1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 declare -a MANAGER_IPS
 declare -a WORKER_IPS
 declare -a ROUTER_IPS
+declare -a VPN_IPS
 declare -A HOST_NAMES
+declare -A HOST_ALT_NAMES
 declare -A PEM_FILES
 declare -A PORTS
 declare -A OS_TYPES
@@ -151,19 +153,28 @@ parse_instance_details() {
         CLUSTER_TYPE["$IP"]="$C1TYPE"
         hyphenated_ip="${IP//./-}"
         lowercase_text="${C1TYPE,,}"
+        
+        if [[ "$C1TYPE" == "ONPREM" ]]; then
+        	echo "VPN NA"
+        else
+        	VPN_IPS+=("$IP,$PORT,$PEM,$U1SER")
+        fi
                        
         echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                     
         if [ "$ROLE" == "MANAGER" ]; then
             MANAGER_IPS+=("$IP")
             HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         elif [ "$ROLE" == "WORKER" ]; then
             WORKER_IPS+=("$IP")
             HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
         elif [ "$ROLE" == "ROUTER" ]; then
             ROUTER_IPS+=("$IP")
             HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         fi                
     done < "$INSTANCE_DETAILS_FILE"
@@ -338,8 +349,13 @@ install_docker() {
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerSetUpTemplate $BASE/tmp/$DOCKERTEMPLATE
 
-    ALLHOSTS=$(IFS=','; echo "${HOST_NAMES[*]}")
-
+    if [ "$NATIVE" -lt 2 ]; then
+    	ALLHOSTS=$(IFS=','; echo "${HOST_ALT_NAMES[*]}") 
+    else
+	ALLHOSTS=$(IFS=','; echo "${HOST_NAMES[*]}")
+    fi
+    echo "ALLHOSTS : $ALLHOSTS"
+    
     sed -i -e s~"THEREQIP"~"$IP"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQHOSTNAME"~"$THE1HOST1NAME"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THEREQOS"~"$OS"~g $BASE/tmp/$DOCKERTEMPLATE
@@ -362,6 +378,16 @@ install_docker() {
     sed -i -e s~"BDD2"~"$BDDPort2"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"BDDHOSTS"~"$ALLHOSTS"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"THECERTS"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERTEMPLATE
+    if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+    	sed -i -e s~"GETVPN"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
+    else
+    	sed -i -e s~"GETVPN"~"N"~g $BASE/tmp/$DOCKERTEMPLATE
+    fi
+    if [ "$NATIVE" -lt 2 ]; then
+    	sed -i -e s~"BDDCURRHOST"~"${HOST_ALT_NAMES[$IP]}"~g $BASE/tmp/$DOCKERTEMPLATE
+    else
+	sed -i -e s~"BDDCURRHOST"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$DOCKERTEMPLATE
+    fi       
         
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
 
@@ -585,6 +611,16 @@ create_cluster_cdn_proxy() {
     done 
 }
 
+# Function to get the VPC
+get_vpc() {
+    local ip="$1"
+    local pem_file="${PEM_FILES[$ip]}"
+    local port="${PORTS[$ip]}"
+    local theuser="${LOGIN_USERS[$ip]}"
+
+    ssh -i "$pem_file" -o StrictHostKeyChecking=no -p "$port" "$theuser@$ip" "head -n 1 /opt/VPC"
+}
+
 # Parse instance details
 parse_instance_details
 
@@ -593,6 +629,40 @@ generate_ssl_certificates ${MANAGER_IPS[0]}
 
 # Copy SSL certificates to the other manager nodes
 copy_ssl_certificates ${MANAGER_IPS[0]}
+
+# Check If VPN Required
+declare -a VPCDET
+for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+    VPCDET+=("$(get_vpc "$ip")")
+done
+declare -A unique_counts
+for detail in "${VPCDET[@]}"; do
+    ((unique_counts["$detail"]++))
+done
+ELIGIBLEFORVPN="N"
+if [ "${#unique_counts[@]}" -gt 1 ]; then
+    ELIGIBLEFORVPN="Y"
+fi
+echo "Eligible for VPN: $ELIGIBLEFORVPN"
+if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+	VPNTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo cp $BASE/Resources/VPNTemplate $BASE/tmp/$VPNTEMPLATE
+	
+	THEVPNIPDET=$(IFS='|'; echo "${VPN_IPS[*]}")
+	sed -i -e s~"THEIPLIST"~"$THEVPNIPDET"~g $BASE/tmp/$VPNTEMPLATE
+	sed -i -e s~"THENIC"~"$STACKNAME"~g $BASE/tmp/$VPNTEMPLATE
+	sed -i -e s~"THEWGPATH"~"/etc/wireguard"~g $BASE/tmp/$VPNTEMPLATE
+	THEVPNPORT=$($BASE/Scripts/GetRandomPortRange.sh 51000 52000)
+	sed -i -e s~"THEVPNPORT"~"$THEVPNPORT"~g $BASE/tmp/$VPNTEMPLATE
+	num1=$((RANDOM % 241 + 10))
+	num2=$((RANDOM % 241 + 10))
+	num3=$((RANDOM % 241 + 10))
+	THESUBNET="${num1}.${num2}.${num3}"	
+	sed -i -e s~"THESUBNET"~"$THESUBNET"~g $BASE/tmp/$VPNTEMPLATE
+	sudo chmod 777 $BASE/tmp/$VPNTEMPLATE
+	$BASE/tmp/$VPNTEMPLATE
+	sudo rm -f $BASE/tmp/$VPNTEMPLATE	
+fi
 
 # Install Docker on all nodes
 for IP in "${MANAGER_IPS[@]}"; do
@@ -607,6 +677,48 @@ done
 sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
+
+fetch_internal_ip() {
+    local IP=$1
+    local PORT=${PORTS[$IP]}
+    local THEREQUSER=${LOGIN_USERS[$IP]}
+    if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+    	local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI3") 
+    else
+    	local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI2") 
+    fi        
+    echo $internal_ip   
+}
+
+if [ "$NATIVE" -lt 2 ]; then
+	EXECUTE2SCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTE2SCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTE2SCRIPT
+	EXECUTE3SCRIPT='#!/bin/bash'"
+	"
+	echo "$EXECUTE3SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+	echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+	echo 'sudo -H -u root bash -c "echo \"#VAMANA ALT => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+	for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+	    internal_ip=$(fetch_internal_ip $ip)
+	    INTERNAL_IPS["$ip"]="$internal_ip"
+	    echo 'sudo -H -u root bash -c "sed -i -e s~'"$internal_ip"'~#'"$internal_ip"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null  
+	    echo 'sudo -H -u root bash -c "echo \"'"$internal_ip"' '"${HOST_ALT_NAMES[$ip]}"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null	    
+	done
+	for ip in "${!INTERNAL_IPS[@]}"; do
+	    echo "$ip : ${INTERNAL_IPS[$ip]}"
+	done
+	echo 'sudo -H -u root bash -c "echo \"#VAMANA ALT => '"$STACKPRETTYNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null 
+	echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+	#echo 'sudo systemctl enable BDDMinio'"$STACKNAME" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+	#echo 'sudo systemctl start BDDMinio'"$STACKNAME" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
+
+	ALL_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	for ip in "${ALL_IPS[@]}"; do
+		scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTE2SCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+		ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT"
+	done
+
+	sudo rm -f $BASE/tmp/$EXECUTE2SCRIPT	  
+fi
 
 # Initialize Docker Swarm with custom ports and autolock on the first manager node
 run_remote ${MANAGER_IPS[0]} "docker swarm init --advertise-addr ${MANAGER_IPS[0]} --autolock"
@@ -671,24 +783,6 @@ P1O1R1T=${PORTS[${MANAGER_IPS[0]}]}
 THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
 SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
 echo "Using Subnet $SUBNET ..."
-
-fetch_internal_ip() {
-    local IP=$1
-    local PORT=${PORTS[$IP]}
-    local THEREQUSER=${LOGIN_USERS[$IP]}
-    local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI2") 
-    echo $internal_ip   
-}
-
-if [ "$NATIVE" -lt 2 ]; then
-	for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
-	    internal_ip=$(fetch_internal_ip $ip)
-	    INTERNAL_IPS["$ip"]="$internal_ip"
-	done
-	for ip in "${!INTERNAL_IPS[@]}"; do
-	    echo "$ip : ${INTERNAL_IPS[$ip]}"
-	done  
-fi
 
 create_glusterfs_volume_cluster
 
