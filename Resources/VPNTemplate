@@ -1,18 +1,16 @@
 #!/bin/bash
 
-# Define server details
-VARNA=(
-    "35.244.150.166,22,/opt/Matsya/Output/Pem/v2024s2013fi310rzfkr0.pem,ubuntu"
-    "34.193.84.161,22,/opt/Matsya/Output/Pem/v2024s20f13i311rkivta.pem,ubuntu"
-    "34.131.133.217,22,/opt/Matsya/Output/Pem/v2024s2013i314fr6jmms.pem,ubuntu"
-)
+THELISTOFIPS="THEIPLIST"
+THEINTERFACE="THENIC"
+IFS='|' read -r -a VARNA <<< "$THELISTOFIPS"
 
 # Define WireGuard configuration
-WG_CONFIG_DIR="/etc/wireguard"
-WG_CONFIG_FILE="${WG_CONFIG_DIR}/wg0.conf"
-WG_INTERFACE="wg0"
-WG_PORT="51820"  # Default WireGuard port
-WG_SUBNET="13.16.30.0/24"
+WG_CONFIG_DIR="THEWGPATH"
+WG_CONFIG_FILE="${WG_CONFIG_DIR}/$THEINTERFACE.conf"
+THEPATH="$WG_CONFIG_DIR/$THEINTERFACE"
+WG_INTERFACE="$THEINTERFACE"
+WG_PORT="THEVPNPORT"
+WG_SUBNET="THESUBNET.0/24"
 
 # SSH run command
 ssh_run() {
@@ -50,7 +48,7 @@ generate_keys() {
     local port="$2"
     local pem_file="$3"
     local user="$4"
-    ssh_run "$ip" "$port" "$pem_file" "$user" "echo '2' && hostname && sudo rm -f /etc/wireguard/privatekey && sudo rm -f /etc/wireguard/publickey && umask 077 && sudo wg genkey | sudo tee /etc/wireguard/privatekey | sudo wg pubkey | sudo tee /etc/wireguard/publickey && sudo cat /etc/wireguard/privatekey && sudo cat /etc/wireguard/publickey"
+    ssh_run "$ip" "$port" "$pem_file" "$user" "echo '2' && hostname && sudo rm -f ""$THEPATH""privatekey && sudo rm -f ""$THEPATH""publickey && umask 077 && sudo wg genkey | sudo tee ""$THEPATH""privatekey | sudo wg pubkey | sudo tee ""$THEPATH""publickey && sudo cat ""$THEPATH""privatekey && sudo cat ""$THEPATH""publickey"
 }
 
 # Retrieve WireGuard keys from remote server
@@ -59,8 +57,8 @@ get_keys() {
     local port="$2"
     local pem_file="$3"
     local user="$4"
-    PRIVATE_KEY=$(ssh_run "$ip" "$port" "$pem_file" "$user" "sudo cat /etc/wireguard/privatekey")
-    PUBLIC_KEY=$(ssh_run "$ip" "$port" "$pem_file" "$user" "sudo cat /etc/wireguard/publickey")
+    PRIVATE_KEY=$(ssh_run "$ip" "$port" "$pem_file" "$user" "sudo cat ""$THEPATH""privatekey")
+    PUBLIC_KEY=$(ssh_run "$ip" "$port" "$pem_file" "$user" "sudo cat ""$THEPATH""publickey")
 }
 
 # Configure WireGuard on remote server
@@ -73,7 +71,7 @@ configure_wireguard() {
     local public_key="$6"
     
     local conf="[Interface]
-Address = 13.16.30.$((i+1))/24
+Address = THESUBNET.$((i+1))/24
 PrivateKey = $PRIVATE_KEY
 ListenPort = $WG_PORT
 "
@@ -81,32 +79,23 @@ ListenPort = $WG_PORT
     for peer in "${VARNA[@]}"; do
         if [ "$i" -ne "$j" ]; then
             IFS=',' read -r PEER_IP PEER_PORT PEER_PEM PEER_USER <<< "$peer"
-            PEER_PUBLIC_KEY=$(ssh_run "$PEER_IP" "$PEER_PORT" "$PEER_PEM" "$PEER_USER" "sudo cat /etc/wireguard/publickey")
+            PEER_PUBLIC_KEY=$(ssh_run "$PEER_IP" "$PEER_PORT" "$PEER_PEM" "$PEER_USER" "sudo cat ""$THEPATH""publickey")
             conf+="
 [Peer]
 PublicKey = $PEER_PUBLIC_KEY
 Endpoint = $PEER_IP:$WG_PORT
-AllowedIPs = 13.16.30.$((j+1))/32
+AllowedIPs = THESUBNET.$((j+1))/32
 PersistentKeepalive = 25
 "
         fi
         ((j++))
     done
    
-    echo "$conf" > wg0.conf
-    scp_run "$ip" "$port" "$pem_file" "$user" wg0.conf "/tmp/wg0.conf"
-    rm -f wg0.conf
-    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo mv /tmp/wg0.conf ${WG_CONFIG_FILE} && sudo chmod 600 ${WG_CONFIG_FILE}"
+    echo "$conf" > $THEINTERFACE.conf
+    scp_run "$ip" "$port" "$pem_file" "$user" $THEINTERFACE.conf "/tmp/$THEINTERFACE.conf"
+    rm -f $THEINTERFACE.conf
+    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo mv /tmp/$THEINTERFACE.conf ${WG_CONFIG_FILE} && sudo chmod 600 ${WG_CONFIG_FILE}"
     ssh_run "$ip" "$port" "$pem_file" "$user" "sudo systemctl enable wg-quick@${WG_INTERFACE} && sudo systemctl restart wg-quick@${WG_INTERFACE} && sudo systemctl status wg-quick@${WG_INTERFACE}"
-}
-
-# Configure firewall on remote server
-configure_firewalld() {
-    local ip="$1"
-    local port="$2"
-    local pem_file="$3"
-    local user="$4"
-    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo firewall-cmd --permanent --add-port=${WG_PORT}/udp && sudo firewall-cmd --reload"
 }
 
 # Ensure IP forwarding is enabled
@@ -136,29 +125,10 @@ for ((i=0; i<${#VARNA[@]}; i++)); do
     
     # Configure WireGuard
     configure_wireguard "$IP" "$PORT" "$PEM_FILE" "$USER" "$PRIVATE_KEY" "$PUBLIC_KEY"
-    
-    # Configure firewall
-    #configure_firewalld "$IP" "$PORT" "$PEM_FILE" "$USER"
-    
+       
     # Enable IP forwarding
     enable_ip_forwarding "$IP" "$PORT" "$PEM_FILE" "$USER"    
 done
 
 echo "WireGuard VPN setup complete."
-
-# Verify connectivity between peers
-verify_connectivity() {
-    for ((i=0; i<${#VARNA[@]}; i++)); do
-        IFS=',' read -r IP PORT PEM_FILE USER <<< "${VARNA[$i]}"
-        echo "Checking connectivity from $IP"
-        for ((j=0; j<${#VARNA[@]}; j++)); do
-            if [[ $i -ne $j ]]; then
-                IFS=',' read -r PEER_IP PEER_PORT PEER_PEM PEER_USER <<< "${VARNA[$j]}"
-                ssh_run "$IP" "$PORT" "$PEM_FILE" "$USER" "ping -c 4 13.16.30.$((j+1))"
-            fi
-        done
-    done
-}
-
-verify_connectivity
 

@@ -28,6 +28,8 @@ BDDPort1="BDD1"
 BDDPort2="BDD2"
 BDD_HOSTS="BDDHOSTS"
 CERTS_DIR="THECERTS"
+ELIGIBLEFORVPN="GETVPN"
+BDD_CURRHOST="BDDCURRHOST"
 
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
@@ -194,7 +196,13 @@ install_firewalld() {
 install_python() {
     echo "Installing Python3 and pip..."
     if [[ "$OS" == "UBU" ]]; then
-        sudo NEEDRESTART_MODE=a $PKG_MANAGER install -y python3 python3-pip    
+        sudo rm -f /var/lib/dpkg/lock-frontend
+        sudo rm -f /var/cache/apt/archives/lock
+        sudo rm -f /var/lib/dpkg/lock-frontend
+        sudo rm -f /var/cache/apt/archives/lock        
+        sudo NEEDRESTART_MODE=a $PKG_MANAGER install -y python3 python3-pip  
+        sudo rm -f /var/cache/apt/archives/lock 
+        sudo NEEDRESTART_MODE=a $PKG_MANAGER install -y python3 python3-pip         
     else
         sudo $PKG_MANAGER install -y python3 python3-pip 
     fi
@@ -268,8 +276,13 @@ LimitNOFILE=65536
 WantedBy=multi-user.target
 ' | sudo tee /etc/systemd/system/BDDMinio$STACKNAME.service > /dev/null
 	sudo systemctl daemon-reload
-	sudo systemctl enable BDDMinio$STACKNAME
-	sudo systemctl start BDDMinio$STACKNAME	
+	if [ ! -f /opt/CLD ]; then
+		sudo systemctl enable BDDMinio$STACKNAME
+		sudo systemctl start BDDMinio$STACKNAME	
+	else
+		sudo systemctl stop BDDMinio$STACKNAME
+		sudo systemctl disable BDDMinio$STACKNAME		
+	fi
 	
 	pip3 install s3ql
 }
@@ -372,7 +385,17 @@ else
 		    
 		    /opt/EDN && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE
 		fi									
-	fi	
+	fi
+	
+	if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+	fi
+	
+	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+		INTERNALIP2=$(ip addr show $STACKNAME | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI3 && sudo touch /opt/WHOAMI3 && sudo chmod 777 /opt/WHOAMI3 && echo "$INTERNALIP2" | sudo tee -a /opt/WHOAMI3 > /dev/null		
+	fi				
 fi
 
 if [[ "$OS" == "UBU" ]]; then
@@ -631,8 +654,12 @@ sudo firewall-cmd --reload
 if [ ! -f /opt/CLD ]; then
     echo 'Firewall On'
 else
-    sudo systemctl stop firewalld
-    sudo systemctl disable firewalld
+    if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+        echo 'Firewall On'
+    else
+        sudo systemctl stop firewalld
+        sudo systemctl disable firewalld
+    fi
 fi
 
 sudo systemctl daemon-reload
