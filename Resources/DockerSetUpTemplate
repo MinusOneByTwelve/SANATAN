@@ -36,6 +36,8 @@ sudo hostnamectl set-hostname $THEHOST --static
 sudo hostnamectl set-hostname $THEHOST --transient
 sudo hostnamectl set-hostname "$THEHOST" --pretty
 
+sudo rm -f /opt/DSUDONE$STACKNAME
+
 setup_http_server() {
     sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
     sudo chown -R root:root $DFS_DATA2_DIR/Static$STACKNAME
@@ -482,6 +484,7 @@ sudo chmod -R 777 $DFS_DATA_DIR
 sudo mkdir -p $DFS_CLUSTER_DIR
 sudo chown -R root:root $DFS_CLUSTER_DIR
 sudo chmod -R 777 $DFS_CLUSTER_DIR
+sudo ln -s $DFS_CLUSTER_DIR /$STACKPRETTYNAME 
 
 sudo mkdir -p $DFS_DATA2_DIR
 sudo chown -R root:root $DFS_DATA2_DIR
@@ -494,11 +497,6 @@ sudo chmod -R 777 $DFS_DATA2_DIR/$STACKNAME
 sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
 sudo chown -R gluster:gluster $DFS_DATA2_DIR/Static$STACKNAME
 sudo chmod -R 777 $DFS_DATA2_DIR/Static$STACKNAME
-
-sudo mkdir -p $DFS_DATA2_DIR/Mnt$STACKNAME
-sudo chown -R root:root $DFS_DATA2_DIR/Mnt$STACKNAME
-sudo chmod -R 777 $DFS_DATA2_DIR/Mnt$STACKNAME
-sudo ln -s $DFS_DATA2_DIR/Mnt$STACKNAME /$STACKPRETTYNAME 
 
 sudo mkdir -p $DFS_DATA_DIR/Portainer$STACKNAME
 sudo chown -R gluster:gluster $DFS_DATA_DIR/Portainer$STACKNAME
@@ -675,4 +673,9 @@ sudo rm -rf /home/$CURRENTUSER/.bash_history
 
 sudo rm -f /home/$CURRENTUSER/SetUpHosts.sh
 sudo rm -f /home/$CURRENTUSER/SetUpDocker.sh
+
+sudo touch /opt/DSUDONE$STACKNAME
+sudo chmod 777 /opt/DSUDONE$STACKNAME
+sudo mv /home/$CURRENTUSER/DSULog$STACKNAME.out /opt/DSULog$STACKNAME.out
+sudo chmod 777 /opt/DSULog$STACKNAME.out
 
