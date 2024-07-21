@@ -88,8 +88,8 @@ if [ "$THECHOICE" == "CORE" ] ; then
 INSTANCE_DETAILS_FILE="/opt/Matsya/Repo/Stack/UdemyCourse/WIP/47Y3ax5kc0Zbhx0/Stack_gcp"
 ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
 THEVISIONID="2024"
-CLUSTERID="2076"
-STACKPRETTYNAME="DataAnalytics62"
+CLUSTERID="2077"
+STACKPRETTYNAME="DataAnalytics63"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -113,8 +113,7 @@ REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
 DFS_DATA2_DIR="/shiva/local/storage/dfs$STACKNAME"
-#DFS_DATA2_DIR="/shiva/global/storage/dfs$STACKNAME"
-DFS_CLUSTER_DIR="/shiva/global/storage/dfs$STACKNAME"
+DFS_CLUSTER_DIR="/shiva/bdd/storage/$STACKNAME"
 CERTS_DIR="/shiva/local/storage/certs$STACKNAME"
 
 EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
@@ -429,7 +428,7 @@ install_docker() {
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKERTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/SetUpDocker.sh && sudo mv /home/$THE1REQUSER/$DOCKERTEMPLATE /home/$THE1REQUSER/SetUpDocker.sh && sudo chmod 777 /home/$THE1REQUSER/SetUpDocker.sh && /home/$THE1REQUSER/SetUpDocker.sh"
+            ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/SetUpDocker.sh && sudo mv /home/$THE1REQUSER/$DOCKERTEMPLATE /home/$THE1REQUSER/SetUpDocker.sh && sudo chmod 777 /home/$THE1REQUSER/SetUpDocker.sh && nohup /home/$THE1REQUSER/SetUpDocker.sh > /home/$THE1REQUSER/DSULog$STACKNAME.out 2>&1 &"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -459,51 +458,79 @@ create_encrypted_overlay_network() {
     "
 }
 
-# Function to create cluster glusterfs volume
+# Function to create a GlusterFS volume cluster with retry logic
 create_glusterfs_volume_cluster() {
-	peer_probe_cmds=""
-	
-	ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
-	total_nodes=${#ALL_IPS[@]}
-	max_nodes=$(( (total_nodes / NATIVE) * NATIVE ))
-	peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
-	
-	for ip in "${peer_ips[@]}"; do
-		H1O1S1T=${HOST_NAMES[$ip]}
+    peer_probe_cmds=""
+    volume_create_cmd=""
+    retry_count=0
+    max_retries=5
+    success=false
+
+    ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+    total_nodes=${#ALL_IPS[@]}
+    max_nodes=$(( (total_nodes / NATIVE) * NATIVE ))
+    peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
+
+    # Prepare peer probing commands
+    for ip in "${peer_ips[@]}"; do
+        HOST=${HOST_NAMES[$ip]}
+        if [ "$NATIVE" -lt 2 ]; then
+            HOST=${INTERNAL_IPS[$ip]}
+        fi
+        peer_probe_cmds+="sudo gluster peer probe $HOST; "
+    done
+
+    # Prepare volume creation command
+    volume_create_cmd="sudo gluster volume create $STACKNAME replica 2 "
+    for ip in "${peer_ips[@]}"; do
+        HOST=${HOST_NAMES[$ip]}
+        if [ "$NATIVE" -lt 2 ]; then
+            HOST=${INTERNAL_IPS[$ip]}
+        fi
+        volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$STACKNAME "
+    done
+    volume_create_cmd+="force"
+
+    # Retry logic for probing and volume creation
+    while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+        echo "Attempting to probe peers and create volume, Attempt: $((retry_count + 1))"
+        # Run the peer probing and volume creation commands
+        run_remote ${MANAGER_IPS[0]} "
+            $peer_probe_cmds
+            $volume_create_cmd
+            sudo gluster volume start $STACKNAME
+        "
+
+        # Check if the volume is started successfully
+        if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info $STACKNAME"; then
+            success=true
+            echo "Volume created and started successfully."
+            break
+        else
+            echo "Failed to create/start volume, retrying..."
+            sleep 10  # Wait before retrying
+        fi
+        retry_count=$((retry_count + 1))
+    done
+
+    if [ "$success" = false ]; then
+        echo "Failed to create/start volume after $max_retries attempts."
+    else
+	    # Mount the volume on all IPs
+	    glusterfs_addresses=""
+	    for ip in "${peer_ips[@]}"; do
+		HOST=${HOST_NAMES[$ip]}
 		if [ "$NATIVE" -lt 2 ]; then
-			H1O1S1T=${INTERNAL_IPS[$ip]}
+		    HOST=${INTERNAL_IPS[$ip]}
 		fi
-		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
-	done
-	#volume_create_cmd="sudo gluster volume create $STACKNAME replica $NATIVE "
-	volume_create_cmd="sudo gluster volume create $STACKNAME replica 2 "
-	for ip in "${peer_ips[@]}"; do
-		H1O1S11T=${HOST_NAMES[$ip]}
-		if [ "$NATIVE" -lt 2 ]; then
-			H1O1S11T=${INTERNAL_IPS[$ip]}
-		fi
-		volume_create_cmd+="$H1O1S11T:$DFS_DATA2_DIR/$STACKNAME "
-	done		
-	volume_create_cmd+="force" 
-	echo "create_glusterfs_volume_cluster : $peer_probe_cmds"
-	echo "create_glusterfs_volume_cluster : $volume_create_cmd"  
-	run_remote ${MANAGER_IPS[0]} "
-	$peer_probe_cmds
-	$volume_create_cmd
-	sudo gluster volume start $STACKNAME
-	"
-	glusterfs_addresses=""
-	for ip in "${peer_ips[@]}"; do
-		H11O1S11T=${HOST_NAMES[$ip]}
-		if [ "$NATIVE" -lt 2 ]; then
-			H11O1S11T=${INTERNAL_IPS[$ip]}
-		fi
-		glusterfs_addresses+="$H11O1S11T,"
-	done		
-	glusterfs_addresses=${glusterfs_addresses%,}
-	for IP in "${ALL_IPS[@]}"; do
-	    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_DATA2_DIR/Mnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/$STACKNAME-mount.log"
-	done
+		glusterfs_addresses+="$HOST,"
+	    done
+	    glusterfs_addresses=${glusterfs_addresses%,}  # Remove trailing comma
+
+	    for IP in "${ALL_IPS[@]}"; do
+		run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_CLUSTER_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$STACKNAME-mount.log"
+	    done    
+    fi
 }
 
 # Function to create portainer glusterfs volume
@@ -677,6 +704,45 @@ done
 sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
+
+ALL1_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+check_status() {
+    local ip=$1
+    local pem_file=${PEM_FILES[$ip]}
+    local port=${PORTS[$ip]}
+    local user=${LOGIN_USERS[$ip]}
+    ssh -o StrictHostKeyChecking=no -i "$pem_file" -p "$port" "$user@$ip" "[ -f /opt/DSUDONE$STACKNAME ]"
+    if [ $? -eq 0 ]; then
+        echo "$ip - completed"
+    else
+        echo "$ip - in progress"
+    fi
+}
+COUNTER=0
+while true; do
+    echo ""
+    echo "-----------------------" 
+    echo "COUNTER : $COUNTER"
+    echo "-----------------------"    
+    all_done=true
+
+    for ip in "${ALL1_IPS[@]}"; do
+        status=$(check_status "$ip")
+        echo "$status"
+        if [[ $status == *"in progress"* ]]; then
+            all_done=false
+        fi
+    done
+
+    if [ "$all_done" = true ]; then
+        echo "jobdone"
+        break
+    fi
+    echo "-----------------------" 
+    COUNTER=$((COUNTER + 1))
+    sleep 15
+done
+COUNTER=0
 
 fetch_internal_ip() {
     local IP=$1

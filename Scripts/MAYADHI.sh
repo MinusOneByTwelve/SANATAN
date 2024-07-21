@@ -281,10 +281,14 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	THECORE_1="$BASE/tmp/$ALLWORKFOLDER/$THECORE1"	
 	THECORE2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
 	SOFTSTACK="$BASE/tmp/$ALLWORKFOLDER/$THECORE2"	
-	
-	awk -F ',' '{print $1 "," $2 "," $3 "," $4 "," $5 "," $6 "," $7 "," $8 "," $9 "," $10 "," $11 "," $12 "," $13 "," $14 "," $15 "," $16 "," $17 "," $18 "," $19 "," $20 "," $21 "," $22 "," $23 "," $24 "," $25 "," $26 "," $27 "," $28}' $THESTACK1FILE > $THECORE_1
+	SOFTSTACK="NA"
 
-	awk -F ',' '{
+	if [ "$SOFTSTACK" == "NA" ]; then
+		echo "SOFTSTACK : $SOFTSTACK"
+	else	
+		awk -F ',' '{print $1 "," $2 "," $3 "," $4 "," $5 "," $6 "," $7 "," $8 "," $9 "," $10 "," $11 "," $12 "," $13 "," $14 "," $15 "," $16 "," $17 "," $18 "," $19 "," $20 "," $21 "," $22 "," $23 "," $24 "," $25 "," $26 "," $27 "," $28}' $THESTACK1FILE > $THECORE_1
+
+		awk -F ',' '{
     # Print columns 1 and 2
     printf "%s,%s,", $1, $2
 
@@ -298,34 +302,35 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
     printf "\n"
 }' $THESTACK1FILE > $SOFTSTACK
 	
-	sudo rm -f $THESTACK1FILE
-	sudo mv $THECORE_1 $THESTACK1FILE		
-	sudo chmod 777 $THESTACK1FILE
+		sudo rm -f $THESTACK1FILE
+		sudo mv $THECORE_1 $THESTACK1FILE		
+		sudo chmod 777 $THESTACK1FILE
 
-	# SANITIZE SOFTWARE FILE
-	header=$(head -n 1 $SOFTSTACK)
-	csv_data=$(tail -n +2 $SOFTSTACK)
-	#echo 'came here2'
-	j1son1_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
-	#echo 'came here3'
-	#echo "$j1son1_data"
-	fil1ter1ed_json=$(echo "$j1son1_data" | jq 'map(select(.IsEligibleForStack != null and .IsEligibleForStack != ""))')
-	#echo 'came here4'
-	THESOFTSTKREALFILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
-	THESOFTSTKREALFILE_file="$BASE/tmp/$ALLWORKFOLDER/$THESOFTSTKREALFILE__file"
-	header=$(echo "$fil1ter1ed_json" | jq -r '.[0] | keys_unsorted | join(",")')
-	echo "$header" > "$THESOFTSTKREALFILE_file"
-	echo "$fil1ter1ed_json" | jq -c '.[]' | while IFS= read -r obj; do
-	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
-	    echo "$record" >> "$THESOFTSTKREALFILE_file"
-	done	
-	sudo chmod 777 $THESOFTSTKREALFILE_file
-	sed -i 's/""//g' "$THESOFTSTKREALFILE_file"
-	sed -i 's/"//g' "$THESOFTSTKREALFILE_file"
-	sudo rm -f $SOFTSTACK
-	sudo mv $THESOFTSTKREALFILE_file $SOFTSTACK		
-	# SANITIZE SOFTWARE FILE
-	#echo 'came here1'
+		# SANITIZE SOFTWARE FILE
+		header=$(head -n 1 $SOFTSTACK)
+		csv_data=$(tail -n +2 $SOFTSTACK)
+		#echo 'came here2'
+		j1son1_data=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+		#echo 'came here3'
+		#echo "$j1son1_data"
+		fil1ter1ed_json=$(echo "$j1son1_data" | jq 'map(select(.IsEligibleForStack != null and .IsEligibleForStack != ""))')
+		#echo 'came here4'
+		THESOFTSTKREALFILE__file=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		THESOFTSTKREALFILE_file="$BASE/tmp/$ALLWORKFOLDER/$THESOFTSTKREALFILE__file"
+		header=$(echo "$fil1ter1ed_json" | jq -r '.[0] | keys_unsorted | join(",")')
+		echo "$header" > "$THESOFTSTKREALFILE_file"
+		echo "$fil1ter1ed_json" | jq -c '.[]' | while IFS= read -r obj; do
+		    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+		    echo "$record" >> "$THESOFTSTKREALFILE_file"
+		done	
+		sudo chmod 777 $THESOFTSTKREALFILE_file
+		sed -i 's/""//g' "$THESOFTSTKREALFILE_file"
+		sed -i 's/"//g' "$THESOFTSTKREALFILE_file"
+		sudo rm -f $SOFTSTACK
+		sudo mv $THESOFTSTKREALFILE_file $SOFTSTACK		
+		# SANITIZE SOFTWARE FILE
+	fi
+		
 	# SANITIZE ORIGINAL FILE
 	header=$(head -n 1 $THESTACK1FILE)
 	csv_data=$(tail -n +2 $THESTACK1FILE)

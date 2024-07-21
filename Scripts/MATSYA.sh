@@ -158,6 +158,10 @@ deploy_instances_azure() {
 		AZURESCOPE12VAL="${_AZVAL3[3]}"		
 		AZURESCOPE14VAL="${CHOICEVALS[2]}"
 
+		IFS='‡' read -r -a AZURESCOPE8_VAL <<< $AZURESCOPE8VAL
+		THESIZE="${AZURESCOPE8_VAL[0]}"
+		THEDISKSIZE="${AZURESCOPE8_VAL[1]}"
+
 		sed -i -e s~"AZURESCOPEVAL"~"$AZURESCOPEVAL"~g $BASE/tmp/$AZNAME.tf 
 		sed -i -e s~"AZURESCOPE1VAL"~"$AZURESCOPE1VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE2VAL"~"$AZURESCOPE2VAL"~g $BASE/tmp/$AZNAME.tf
@@ -166,7 +170,8 @@ deploy_instances_azure() {
 		sed -i -e s~"AZURESCOPE5VAL"~"$AZURESCOPE5VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE6VAL"~"$AZURESCOPE6VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE7VAL"~"$AZURESCOPE7VAL"~g $BASE/tmp/$AZNAME.tf
-		sed -i -e s~"AZURESCOPE8VAL"~"$AZURESCOPE8VAL"~g $BASE/tmp/$AZNAME.tf 
+		sed -i -e s~"AZURESCOPE8VAL"~"$THESIZE"~g $BASE/tmp/$AZNAME.tf 
+		sed -i -e s~"THEDISKSIZE"~"$THEDISKSIZE"~g $BASE/tmp/$AZNAME.tf		
 		sed -i -e s~"AZURESCOPE9VAL"~"$AZURESCOPE9VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE10VAL"~"$AZURESCOPE10VAL"~g $BASE/tmp/$AZNAME.tf
 		sed -i -e s~"AZURESCOPE11VAL"~"$AZURESCOPE11VAL"~g $BASE/tmp/$AZNAME.tf
@@ -733,8 +738,13 @@ deploy_instances() {
 			sudo rm -rf $BASE/tmp/$SECPORTFILE
 			
 			FILESTOBEDELETED+=("$BASE/tmp/$SECPORTFILE")		
+
+			IFS='‡' read -r -a THEREQUIRED_AMI <<< $THEREQUIREDAMI
+			THEAMI="${THEREQUIRED_AMI[0]}"
+			THEDISKSIZE="${THEREQUIRED_AMI[1]}"
 			
-			sed -i -e s~"THEREQUIREDAMI"~"$THEREQUIREDAMI"~g $terraform_file
+			sed -i -e s~"THEREQUIREDAMI"~"$THEAMI"~g $terraform_file
+			sed -i -e s~"THEDISKSIZE"~"$THEDISKSIZE"~g $terraform_file			
 			sed -i -e s~"THEREQUIREDTYPE"~"$THEREQUIREDTYPE"~g $terraform_file
 			sed -i -e s~"THEREQUIREDPEMKEY"~"$THEREQUIREDPEMKEY"~g $terraform_file
 			sed -i -e s~"THEREQUIREDLOCPEMKEY"~"$THEREQUIREDLOCPEMKEY"~g $terraform_file

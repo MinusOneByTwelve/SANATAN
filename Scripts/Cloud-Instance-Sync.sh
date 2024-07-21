@@ -357,26 +357,30 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		sudo rm -f $THE1STACK1FILE
 		sudo mv $BASE/tmp/$THEFILEFORNEWVAL $THE1STACK1FILE
 		
-		PART_1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		#sudo touch $BASE/tmp/$PART_1
-		#sudo chmod 777 $BASE/tmp/$PART_1		
-		cut -d ',' -f 1-28 $THE1STACK1FILE > $BASE/tmp/$PART_1.csv
+		if [ "$SOFTSTACK" == "NA" ]; then
+			echo "SOFTSTACK : $SOFTSTACK"
+		else
+			PART_1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			#sudo touch $BASE/tmp/$PART_1
+			#sudo chmod 777 $BASE/tmp/$PART_1		
+			cut -d ',' -f 1-28 $THE1STACK1FILE > $BASE/tmp/$PART_1.csv
 
-		PART_2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		#sudo touch $BASE/tmp/$PART_2
-		#sudo chmod 777 $BASE/tmp/$PART_2
-		awk -F ',' '{ for (i = 3; i <= NF; i++) printf "%s%s", $i, (i<NF ? "," : "\n") }' $SOFTSTACK > $BASE/tmp/$PART_2.csv
+			PART_2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			#sudo touch $BASE/tmp/$PART_2
+			#sudo chmod 777 $BASE/tmp/$PART_2
+			awk -F ',' '{ for (i = 3; i <= NF; i++) printf "%s%s", $i, (i<NF ? "," : "\n") }' $SOFTSTACK > $BASE/tmp/$PART_2.csv
 
-		PART_3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-		#sudo touch $BASE/tmp/$PART_3
-		#sudo chmod 777 $BASE/tmp/$PART_3
-		paste -d ',' $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv > $BASE/tmp/$PART_3.csv
+			PART_3=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+			#sudo touch $BASE/tmp/$PART_3
+			#sudo chmod 777 $BASE/tmp/$PART_3
+			paste -d ',' $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv > $BASE/tmp/$PART_3.csv
+			
+			sudo rm -f $THE1STACK1FILE
+			sudo mv $BASE/tmp/$PART_3.csv $THE1STACK1FILE		
+
+			sudo rm $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv
+		fi
 		
-		sudo rm -f $THE1STACK1FILE
-		sudo mv $BASE/tmp/$PART_3.csv $THE1STACK1FILE		
-
-		sudo rm $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv
-
 		sudo rm -rf $THEMAINJOBFOLDER						
 		sudo rm -rf /home/$CURRENTUSER/nohup.out
 							

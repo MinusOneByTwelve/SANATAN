@@ -26,6 +26,7 @@ NoQuotes=''
 USERINTERACTION="YES"
 USERVALS=""
 MANUALRUN="NO"
+DEBUG="NO"
 
 AWSGLOBALDELETE="NO"
 AWSGLOBALDONEDELETE="NO"
@@ -64,6 +65,11 @@ source $BASE/Resources/StackVersioningAndMisc
 
 FILESTOBEDELETED=()
 SCOPEFOLDERS=()
+
+if [ "$DEBUG" == "YES" ] ; then
+	THEDEBUGFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "" | sudo tee $BASE/tmp/$THEDEBUGFILE > /dev/null	
+fi
 
 Vision_DELETE() {
 	#IFS="º" read -ra INPUT <<< "$1"
@@ -215,8 +221,9 @@ CLD_IDENTITY_DELETE() {
 	AID2=$2
 	AID3=$3
 	AID4=$4
-		
-	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+	if [ "$DEBUG" == "YES" ] ; then	
+	echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+	fi
 	IFS='|' read -ra items <<< "$AID1"
 	for scopeidy in "${items[@]}"; do
 		search_result=$(grep -n "^$scopeidy" $AID2)
@@ -225,7 +232,9 @@ CLD_IDENTITY_DELETE() {
 		sc1id="${scid[0]}"
 		sc2id="${scid[1]}"
 		sc3id="s""$sc1id""i""$sc2id"
-		#echo "scopeidy : $scopeidy  search_result : $search_result  sc1id : $sc1id  sc2id : $sc2id  sc3id : $sc3id" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+		if [ "$DEBUG" == "YES" ] ; then
+		echo "scopeidy : $scopeidy  search_result : $search_result  sc1id : $sc1id  sc2id : $sc2id  sc3id : $sc3id" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+		fi
 		if [ -n "$search_result" ]; then
 			line_number=$(echo "$search_result" | awk -F ':' 'NR==1 {print $1}')
 			content=$(echo "$search_result" | awk -F ':' 'NR==1 {print $2}')
@@ -237,10 +246,14 @@ CLD_IDENTITY_DELETE() {
 			TheVMPemFile="${USERLISTVALS[25]}"
 			TheVMPemFile=$(NARASIMHA "decrypt" "$TheVMPemFile" "$AID3")				
 			thenewdeleteflag="N"
-			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			if [ "$thecurrentdeleteflag" == "Y" ] ; then
 				thenewdeleteflag="Y"
-				#echo "came here1: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				if [ "$DEBUG" == "YES" ] ; then
+				echo "came here1: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+				fi
 			else
 				Secret1Key="${USERLISTVALS[5]}"
 				Secret1Key=$(NARASIMHA "decrypt" "$Secret1Key" "$AID3")	
@@ -248,7 +261,9 @@ CLD_IDENTITY_DELETE() {
 				
 				if [ -f "$THEFOLDERINQ/ISDELETED" ]; then
 				    	thenewdeleteflag="Y"
-				    	#echo "came here2: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				    	if [ "$DEBUG" == "YES" ] ; then
+				    	echo "came here2: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+				    	fi
 				else				    
 					tf_file=$(find "$THEFOLDERINQ" -maxdepth 1 -type f -name "*.tf" | head -n 1)
 					tf_filename=$(basename "$tf_file")
@@ -300,8 +315,10 @@ CLD_IDENTITY_DELETE() {
 						if [ "$tv17" == "ALMA" ]; then						
 							$BASE/Scripts/Cloud-Instance-Exec.sh "AWS_ALMA" "B" "$tv32" "$tv30" "$tv6" "$tv31" "$tv36"
 						fi												
-					fi					
-					#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"	 | sudo tee -a /home/prathamos/Downloads/log > /dev/null				
+					fi
+					if [ "$DEBUG" == "YES" ] ; then					
+					echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  tf_filename : $tf_filename"	 | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null		
+					fi		
 					RANDOM2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
 					RANDOM3VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)					
 							
@@ -345,7 +362,9 @@ CLD_IDENTITY_DELETE() {
 							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
 						fi						
 						thenewdeleteflag="A"
-						#echo "came here4: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						if [ "$DEBUG" == "YES" ] ; then
+						echo "came here4: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+						fi
 						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null		
 						exit 0
 					}
@@ -374,7 +393,9 @@ CLD_IDENTITY_DELETE() {
 							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
 						fi						
 						thenewdeleteflag="Y"
-						#echo "came here5: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						if [ "$DEBUG" == "YES" ] ; then
+						echo "came here5: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+						fi
 						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null									
 					else
 						cd $CURDIR
@@ -389,7 +410,9 @@ CLD_IDENTITY_DELETE() {
 							sudo mv $THEFOLDERINQ/$RANDOMSAVAL $THEFOLDERINQ/$gcpsafilename
 						fi						
 						thenewdeleteflag="A"
-						#echo "came here6: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+						if [ "$DEBUG" == "YES" ] ; then
+						echo "came here6: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+						fi
 						sudo rm -f $THEFOLDERINQ/$RANDOM4VAL && echo "$thenewdeleteflag" | sudo tee -a $THEFOLDERINQ/$RANDOM4VAL > /dev/null													
 					fi			
 					cd $CURDIR					
@@ -411,9 +434,13 @@ CLD_IDENTITY_DELETE() {
 					fi
 				fi							
 			fi
-			#echo "came here3: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "came here3: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			thenewcontent="$filtered_content,$thenewdeleteflag"
-			#echo "thenewcontent : $thenewcontent" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "thenewcontent : $thenewcontent" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			sed -i "$line_number""s#.*#$thenewcontent#" "$AID2"		
 		else
 		    echo "Not Found"
@@ -430,8 +457,9 @@ E2E_IDENTITY_DELETE() {
 	AID2=$2
 	AID3=$3
 	AID4=$4
-		
-	#echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+	if [ "$DEBUG" == "YES" ] ; then	
+	echo "AID1 : $AID1    AID2 : $AID2      AID3 : $AID3" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+	fi
 	IFS='|' read -ra items <<< "$AID1"
 	for scopeidy in "${items[@]}"; do
 		search_result=$(grep -n "^$scopeidy" $AID2)
@@ -452,10 +480,14 @@ E2E_IDENTITY_DELETE() {
 			TheVMPemFile="${USERLISTVALS[25]}"
 			TheVMPemFile=$(NARASIMHA "decrypt" "$TheVMPemFile" "$AID3")				
 			thenewdeleteflag="N"
-			#echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "scopeidy : $scopeidy  THEFOLDERINQ : $THEFOLDERINQ  Secret1Key : $Secret1Key  TheVMPemFile : $TheVMPemFile" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			if [ "$thecurrentdeleteflag" == "Y" ] ; then
 				thenewdeleteflag="Y"
-				#echo "came here1: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+				if [ "$DEBUG" == "YES" ] ; then
+				echo "came here1: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+				fi
 			else
 				Secret1Key="${USERLISTVALS[5]}"
 				Secret1Key=$(NARASIMHA "decrypt" "$Secret1Key" "$AID3")	
@@ -464,9 +496,13 @@ E2E_IDENTITY_DELETE() {
 				sudo rm -f $TheVMPemFile
 				thenewdeleteflag="Y"			
 			fi
-			#echo "came here3: $thenewdeleteflag" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "came here3: $thenewdeleteflag" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			thenewcontent="$filtered_content,$thenewdeleteflag"
-			#echo "thenewcontent : $thenewcontent" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
+			if [ "$DEBUG" == "YES" ] ; then
+			echo "thenewcontent : $thenewcontent" | sudo tee -a $BASE/tmp/$THEDEBUGFILE > /dev/null
+			fi
 			sed -i "$line_number""s#.*#$thenewcontent#" "$AID2"		
 		else
 		    echo "Not Found"
