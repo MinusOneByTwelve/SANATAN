@@ -1,0 +1,174 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vision {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  userId      Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  modes       Mode[]
+  clusters    Cluster[]
+  scopes      Scope[]
+}
+
+model Scope {
+  id            Int        @id @default(autoincrement())
+  vision        Vision     @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  visionId      Int
+  name          String
+  description   String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  identityCount Int        @default(0)
+  isProcessed   Boolean    @default(true)
+  isMixed       Boolean    @default(false)
+  xPos          Int        @default(-1)
+  yPos          Int        @default(-1)
+  instances     Instance[]
+  mode          Mode?      @relation(fields: [modeId], references: [modeId])
+  modeId        String?
+}
+
+model Provider {
+  id                  Int              @id @default(autoincrement())
+  icon                String
+  name                String
+  acronym             PROVIDER_ACRONYM @unique
+  providerColor       String
+  showName            Boolean          @default(false)
+  needsSecretKey      Boolean          @default(false)
+  needsServiceAccount Boolean          @default(false)
+  instances           Instance[]
+  secrets             Secrets[]
+}
+
+model Secrets {
+  id         Int         @id @default(autoincrement())
+  userId     Int
+  visionId   Int
+  fileName   String
+  key        String
+  provider   Provider    @relation(fields: [providerId], references: [id])
+  providerId Int
+  type       SECRET_TYPE @default(SECRET)
+  instances  Instance[]
+}
+
+model Instance {
+  id                   Int            @id @default(autoincrement())
+  visionId             Int
+  scope                Scope          @relation(fields: [scopeId], references: [id], onDelete: Cascade)
+  scopeId              Int
+  provider             Provider       @relation(fields: [providerId], references: [id])
+  providerId           Int
+  name                 String
+  ip                   String
+  configurationDetails Json
+  secrets              Secrets        @relation(fields: [secretId], references: [id])
+  secretId             Int
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  cores                Int?
+  memory               Float?
+  reservedCores        Float?
+  reservedMemory       Float?
+  isRunning            Boolean        @default(false)
+  apps                 InstanceApps[]
+}
+
+model Mode {
+  id            Int       @id @default(autoincrement())
+  vision        Vision    @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  visionId      Int
+  encryptionKey String?
+  modeId        String    @unique
+  label         String
+  color         String
+  clusters      Cluster[]
+  scopes        Scope[]
+}
+
+model Apps {
+  id               Int            @id @default(autoincrement())
+  name             String
+  version          String?
+  documentationUrl String?
+  downloadUrl      String?
+  iconUrl          String?
+  identifier       String?
+  identifierId     Int            @unique() @default(autoincrement())
+  suite            String?
+  suiteVersion     String?
+  defaultMemory    Float?
+  defaultCores     Float?
+  properties       Json?
+  isOpen           Boolean?
+  InstanceApps     InstanceApps[]
+}
+
+model Cluster {
+  id       Int    @id @default(autoincrement())
+  vision   Vision @relation(fields: [visionId], references: [id])
+  visionId Int
+  mode     Mode   @relation(fields: [modeId], references: [id])
+  modeId   Int
+  name     String
+  color    String
+}
+
+model InstanceApps {
+  id            Int      @id @default(autoincrement())
+  instance      Instance @relation(fields: [instanceId], references: [id])
+  instanceId    Int
+  app           Apps     @relation(fields: [appId], references: [identifierId])
+  appId         Int
+  memory        Float
+  cores         Float
+  properties    Json?
+  isUnfulfilled Boolean
+  isManager     Boolean
+  isWorker      Boolean
+}
+
+enum Role {
+  ADMIN
+  SYSTEM_USER
+}
+
+enum PROVIDER_ACRONYM {
+  AWS
+  GCP
+  AZURE
+  E2E
+  OP
+}
+
+enum SECRET_TYPE {
+  SECRET
+  SERVICE_ACCOUNT
+}

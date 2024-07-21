@@ -1,0 +1,179 @@
+{
+    "stackOptions": [{
+        "name": "Grafana",
+        "version": "8.0.5",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/common_grafana.png",
+        "downloadUrl": "",
+        "identifier": "grafana",
+        "identifierId": 3
+    }, {
+        "name": "Prometheus",
+        "version": "2.28.1",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/common_prometheus.png",
+        "downloadUrl": "",
+        "identifier": "prometheus",
+        "identifierId": 4
+    }, {
+        "name": "MySql",
+        "version": "5.6",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/common_mysql.png",
+        "downloadUrl": "",
+        "identifier": "mysql_56",
+        "properties": [
+            { "name": "port", "value": "3306", "type": "public" },
+            { "name": "password", "value": "", "type": "private" }
+        ],
+        "identifierId": 5
+    }, {
+        "name": "MySql",
+        "version": "8.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/common_mysql.png",
+        "downloadUrl": "",
+        "identifier": "mysql_8",
+        "properties": [
+            { "name": "port", "value": "3306", "type": "public" },
+            { "name": "password", "value": "", "type": "private" }
+        ],
+        "identifierId": 6
+    }, {
+        "name": "Zookeeper",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_zk.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_zk",
+        "properties": [
+            { "name": "port", "value": "2181", "type": "public" },
+            { "name": "dataDir", "value": "", "type": "public" },
+            { "name": "id", "value": "1", "type": "public" }
+        ],
+        "identifierId": 7
+    }, {
+        "name": "Broker",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_broker.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_broker",
+        "properties": [
+            { "name": "port", "value": "9092", "type": "public" },
+            { "name": "dataDir", "value": "", "type": "public" },
+            { "name": "id", "value": "100", "type": "public" }
+        ],
+        "identifierId": 8
+    }, {
+        "name": "Connect",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_connect.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_connect",
+        "identifierId": 9
+    }, {
+        "name": "Schema Registry",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_sr.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_sr",
+        "identifierId": 10
+    }, {
+        "name": "Rest Proxy",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_rest.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_rest",
+        "identifierId": 11
+    }, {
+        "name": "ksqlDB",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_ksql.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_ksql",
+        "identifierId": 12
+    }, {
+        "name": "MDS",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_mds.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_mds",
+        "identifierId": 13
+    }, {
+        "name": "Replicator",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_replicator.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_replicator",
+        "identifierId": 14
+    }, {
+        "name": "Control Center",
+        "suite": "Confluent",
+        "suiteVersion": "6.2.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_cc.png",
+        "downloadUrl": "",
+        "identifier": "kafka_confluent_cc",
+        "identifierId": 15
+    }, {
+        "name": "Zookeeper",
+        "suite": "Apache",
+        "suiteVersion": "2.8.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_zk.png",
+        "downloadUrl": "",
+        "identifier": "kafka_apache_zk",
+        "properties": [
+            { "name": "port", "value": "2181", "type": "public" },
+            { "name": "dataDir", "value": "", "type": "public" },
+            { "name": "id", "value": "1", "type": "public" }
+        ],
+        "identifierId": 16
+    }, {
+        "name": "Broker",
+        "suite": "Apache",
+        "suiteVersion": "2.8.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_broker.png",
+        "downloadUrl": "",
+        "identifier": "kafka_apache_broker",
+        "properties": [
+            { "name": "port", "value": "9092", "type": "public" },
+            { "name": "dataDir", "value": "", "type": "public" },
+            { "name": "id", "value": "100", "type": "public" }
+        ],
+        "identifierId": 17
+    }, {
+        "name": "Connect",
+        "suite": "Apache",
+        "suiteVersion": "2.8.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_connect.png",
+        "downloadUrl": "",
+        "identifier": "kafka_apache_connect",
+        "identifierId": 18
+    }, {
+        "name": "Zoo Navigator",
+        "version": "1.1.0",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_zkn.png",
+        "downloadUrl": "",
+        "identifier": "kafka_open_zkn",
+        "isOpen": true,
+        "identifierId": 19
+    }, {
+        "name": "Kafka Manager",
+        "version": "3.0.5",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/kafka_manager.png",
+        "downloadUrl": "",
+        "identifier": "kafka_open_manager",
+        "isOpen": true,
+        "identifierId": 20
+    }, {
+        "name": "Prometheus",
+        "version": "2.28.1",
+        "iconUrl": "https://www.minus1by12.com/Matsya/Images/common_prometheus.png",
+        "downloadUrl": "",
+        "identifier": "kafka_prometheus",
+        "isOpen": true,
+        "identifierId": 21
+    }]
+}
