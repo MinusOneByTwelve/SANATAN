@@ -1,0 +1,13 @@
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+  
+.tooltip .tooltipText {
+    display:none;
+}
+  
+  .tooltip:hover .tooltipText {
+    visibility: visible;
+    display: block;
+  }
