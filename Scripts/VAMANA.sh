@@ -215,6 +215,7 @@ create_instance_details() {
 }
 
 if [[ "$ISAUTOMATED" == "Y" ]]; then
+	terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
 	# CREATE FILE FOR STACKMAKER
 	header=$(head -n 1 $INSTANCE_DETAILS_FILE)
 	csv_data=$(tail -n +2 $INSTANCE_DETAILS_FILE)
@@ -321,7 +322,9 @@ parse_instance_details() {
         fi
     done 
     
-    sudo rm -f $INSTANCE_DETAILS_FILE   
+    if [[ "$ISAUTOMATED" == "N" ]]; then
+    	sudo rm -f $INSTANCE_DETAILS_FILE 
+    fi  
 }
 
 # Function to run commands on remote hosts
@@ -564,7 +567,7 @@ install_docker() {
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKERTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/SetUpDocker.sh && sudo mv /home/$THE1REQUSER/$DOCKERTEMPLATE /home/$THE1REQUSER/SetUpDocker.sh && sudo chmod 777 /home/$THE1REQUSER/SetUpDocker.sh && nohup /home/$THE1REQUSER/SetUpDocker.sh > /home/$THE1REQUSER/DSULog$STACKNAME.out 2>&1 &"
+            ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/SetUpDocker.sh && sudo mv /home/$THE1REQUSER/$DOCKERTEMPLATE /home/$THE1REQUSER/SetUpDocker.sh && sudo chmod 777 /home/$THE1REQUSER/SetUpDocker.sh && nohup /home/$THE1REQUSER/SetUpDocker.sh > /home/$THE1REQUSER/DSULog$STACKNAME.out 2>&1 &" < /dev/null > /dev/null 2>&1 &
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -576,11 +579,11 @@ install_docker() {
         fi
     done 
     
-    DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-    sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
-    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER2TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
-    ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate && sudo mv /home/$THE1REQUSER/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME"
-    sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE           
+    #DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    #sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
+    #scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER2TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
+    #ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate && sudo mv /home/$THE1REQUSER/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME"
+    #sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE           
 }
 
 # Function to create an encrypted overlay network
@@ -594,6 +597,8 @@ create_encrypted_overlay_network() {
     "
 }
 
+THEFINALVOLUMENAME="$STACKNAME"
+   
 # Function to create a GlusterFS volume cluster with retry logic
 create_glusterfs_volume_cluster() {
     peer_probe_cmds=""
@@ -606,39 +611,43 @@ create_glusterfs_volume_cluster() {
     total_nodes=${#ALL_IPS[@]}
     max_nodes=$(( (total_nodes / NATIVE) * NATIVE ))
     peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
-
-    # Prepare peer probing commands
-    for ip in "${peer_ips[@]}"; do
-        HOST=${HOST_NAMES[$ip]}
-        if [ "$NATIVE" -lt 2 ]; then
-            HOST=${INTERNAL_IPS[$ip]}
-        fi
-        peer_probe_cmds+="sudo gluster peer probe $HOST; "
-    done
-
-    # Prepare volume creation command
-    volume_create_cmd="sudo gluster volume create $STACKNAME replica 2 "
-    for ip in "${peer_ips[@]}"; do
-        HOST=${HOST_NAMES[$ip]}
-        if [ "$NATIVE" -lt 2 ]; then
-            HOST=${INTERNAL_IPS[$ip]}
-        fi
-        volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$STACKNAME "
-    done
-    volume_create_cmd+="force"
-
+        
     # Retry logic for probing and volume creation
     while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
         echo "Attempting to probe peers and create volume, Attempt: $((retry_count + 1))"
+
+        TMPRNDM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+        THEFINALVOLUMENAME="$STACKNAME""$TMPRNDM"
+        
+        # Prepare peer probing commands
+        for ip in "${peer_ips[@]}"; do
+            HOST=${HOST_NAMES[$ip]}
+            if [ "$NATIVE" -lt 2 ]; then
+                HOST=${INTERNAL_IPS[$ip]}
+            fi
+            peer_probe_cmds+="sudo gluster peer probe $HOST; "
+        done
+            
+        # Prepare volume creation command
+        volume_create_cmd="sudo gluster volume create $THEFINALVOLUMENAME replica 2 "
+        for ip in "${peer_ips[@]}"; do
+		HOST=${HOST_NAMES[$ip]}
+		if [ "$NATIVE" -lt 2 ]; then
+		    HOST=${INTERNAL_IPS[$ip]}
+		fi
+		volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$THEFINALVOLUMENAME "
+        done
+        volume_create_cmd+="force"        
+        
         # Run the peer probing and volume creation commands
         run_remote ${MANAGER_IPS[0]} "
             $peer_probe_cmds
             $volume_create_cmd
-            sudo gluster volume start $STACKNAME
+            sudo gluster volume start $THEFINALVOLUMENAME
         "
 
         # Check if the volume is started successfully
-        if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info $STACKNAME"; then
+        if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info $THEFINALVOLUMENAME"; then
             success=true
             echo "Volume created and started successfully."
             break
@@ -663,8 +672,9 @@ create_glusterfs_volume_cluster() {
 	    done
 	    glusterfs_addresses=${glusterfs_addresses%,}  # Remove trailing comma
 
-	    for IP in "${ALL_IPS[@]}"; do
-		run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$STACKNAME $DFS_CLUSTER_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$STACKNAME-mount.log"
+	    ALL2_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	    for IP in "${ALL2_IPS[@]}"; do
+		run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$THEFINALVOLUMENAME $DFS_CLUSTER_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log"
 	    done    
     fi
 }
@@ -880,6 +890,15 @@ while true; do
 done
 COUNTER=0
 
+ALL5_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+for ip in "${ALL5_IPS[@]}"; do
+    DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
+    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER2TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME"
+    sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE
+done
+
 fetch_internal_ip() {
     local IP=$1
     local PORT=${PORTS[$IP]}
@@ -994,6 +1013,11 @@ create_swarm_labels
 
 create_cluster_cdn_proxy
 
+ALL3_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+for ip in "${ALL3_IPS[@]}"; do
+	ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo gluster volume heal $THEFINALVOLUMENAME full"
+done
+
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 sudo cp $BASE/Resources/DockerPortainer.yml $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"PortainerSPort"~"$PortainerSPort"~g $BASE/tmp/$DOCKERPTEMPLATE
@@ -1050,6 +1074,9 @@ echo "Portainer Proxy : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort4"
 echo "Static Local : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort1"
 echo "Static Global : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort2"
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	/opt/firefox/firefox "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort2" &
+fi
 
 PORTAINER_URL="https://${MANAGER_IPS[0]}:$PortainerSPort/api"
 USERNAME="admin"
