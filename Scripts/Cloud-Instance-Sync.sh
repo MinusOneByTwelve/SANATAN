@@ -320,6 +320,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	THE1STACK1FILE="$5"
 	THE1VISION1KEY="$6"
 	SOFTSTACK="$7"
+	VAMANA="$8"
 		
 	source $BASE/Resources/StackVersioningAndMisc
 
@@ -386,6 +387,25 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 							
 		echo "All files processed. Exiting."
 		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync B Function"
+		
+		if [ "$VAMANA" == "NA" ]; then
+			echo "VAMANA : $VAMANA"
+		else
+			echo "Processing VAMANA..."
+			notify-send -t 5000 "Progress" "Processing VAMANA..."
+			IFS='├' read -r -a THE_ARGS <<< $VAMANA
+			INSTANCE_DETAILS_FILE="${THE_ARGS[0]}"
+			VISION_KEY="${THE_ARGS[1]}"
+			THEVISIONID="${THE_ARGS[2]}"			
+			ADMIN_PASSWORD="${THE_ARGS[3]}"				
+			/opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
+  "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
+  "VisionKey": "'"$VISION_KEY"'",
+  "VisionId": "'"$THEVISIONID"'",
+  "FromMatsya": "Y",     
+  "AdminKey": "'"$ADMIN_PASSWORD"'"      
+}'							
+		fi
 				
 		break
 	    fi

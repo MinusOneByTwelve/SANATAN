@@ -82,14 +82,18 @@ echo -e "\x1b[3m\x1b[4mSTACK MAKER DOCKER BASED\x1b[m"
 echo ''
 
 THECHOICE="$1"
+THEARGS="$2"
 
 if [ "$THECHOICE" == "CORE" ] ; then
-# Path to the dynamic instance details file
-INSTANCE_DETAILS_FILE="/opt/Matsya/Repo/Stack/UdemyCourse/WIP/47Y3ax5kc0Zbhx0/Stack_gcp"
-ADMIN_PASSWORD="qtofCcq519714UdVnqd0j"
-THEVISIONID="2024"
-CLUSTERID="2077"
-STACKPRETTYNAME="DataAnalytics63"
+IFS='├' read -r -a THE_ARGS <<< $THEARGS
+INSTANCE_DETAILS_FILE="${THE_ARGS[0]}"
+VISION_KEY="${THE_ARGS[1]}"
+ADMIN_PASSWORD="${THE_ARGS[2]}"
+THEVISIONID="${THE_ARGS[3]}"
+CLUSTERID="${THE_ARGS[4]}"
+STACKPRETTYNAME="${THE_ARGS[5]}"
+ISAUTOMATED="${THE_ARGS[6]}"
+THENOHUPFILE="${THE_ARGS[7]}"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -138,11 +142,141 @@ declare -A CLUSTER_TYPE
 declare -A INTERNAL_IPS
 NATIVE="1"
 
+# Function to prepare swarm dynamically
+create_instance_details() {
+    input_file="$1"
+    output_file="$2"
+    thereqmode="$3"
+    
+    # Read the file into an array
+    mapfile -t lines < "$input_file"
+
+    # Create an array to track which lines have been updated
+    declare -A updated_lines
+
+    # Randomly pick 3 lines to be "MANAGER"
+    manager_count=0
+    while [ $manager_count -lt 3 ]; do
+      random_index=$((RANDOM % ${#lines[@]}))
+      if [[ "${updated_lines[$random_index]}" != "1" ]]; then
+        updated_lines[$random_index]="1"
+        manager_count=$((manager_count + 1))
+      fi
+    done
+
+    # Randomly pick 1 line to be "ROUTER"
+    router_count=0
+    while [ $router_count -lt 1 ]; do
+      random_index=$((RANDOM % ${#lines[@]}))
+      if [[ "${updated_lines[$random_index]}" != "1" ]]; then
+        updated_lines[$random_index]="2"
+        router_count=$((router_count + 1))
+      fi
+    done
+
+    # Process each line
+    for i in "${!lines[@]}"; do
+      line="${lines[$i]}"
+      IFS=',' read -ra columns <<< "$line"
+      
+      uppercase_text=$(echo "${columns[8]}" | tr '[:lower:]' '[:upper:]')
+      columns[8]="$uppercase_text"
+      columns4=$(NARASIMHA "decrypt" "${columns[4]}" "$VISION_KEY")
+      columns5=$(NARASIMHA "decrypt" "${columns[5]}" "$VISION_KEY")
+      columns7=$(NARASIMHA "decrypt" "${columns[7]}" "$VISION_KEY")
+      columns[4]="$columns4"
+      columns[5]="$columns5"
+      columns[7]="$columns7"
+      
+      if [[ "$thereqmode" == "Y" ]]; then            					      
+	      if [[ "${updated_lines[$i]}" == "1" ]]; then
+		columns[9]="MANAGER"
+		columns[10]="1280"
+		columns[11]="1"
+	      elif [[ "${updated_lines[$i]}" == "2" ]]; then
+		columns[9]="ROUTER"
+		columns[10]="1024"
+		columns[11]="1"
+	      else
+		columns[9]="WORKER"
+		columns[10]="512"
+		columns[11]="0.5"
+	      fi
+      fi
+      
+      # Reconstruct the line
+      lines[$i]=$(IFS=','; echo "${columns[*]}")
+    done
+
+    # Write the updated lines to the output file
+    printf "%s\n" "${lines[@]}" > "$output_file"
+    #cat $output_file
+    echo "Updated file saved as $output_file"
+}
+
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	# CREATE FILE FOR STACKMAKER
+	header=$(head -n 1 $INSTANCE_DETAILS_FILE)
+	csv_data=$(tail -n +2 $INSTANCE_DETAILS_FILE)
+	JSNDT1=$(echo "$csv_data" | awk -v header="$header" 'BEGIN { FS=","; OFS=","; split(header, keys, ","); print "[" } { print "{"; for (i=1; i<=NF; i++) { printf "\"%s\":\"%s\"", keys[i], $i; if (i < NF) printf ","; } print "},"; } END { print "{}]"; }' | sed '$s/,$//')
+	JSNDT2=$(echo "$JSNDT1" | jq 'map(select(.IP != null and .IP != ""))')
+	JSNDT3=$(echo "$JSNDT2" | jq 'map(select(.IP != "TBD"))')
+	JSNDT4=$(echo "$JSNDT3" | jq 'map(select(.Encrypted != "N"))')
+	JSNDT5=$(echo "$JSNDT4" | jq 'map(select(.Deleted != "Y"))')	
+	JSNDT6=$(echo "$JSNDT5" | jq 'map(select(.InstanceType != "NA"))')	
+		
+	THESFTSTK_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THESFTSTKFILE="$BASE/tmp/Stack_$THESFTSTK_FILE.csv"
+	header=$(echo "$JSNDT6" | jq -r '.[0] | keys_unsorted | join(",")')
+	echo "$header" > "$THESFTSTKFILE"
+	echo "$JSNDT6" | jq -c '.[]' | while IFS= read -r obj; do
+	    record=$(echo "$obj" | jq -r 'map(.) | @csv')
+	    echo "$record" >> "$THESFTSTKFILE"
+	done	
+	sudo chmod 777 $THESFTSTKFILE
+	sed -i 's/""//g' "$THESFTSTKFILE"
+	sed -i 's/"//g' "$THESFTSTKFILE"	
+	# CREATE FILE FOR STACKMAKER
+	
+	# CREATE FILE FOR INSTANCE INPUT FOR STACKMAKER
+	THE1SFTSTK_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THE1SFTSTKFILE="$BASE/tmp/Stack_$THE1SFTSTK_FILE.csv"
+	columns="1,2,7,17,24,26,18,23,3"
+	awk -F',' -v columns="$columns" '
+BEGIN {
+    split(columns, col, ",")
+    col_count = length(col)
+}
+NR > 1 {
+    output = ""
+    for (i = 1; i <= col_count; i++) {
+        output = output (i == 1 ? "" : ",") $col[i]
+    }
+    output = output ",TBD,TBD,TBD"
+    print output
+}
+' "$THESFTSTKFILE" > "$THE1SFTSTKFILE"
+	THE1SFTSTK2_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THE1SFTSTK1FILE="$BASE/tmp/Stack_$THE1SFTSTK2_FILE.csv"
+	create_instance_details "$THE1SFTSTKFILE" "$THE1SFTSTK1FILE" "Y"	
+	# CREATE FILE FOR INSTANCE INPUT FOR STACKMAKER
+	
+	sudo rm -f $THESFTSTKFILE
+	sudo rm -f $THE1SFTSTKFILE
+	
+	INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"
+else
+	THE1SFTSTK2_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	THE1SFTSTK1FILE="$BASE/tmp/Stack_$THE1SFTSTK2_FILE.csv"
+	create_instance_details "$INSTANCE_DETAILS_FILE" "$THE1SFTSTK1FILE" "N"
+	INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"					
+fi
+
 # Function to parse the instance details file
 parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
-    while IFS='├' read -r SCPID INSTID IP HOSTNAME PORT PEM ROLE OS U1SER M1EM C1ORE C1TYPE; do
+    while IFS=',' read -r SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
         OS_TYPES["$IP"]="$OS"
@@ -185,7 +319,9 @@ parse_instance_details() {
             NATIVE="2"
             break
         fi
-    done    
+    done 
+    
+    sudo rm -f $INSTANCE_DETAILS_FILE   
 }
 
 # Function to run commands on remote hosts
@@ -1002,6 +1138,8 @@ if [ $RETRIES -eq $MAX_RETRIES ]; then
     exit 1
 fi
 rename_environment
+
+sudo rm -f $THENOHUPFILE
 fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
