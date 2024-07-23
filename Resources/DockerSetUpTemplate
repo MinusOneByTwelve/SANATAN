@@ -38,6 +38,47 @@ sudo hostnamectl set-hostname "$THEHOST" --pretty
 
 sudo rm -f /opt/DSUDONE$STACKNAME
 
+# Function to check and remove lock files
+remove_locks() {
+    echo "Checking and removing lock files..."
+    sudo rm -f /var/lib/dpkg/lock-frontend
+    sudo rm -f /var/lib/dpkg/lock
+}
+
+# Function to check and terminate running apt or dpkg processes
+terminate_processes() {
+    echo "Checking for running apt or dpkg processes..."
+    pids=$(ps aux | grep -E 'apt|dpkg' | grep -v grep | awk '{print $2}')
+    if [ -z "$pids" ]; then
+        echo "No running apt or dpkg processes found."
+    else
+        echo "Terminating running apt or dpkg processes..."
+        for pid in $pids; do
+            sudo kill -9 $pid
+            echo "Terminated process with PID: $pid"
+        done
+    fi
+}
+
+# Function to reconfigure dpkg
+reconfigure_dpkg() {
+    echo "Reconfiguring dpkg..."
+    sudo dpkg --configure -a
+}
+
+# Function to update package list
+update_package_list() {
+    echo "Updating package list..."
+    sudo apt-get update -y
+}
+
+remove_locks
+terminate_processes
+remove_locks
+reconfigure_dpkg
+update_package_list
+echo "System is ready for package installation..."
+
 setup_http_server() {
     sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
     sudo chown -R root:root $DFS_DATA2_DIR/Static$STACKNAME
@@ -289,6 +330,8 @@ WantedBy=multi-user.target
 	pip3 install s3ql
 }
 
+THEOSCHOICE="NA"
+
 if [ ! -f /opt/CLD ]; then
 	echo 'ON PREMISE'
 else
@@ -390,7 +433,7 @@ else
 	fi
 	
 	if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
-		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		INTERNALIP=$(ip addr show eth1 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
 	fi
 	
@@ -400,7 +443,7 @@ else
 	fi				
 fi
 
-if [[ "$OS" == "UBU" ]]; then
+if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
     sudo rm -f /etc/apt/sources.list.d/docker.list
     sudo rm -f /etc/apt/keyrings/docker.gpg
     sudo apt-get remove -y docker docker-engine docker.io containerd runc
@@ -410,6 +453,7 @@ if [[ "$OS" == "UBU" ]]; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
+    sudo rm -rf /etc/glusterfs/glusterd.vol
     sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
@@ -462,8 +506,12 @@ if [ -f /etc/os-release ]; then
     esac
 
     # Install and configure firewalld
-    install_firewalld
-
+    if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+	echo 'No Firewall'
+    else
+    	install_firewalld
+    fi
+    
     # Install Python3 and pip
     install_python
 
@@ -616,44 +664,48 @@ KillMode=process
 [Install]
 WantedBy=multi-user.target' | sudo tee /etc/systemd/system/docker.service > /dev/null
 
-sudo firewall-cmd --zone=public --add-port=$PortainerAPort/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=$PortainerSPort/tcp --permanent
+if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+	echo 'No Firewall'
+else
+	sudo firewall-cmd --zone=public --add-port=$PortainerAPort/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$PortainerSPort/tcp --permanent
 
-#sudo firewall-cmd --zone=public --add-port=$VarahaPort1/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=$VarahaPort2/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=$VarahaPort3/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=$VarahaPort4/tcp --permanent
+	#sudo firewall-cmd --zone=public --add-port=$VarahaPort1/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$VarahaPort2/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$VarahaPort3/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$VarahaPort4/tcp --permanent
 
-sudo firewall-cmd --zone=public --add-port=$BDDPort1/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=$BDDPort2/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$BDDPort1/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=$BDDPort2/tcp --permanent
 
-sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
-sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
-sudo firewall-cmd --zone=public --add-port=53/udp --permanent
+	sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=7946/udp --permanent
+	sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
+	sudo firewall-cmd --zone=public --add-port=53/udp --permanent
 
-sudo firewall-cmd --zone=public --add-port=111/udp --permanent
-sudo firewall-cmd --zone=public --add-port=111/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=24007/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=24008/tcp --permanent
-#sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=35000-65000/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=35000-65000/udp --permanent
+	sudo firewall-cmd --zone=public --add-port=111/udp --permanent
+	sudo firewall-cmd --zone=public --add-port=111/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=24007/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=24008/tcp --permanent
+	#sudo firewall-cmd --zone=public --add-port=49152-60999/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=35000-65000/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=35000-65000/udp --permanent
 
-sudo firewall-cmd --zone=public --add-protocol=50 --permanent
+	sudo firewall-cmd --zone=public --add-protocol=50 --permanent
 
-sudo firewall-cmd --zone=public --add-port=16746-19478/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=2049/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=53/tcp --permanent
-                
-sudo firewall-cmd --reload
+	sudo firewall-cmd --zone=public --add-port=16746-19478/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=2049/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=53/tcp --permanent
+		        
+	sudo firewall-cmd --reload
+fi
 
 if [ ! -f /opt/CLD ]; then
     echo 'Firewall On'
 else
     if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
-        echo 'Firewall On'
+        echo 'No Firewall'
     else
         sudo systemctl stop firewalld
         sudo systemctl disable firewalld
