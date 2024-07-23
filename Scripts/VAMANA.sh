@@ -151,66 +151,87 @@ create_instance_details() {
     # Read the file into an array
     mapfile -t lines < "$input_file"
 
+    # Check if the number of lines is less than 3
+    if [ ${#lines[@]} -lt 3 ]; then
+        echo "Swarm setup not possible. Minimum 3 rows required."
+        exit 1
+    fi
+
     # Create an array to track which lines have been updated
     declare -A updated_lines
 
-    # Randomly pick 3 lines to be "MANAGER"
     manager_count=0
-    while [ $manager_count -lt 3 ]; do
-      random_index=$((RANDOM % ${#lines[@]}))
-      if [[ "${updated_lines[$random_index]}" != "1" ]]; then
-        updated_lines[$random_index]="1"
-        manager_count=$((manager_count + 1))
-      fi
+    worker_count=0
+    router_count=0
+
+    # Assign one manager, one worker, and one router first
+    for i in "${!lines[@]}"; do
+        if [ $manager_count -eq 0 ]; then
+            updated_lines[$i]="MANAGER"
+            manager_count=$((manager_count + 1))
+        elif [ $worker_count -eq 0 ]; then
+            updated_lines[$i]="WORKER"
+            worker_count=$((worker_count + 1))
+        elif [ $router_count -eq 0 ]; then
+            updated_lines[$i]="ROUTER"
+            router_count=$((router_count + 1))
+        fi
+
+        # Exit the loop once we have at least one of each
+        if [ $manager_count -eq 1 ] && [ $worker_count -eq 1 ] && [ $router_count -eq 1 ]; then
+            break
+        fi
     done
 
-    # Randomly pick 1 line to be "ROUTER"
-    router_count=0
-    while [ $router_count -lt 1 ]; do
-      random_index=$((RANDOM % ${#lines[@]}))
-      if [[ "${updated_lines[$random_index]}" != "1" ]]; then
-        updated_lines[$random_index]="2"
-        router_count=$((router_count + 1))
-      fi
+    # Assign remaining managers and workers
+    for i in "${!lines[@]}"; do
+        if [ -z "${updated_lines[$i]}" ]; then
+            if [ $manager_count -lt 3 ]; then
+                updated_lines[$i]="MANAGER"
+                manager_count=$((manager_count + 1))
+            else
+                updated_lines[$i]="WORKER"
+                worker_count=$((worker_count + 1))
+            fi
+        fi
     done
 
     # Process each line
     for i in "${!lines[@]}"; do
-      line="${lines[$i]}"
-      IFS=',' read -ra columns <<< "$line"
-      
-      uppercase_text=$(echo "${columns[8]}" | tr '[:lower:]' '[:upper:]')
-      columns[8]="$uppercase_text"
-      columns4=$(NARASIMHA "decrypt" "${columns[4]}" "$VISION_KEY")
-      columns5=$(NARASIMHA "decrypt" "${columns[5]}" "$VISION_KEY")
-      columns7=$(NARASIMHA "decrypt" "${columns[7]}" "$VISION_KEY")
-      columns[4]="$columns4"
-      columns[5]="$columns5"
-      columns[7]="$columns7"
-      
-      if [[ "$thereqmode" == "Y" ]]; then            					      
-	      if [[ "${updated_lines[$i]}" == "1" ]]; then
-		columns[9]="MANAGER"
-		columns[10]="1280"
-		columns[11]="1"
-	      elif [[ "${updated_lines[$i]}" == "2" ]]; then
-		columns[9]="ROUTER"
-		columns[10]="1024"
-		columns[11]="1"
-	      else
-		columns[9]="WORKER"
-		columns[10]="512"
-		columns[11]="0.5"
-	      fi
-      fi
-      
-      # Reconstruct the line
-      lines[$i]=$(IFS=','; echo "${columns[*]}")
+        line="${lines[$i]}"
+        IFS=',' read -ra columns <<< "$line"
+        
+        uppercase_text=$(echo "${columns[8]}" | tr '[:lower:]' '[:upper:]')
+        columns[8]="$uppercase_text"
+        columns4=$(NARASIMHA "decrypt" "${columns[4]}" "$VISION_KEY")
+        columns5=$(NARASIMHA "decrypt" "${columns[5]}" "$VISION_KEY")
+        columns7=$(NARASIMHA "decrypt" "${columns[7]}" "$VISION_KEY")
+        columns[4]="$columns4"
+        columns[5]="$columns5"
+        columns[7]="$columns7"
+        
+        if [[ "$thereqmode" == "Y" ]]; then
+            if [[ "${updated_lines[$i]}" == "MANAGER" ]]; then
+                columns[9]="MANAGER"
+                columns[10]="1280"
+                columns[11]="1"
+            elif [[ "${updated_lines[$i]}" == "ROUTER" ]]; then
+                columns[9]="ROUTER"
+                columns[10]="1024"
+                columns[11]="1"
+            else
+                columns[9]="WORKER"
+                columns[10]="512"
+                columns[11]="0.5"
+            fi
+        fi
+        
+        # Reconstruct the line
+        lines[$i]=$(IFS=','; echo "${columns[*]}")
     done
 
     # Write the updated lines to the output file
     printf "%s\n" "${lines[@]}" > "$output_file"
-    #cat $output_file
     echo "Updated file saved as $output_file"
 }
 
@@ -339,9 +360,15 @@ run_remote() {
 # Function to generate SSL certificates based on OS type
 generate_ssl_certificates() {
     local IP=$1
+    local ip=$1
     local OS=${OS_TYPES[$IP]}
     
     if [[ "$OS" == "UBU" ]]; then
+        EXECUTE21SCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/UbuntuPreInstallSanitize $BASE/tmp/$EXECUTE21SCRIPT    
+        scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTE21SCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+        ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTE21SCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTE21SCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTE21SCRIPT" 
+        sudo rm -f $BASE/tmp/$EXECUTE21SCRIPT           
         run_remote $IP "sudo NEEDRESTART_MODE=a apt-get install -y openssl"
     elif [[ "$OS" == "AZL" ]]; then
         run_remote $IP "sudo yum install -y openssl"
@@ -577,13 +604,7 @@ install_docker() {
             fi
             sleep 5
         fi
-    done 
-    
-    #DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-    #sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
-    #scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER2TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
-    #ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate && sudo mv /home/$THE1REQUSER/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME"
-    #sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE           
+    done                
 }
 
 # Function to create an encrypted overlay network
@@ -609,7 +630,7 @@ create_glusterfs_volume_cluster() {
 
     ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
     total_nodes=${#ALL_IPS[@]}
-    max_nodes=$(( (total_nodes / NATIVE) * NATIVE ))
+    max_nodes=$(( (total_nodes / 2) * 2 ))
     peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
         
     # Retry logic for probing and volume creation
@@ -618,7 +639,9 @@ create_glusterfs_volume_cluster() {
 
         TMPRNDM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
         THEFINALVOLUMENAME="$STACKNAME""$TMPRNDM"
-        
+        peer_probe_cmds=""
+        volume_create_cmd="" 
+               
         # Prepare peer probing commands
         for ip in "${peer_ips[@]}"; do
             HOST=${HOST_NAMES[$ip]}

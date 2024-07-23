@@ -19,7 +19,21 @@ if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo chmod -R 777 $BASE/Output/Pem
 fi
 
+DEBUG="NO"
 THEMODEOFEXECUTION="$1"
+
+if [ "$DEBUG" == "YES" ] ; then
+	THEDEBUGFILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	echo "" | sudo tee $BASE/tmp/VVBIS-THEMODEOFEXECUTION_$THEMODEOFEXECUTION-$THEDEBUGFILE > /dev/null	
+fi
+
+LogNotification() {
+	local Header="$1"
+	local Message="$2"
+	if [ "$DEBUG" == "YES" ] ; then
+		echo "$Message" | sudo tee -a $BASE/tmp/VVBIS-THEMODEOFEXECUTION_$THEMODEOFEXECUTION-$THEDEBUGFILE > /dev/null
+	fi	
+}
 
 if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	THEORIGINALFILE=$2
@@ -46,16 +60,16 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 	while true; do
 		if [ "$auth_type" == "UP" ]; then
 		    if sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			echo "File $THENEWFILE exists on THESERVER $THESERVER"
-			#notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
+			echo "File $THENEWFILE exists on THESERVER UP $THESERVER"
+			LogNotification "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER UP $THESERVER"
 			break
 		    else
 			echo "File $THENEWFILE does not exist on THESERVER $THESERVER"
 		    fi
 		elif [ "$auth_type" == "PEM" ]; then
 		    if ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			echo "File $THENEWFILE exists on THESERVER $THESERVER"
-			#notify-send -t 5000 "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER $THESERVER"
+			echo "File $THENEWFILE exists on THESERVER PEM $THESERVER"
+			LogNotification "$CLUSTERNAME Progress" "File $THENEWFILE exists on THESERVER PEM $THESERVER"
 			break
 		    else
 			echo "File $THENEWFILE does not exist on THESERVER $THESERVER"
@@ -88,24 +102,24 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 		while true; do
 			if [ "$auth_type" == "UP" ]; then
 			    if sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			    	#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
+			    	LogNotification "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS UP ... $THESERVER"
 			    	#sudo rm -f $BASE/tmp/$THENEWLOCALFILE
 				sshpass -p "$password_pem" scp -o StrictHostKeyChecking=no -P $port "$user@$THESERVER:$THENEWFILE" "$BASE/tmp/$THENEWLOCALFILE"
 				sshpass -p "$password_pem" ssh -p "$port" -o StrictHostKeyChecking=no "$user@$THESERVER" "sudo rm -rf $THENEWFILE"	
 			    else
 				echo "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
-				#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
+				LogNotification "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
 				break
 			    fi
 			elif [ "$auth_type" == "PEM" ]; then
 			    if ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "[ -f '$THENEWFILE' ]"; then
-			    	#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS ... $THESERVER"
+			    	LogNotification "$CLUSTERNAME Progress" "RESULT $THENEWFILE EXISTS PEM ... $THESERVER"
 			    	#sudo rm -f $BASE/tmp/$THENEWLOCALFILE
 				scp -i "$password_pem" -o StrictHostKeyChecking=no -P $port "$user@$THESERVER:$THENEWFILE" "$BASE/tmp/$THENEWLOCALFILE"
 				ssh -p "$port" -o StrictHostKeyChecking=no -i "$password_pem" "$user@$THESERVER" "sudo rm -rf $THENEWFILE"
 			    else
 				echo "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
-				#notify-send -t 5000 "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
+				LogNotification "$CLUSTERNAME Progress" "RESULT $THENEWFILE does not exist on THESERVER $THESERVER"
 				break
 			    fi
 			fi
@@ -180,7 +194,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		    # Check if the file has already been processed
 		    if [[ ! " ${processed_files[@]} " =~ " $file " ]]; then
 		        echo "Processing file: $WIP_FOLDER/$file"
-		        #notify-send -t 5000 "$CLUSTERNAME Progress" "Processing file: $WIP_FOLDER/$file"
+		        LogNotification "$CLUSTERNAME Progress" "Processing file: $WIP_FOLDER/$file"
 		        
 		        while IFS= read -r line; do
 				IFS=',' read -ra fields <<< "$line"
@@ -188,7 +202,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 				    echo "Data is invalid"
 				else
 				    echo "Data is OK"
-				    #notify-send -t 5000 "$CLUSTERNAME Progress" "Data is OK : $line"
+				    LogNotification "$CLUSTERNAME Progress" "Data is OK : $line"
 				    echo "$line" >> "$thereal2file"
 				    #echo "$WIP_FOLDER/$file : '$line'" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 				    #echo "" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
@@ -198,11 +212,11 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		        processed_files+=("$file")
 		    else
 		        echo "file already done $WIP_FOLDER/$file"
-		        #notify-send -t 5000 "$CLUSTERNAME Progress" "file already done $WIP_FOLDER/$file"
+		        LogNotification "$CLUSTERNAME Progress" "file already done $WIP_FOLDER/$file"
 		    fi
 		else
 		    echo "file not found $WIP_FOLDER/$file"
-		    #notify-send -t 5000 "$CLUSTERNAME Progress" "file not found $WIP_FOLDER/$file"
+		    LogNotification "$CLUSTERNAME Progress" "file not found $WIP_FOLDER/$file"
 		fi
 	    done
 
@@ -211,7 +225,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		# Remove the list file and exit
 		rm -f "$WIP_LIST"
 		echo "All files processed. Exiting."
-		notify-send -t 5000 "$CLUSTERNAME Progress" "All files processed. Exiting.Vagrant-VirtualBox-Instance-Sync B Function"
+		LogNotification "$CLUSTERNAME Progress" "All files processed. Exiting.Vagrant-VirtualBox-Instance-Sync B Function"
 		sudo rm -f $therealfile
 		sudo mv $thereal2file $therealfile
 		sudo chmod 777 $therealfile
@@ -234,7 +248,7 @@ if [ "$THEMODEOFEXECUTION" == "C" ]; then
 	thenew1file=$2
 	theoldfile=$3
 	thevisionkey=$4	
-	#notify-send -t 5000 "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync C Function.GOT FILE $thenew1file and  $theoldfile and VisionKey = $thevisionkey"	
+	#LogNotification "$CLUSTERNAME Progress" "Vagrant-VirtualBox-Instance-Sync C Function.GOT FILE $thenew1file and  $theoldfile and VisionKey = $thevisionkey"	
 	cat $thenew1file >> $theoldfile
 	#sudo rm -f $thenew1file
 fi
@@ -247,7 +261,7 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	AL1LWORKFOLDER1SYNC=$6
 	RND1OPRMXM=$7
 	THEREPLACEMENT=$8
-	#notify-send -t 5000 "$CLUSTERNAME Progress" "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT"
+	LogNotification "$CLUSTERNAME Progress" "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT"
 	#echo "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT :::: $thefile2todelete :::: $thefoldertocheck :::: $thefiletodelete" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
         while IFS= read -r line; do
         	IFS=',' read -ra fields <<< "$line"
@@ -261,7 +275,7 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 			if [ -n "$tv29" ]; then
 				line_number=$(echo "$tv29" | awk -F ':' 'NR==1 {print $1}')
 				content=$(echo "$tv29" | awk -F ':' 'NR==1 {print $2}')
-				#notify-send -t 5000 "$CLUSTERNAME Progress" "line_number : $line_number   ::::::::::  content : $content"
+				LogNotification "$CLUSTERNAME Progress" "line_number : $line_number   ::::::::::  content : $content"
 				#echo "line_number : $line_number   ::::::::::  content : $content   ::::::::::  line : $line" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
 				while true; do
 				    (
