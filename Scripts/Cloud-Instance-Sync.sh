@@ -397,12 +397,14 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			INSTANCE_DETAILS_FILE="${THE_ARGS[0]}"
 			VISION_KEY="${THE_ARGS[1]}"
 			THEVISIONID="${THE_ARGS[2]}"			
-			ADMIN_PASSWORD="${THE_ARGS[3]}"				
+			ADMIN_PASSWORD="${THE_ARGS[3]}"	
+			WEBSSH_PASSWORD="${THE_ARGS[4]}"			
 			/opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
   "VisionKey": "'"$VISION_KEY"'",
   "VisionId": "'"$THEVISIONID"'",
-  "FromMatsya": "Y",     
+  "FromMatsya": "Y",
+  "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
   "AdminKey": "'"$ADMIN_PASSWORD"'"      
 }'							
 		fi

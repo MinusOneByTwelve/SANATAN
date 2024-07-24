@@ -94,6 +94,7 @@ CLUSTERID="${THE_ARGS[4]}"
 STACKPRETTYNAME="${THE_ARGS[5]}"
 ISAUTOMATED="${THE_ARGS[6]}"
 THENOHUPFILE="${THE_ARGS[7]}"
+WEBSSH_PASSWORD="${THE_ARGS[8]}"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -109,6 +110,7 @@ VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3")
 VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4")
 BDDPort1=$(GetNewPort) && PORTSLIST+=("$BDDPort1")
 BDDPort2=$(GetNewPort) && PORTSLIST+=("$BDDPort2")
+WEBSSHPort1=$(GetNewPort) && PORTSLIST+=("$WEBSSHPort1")
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
@@ -543,6 +545,8 @@ install_docker() {
     sed -i -e s~"BDD2"~"$BDDPort2"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"BDDHOSTS"~"$ALLHOSTS"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"THECERTS"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"WSP1"~"$WEBSSHPort1"~g $BASE/tmp/$DOCKERTEMPLATE
+    
     if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
     	sed -i -e s~"GETVPN"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
     else
@@ -625,13 +629,43 @@ create_glusterfs_volume_cluster() {
     peer_probe_cmds=""
     volume_create_cmd=""
     retry_count=0
-    max_retries=5
+    max_retries=10
     success=false
 
     ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
     total_nodes=${#ALL_IPS[@]}
     max_nodes=$(( (total_nodes / 2) * 2 ))
-    peer_ips=($(shuf -e "${ALL_IPS[@]}" -n $max_nodes))
+    responsive_peer_ips=()
+    
+    # Function to check if GlusterFS is running and installed on a peer
+    check_glusterfs_status() {
+        local ip=$1
+        glusterd_status=$(ssh -i "${PEM_FILES[$ip]}" -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo systemctl is-active glusterd")
+        gluster_command_status=$(ssh -i "${PEM_FILES[$ip]}" -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "which gluster")
+        if [[ "$glusterd_status" == "active" ]] && [[ -n "$gluster_command_status" ]]; then
+            return 0
+        else
+            return 1
+        fi
+    }
+    
+    # Filter responsive peers
+    for ip in "${ALL_IPS[@]}"; do
+        if check_glusterfs_status $ip; then
+            responsive_peer_ips+=("$ip")
+        else
+            echo "Skipping unresponsive or improperly configured peer: $ip"
+        fi
+    done
+
+    # Ensure there are enough responsive peers to create a volume
+    if [ ${#responsive_peer_ips[@]} -lt 2 ]; then
+        echo "Not enough responsive peers to create a replica 2 volume."
+        return 1
+    fi
+    
+    # Select peers for the volume creation
+    peer_ips=($(shuf -e "${responsive_peer_ips[@]}" -n $max_nodes))            
         
     # Retry logic for probing and volume creation
     while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
@@ -658,10 +692,11 @@ create_glusterfs_volume_cluster() {
 		if [ "$NATIVE" -lt 2 ]; then
 		    HOST=${INTERNAL_IPS[$ip]}
 		fi
-		volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$THEFINALVOLUMENAME "
+		volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$STACKNAME "
         done
         volume_create_cmd+="force"        
-        
+	echo "create_glusterfs_volume_cluster : $peer_probe_cmds"
+	echo "create_glusterfs_volume_cluster : $volume_create_cmd"        
         # Run the peer probing and volume creation commands
         run_remote ${MANAGER_IPS[0]} "
             $peer_probe_cmds
@@ -702,46 +737,76 @@ create_glusterfs_volume_cluster() {
     fi
 }
 
+THEFINALVOLUME1NAME="$STACKNAME"
+
 # Function to create portainer glusterfs volume
 create_glusterfs_volume_portainer() {
 	primary_ip=${MANAGER_IPS[0]}
-	peer_ips=("${MANAGER_IPS[@]:1}")
-	peer_probe_cmds=""
-	for ip in "${peer_ips[@]}"; do
-		H1O1S1T=${HOST_NAMES[$ip]}
-		if [ "$NATIVE" -lt 2 ]; then
-			H1O1S1T=${INTERNAL_IPS[$ip]}
+	peer_ips=("${MANAGER_IPS[@]:1}")	
+	retry_count=0
+	max_retries=10
+	success=false	
+	
+	# Retry logic for probing and volume creation
+	while [ $retry_count -lt $max_retries ] && [ "$success" = false ]; do
+		echo "Attempting to probe peers and create Portainer volume, Attempt: $((retry_count + 1))"
+		
+		TMPRNDM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 6 | head -n 1)
+		THEFINALVOLUME1NAME="$STACKNAME""$TMPRNDM"		
+		
+		peer_probe_cmds=""	
+		for ip in "${peer_ips[@]}"; do
+			H1O1S1T=${HOST_NAMES[$ip]}
+			if [ "$NATIVE" -lt 2 ]; then
+				H1O1S1T=${INTERNAL_IPS[$ip]}
+			fi
+			peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
+		done
+		volume_create_cmd="sudo gluster volume create Portainer$THEFINALVOLUME1NAME replica ${#MANAGER_IPS[@]} "
+		for ip in "${MANAGER_IPS[@]}"; do
+			H1O1S11T=${HOST_NAMES[$ip]}
+			if [ "$NATIVE" -lt 2 ]; then
+				H1O1S11T=${INTERNAL_IPS[$ip]}
+			fi
+			volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
+		done
+		volume_create_cmd+="force" 
+		echo "create_glusterfs_volume_portainer : $peer_probe_cmds"
+		echo "create_glusterfs_volume_portainer : $volume_create_cmd" 
+		run_remote ${MANAGER_IPS[0]} "
+		$peer_probe_cmds
+		$volume_create_cmd
+		sudo gluster volume start Portainer$THEFINALVOLUME1NAME
+		"
+		if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info Portainer$THEFINALVOLUME1NAME"; then
+		    success=true
+		    echo "Portainer Volume created and started successfully."
+		    break
+		else
+		    echo "Portainer Failed to create/start volume, retrying..."
+		    sleep 10
 		fi
-		peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
+		retry_count=$((retry_count + 1))
 	done
-	volume_create_cmd="sudo gluster volume create Portainer$STACKNAME replica ${#MANAGER_IPS[@]} "
-	for ip in "${MANAGER_IPS[@]}"; do
-		H1O1S11T=${HOST_NAMES[$ip]}
-		if [ "$NATIVE" -lt 2 ]; then
-			H1O1S11T=${INTERNAL_IPS[$ip]}
-		fi
-		volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
-	done
-	volume_create_cmd+="force" 
-	echo "create_glusterfs_volume_portainer : $peer_probe_cmds"
-	echo "create_glusterfs_volume_portainer : $volume_create_cmd" 
-	run_remote ${MANAGER_IPS[0]} "
-	$peer_probe_cmds
-	$volume_create_cmd
-	sudo gluster volume start Portainer$STACKNAME
-	"
-	glusterfs_addresses=""
-	for ip in "${MANAGER_IPS[@]}"; do
-		H11O1S11T=${HOST_NAMES[$ip]}
-		if [ "$NATIVE" -lt 2 ]; then
-			H11O1S11T=${INTERNAL_IPS[$ip]}
-		fi
-		glusterfs_addresses+="$H11O1S11T,"
-	done
-	glusterfs_addresses=${glusterfs_addresses%,}
-	for IP in "${MANAGER_IPS[@]}"; do
-	    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$STACKNAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
-	done
+    	
+	if [ "$success" = false ]; then
+		echo "Failed to create/start Portainer volume after $max_retries attempts."
+		sudo mv $THENOHUPFILE $BASE/tmp/FATAL_ERROR_$STACKNAME && sudo chmod 777 FATAL_ERROR_$STACKNAME
+		exit
+	else    	
+		glusterfs_addresses=""
+		for ip in "${MANAGER_IPS[@]}"; do
+			H11O1S11T=${HOST_NAMES[$ip]}
+			if [ "$NATIVE" -lt 2 ]; then
+				H11O1S11T=${INTERNAL_IPS[$ip]}
+			fi
+			glusterfs_addresses+="$H11O1S11T,"
+		done
+		glusterfs_addresses=${glusterfs_addresses%,}
+		for IP in "${MANAGER_IPS[@]}"; do
+		    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$THEFINALVOLUME1NAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
+		done
+	fi
 }
 
 # Function to create swarm labels
@@ -794,7 +859,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/WebSSH\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APP_SMAPPING["WEBSSH"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else

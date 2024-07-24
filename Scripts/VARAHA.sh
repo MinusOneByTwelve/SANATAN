@@ -62,7 +62,13 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	SYNCWITHIFCONFIG="${22}"
 	if [ "$SYNCWITHIFCONFIG" == "Y" ]; then	
 		THEROUTER=$(ip addr show docker0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)  
-	fi							
+	fi
+	WEBSSHPort1="${23}"
+	WEBSSH_PASSWORD="${24}"	
+	WEBSSH_DIR="${25}"
+	IDLE_LIMIT="${26}"
+	THEVERWROUTER="${27}" 
+	THEVERW1ROUTER="${28}"								
 fi
 
 # Generate the HAProxy configuration
@@ -100,6 +106,21 @@ defaults
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
 
+frontend '"$STACKPRETTYNAME"'_WebSSH_Front
+    bind *:'"$WEBSSHPort1"' ssl crt /certs/varaha.pem
+    mode http
+    acl path_wetty path_beg -i /wetty
+    use_backend %[path,map_beg(/etc/haproxy/backend.map)]
+    http-request auth realm '"$STACKPRETTYNAME"' if !{ http_auth('"$STACKPRETTYNAME"'_WebSSH_Users) }
+
+backend '"$STACKPRETTYNAME"'_WebSSH_Back
+    mode http
+    balance roundrobin
+    http-reuse always
+
+userlist '"$STACKPRETTYNAME"'_WebSSH_Users
+    user admin password '"$WEBSSH_PASSWORD"'
+    
 frontend '"$STACKPRETTYNAME"'_Portainer_Front
     bind *:'"$PortainerWPort"' ssl crt /certs/varaha.pem
     mode http
@@ -150,7 +171,8 @@ services:
     ports:
       - "'"$PortainerWPort"':'"$PortainerWPort"'"
       - "'"$AdminPort"':'"$AdminPort"'"
-      - "'"$GLOBALCDNPORT"':'"$GLOBALCDNPORT"'"                  
+      - "'"$GLOBALCDNPORT"':'"$GLOBALCDNPORT"'" 
+      - "'"$WEBSSHPort1"':'"$WEBSSHPort1"'"                       
     deploy:
       replicas: 1
       placement:
@@ -185,9 +207,84 @@ configs:
     #cat $THEDCYPATH
 }
 
+# Create all support files
+create_support_files() {
+	echo '#!/bin/bash
+
+HASH=$1
+PORT=$2
+
+# Add new mapping to backend.map
+echo "/wetty/$HASH '"$STACKPRETTYNAME"'_WebSSH_Back" >> '"$WEBSSH_DIR"'/backend.map
+
+# Use the HAProxy Runtime API to add the new server to the backend
+echo "add server '"$STACKPRETTYNAME"'_WebSSH_Back/wetty-$HASH '"$THEROUTER"':$PORT check" | socat stdio /run/haproxy/admin.sock
+' | tee $WEBSSH_DIR/update_haproxy.sh > /dev/null
+	chmod +x $WEBSSH_DIR/update_haproxy.sh
+	
+	echo '#!/bin/sh
+
+LOGFILE="'"$WEBSSH_DIR"'/inactivity_check_'"$STACKPRETTYNAME"'.log"
+IDLE_LIMIT='"$IDLE_LIMIT"'  # Idle limit in seconds
+
+echo "$(date): Starting inactivity check script" >> $LOGFILE
+
+while true; do
+    # Get the last activity time of the tmux session
+    LAST_ACTIVITY=$(tmux display -p -t ssh_session '"'#{client_activity}'"')
+    CURRENT_TIME=$(date +%s)
+
+    # Calculate the idle time
+    IDLE_TIME=$((CURRENT_TIME - LAST_ACTIVITY))
+
+    echo "$(date): Current time: $CURRENT_TIME, Last activity: $LAST_ACTIVITY, Idle time: $IDLE_TIME" >> $LOGFILE
+
+    if [ "$IDLE_TIME" -gt "$IDLE_LIMIT" ]; then
+        echo "$(date): Container idle for more than $IDLE_LIMIT seconds. Exiting." >> $LOGFILE
+        kill 1  # Send SIGTERM to PID 1 to stop the container
+        exit
+    fi
+
+    sleep 60  # Check every 60 seconds
+done' | tee $WEBSSH_DIR/inactivity_check.sh > /dev/null
+	chmod +x $WEBSSH_DIR/inactivity_check.sh
+	
+	echo 'FROM '"$THEVERW1ROUTER"':'"$THEVERWROUTER"'
+
+# Install tmux
+RUN apk update && apk add tmux
+
+# Copy custom scripts
+COPY '"$WEBSSH_DIR"'/custom_ssh.sh '"$WEBSSH_DIR"'/custom_ssh.sh
+COPY '"$WEBSSH_DIR"'/inactivity_check.sh '"$WEBSSH_DIR"'/inactivity_check.sh
+
+# Make scripts executable
+RUN chmod +x '"$WEBSSH_DIR"'/custom_ssh.sh '"$WEBSSH_DIR"'/inactivity_check.sh' | tee $WEBSSH_DIR/dockerfile > /dev/null
+
+	echo '#!/bin/bash
+
+IP=$1
+PORT=$2
+PEM_FILE="/home/vagrant/op-Scope1000-240724152136.pem"
+
+if [ -f "$PEM_FILE" ]; then
+    tmux new-session -d -s ssh_session "ssh -i "$PEM_FILE" -o StrictHostKeyChecking=no -p "$PORT" vagrant@$IP"
+    '"$WEBSSH_DIR"'/inactivity_check.sh &
+    tmux attach-session -t ssh_session
+else
+    echo "PEM file for $IP not found."
+    exit 1
+fi' | tee $WEBSSH_DIR/custom_ssh.sh > /dev/null
+	chmod +x $WEBSSH_DIR/custom_ssh.sh
+	
+	echo '' | tee $WEBSSH_DIR/start_wetty_container.sh > /dev/null
+	chmod +x $WEBSSH_DIR/start_wetty_container.sh		
+}
+
 # Main function to set up everything
 main() {
-	if [ "$THECHOICE" == "CORE" ] ; then	    	    
+	if [ "$THECHOICE" == "CORE" ] ; then
+	    create_support_files	    	    
 	    generate_cfg
 	    create_docker_compose_file
 	    echo "docker stack deploy --compose-file $THEDCYPATH CDN$STACKNAME"

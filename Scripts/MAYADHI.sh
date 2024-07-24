@@ -212,7 +212,8 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		word=$(cat /dev/urandom | tr -dc "$charset" | fold -w "$length" | head -n 1)		
 		ClusterName="$word"
 		Automated="Y"
-		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")	
+		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")	
 	else	
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
@@ -222,10 +223,11 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		ClusterName=$(jq -r '.ClusterName' <<< "$THEJSON")
 		Automated=$(jq -r '.Automated' <<< "$THEJSON")
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")
 	fi
 	
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
@@ -466,7 +468,8 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	VAMANAVAL="NA"
 	if [ "$ToVamana" == "Y" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey"	
+		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey"	
 	fi	
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" 2>&1 &		
 fi
