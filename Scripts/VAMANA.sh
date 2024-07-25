@@ -142,6 +142,7 @@ declare -A APP_MEM
 declare -A APP_CORE
 declare -A CLUSTER_TYPE
 declare -A INTERNAL_IPS
+declare -A ROLE_TYPE
 NATIVE="1"
 
 # Function to prepare swarm dynamically
@@ -310,6 +311,7 @@ parse_instance_details() {
         CLUSTER_TYPE["$IP"]="$C1TYPE"
         hyphenated_ip="${IP//./-}"
         lowercase_text="${C1TYPE,,}"
+        ROLE_TYPE["$IP"]="$ROLE"
         
         if [[ "$C1TYPE" == "ONPREM" ]]; then
         	echo "VPN NA"
@@ -545,7 +547,12 @@ install_docker() {
     sed -i -e s~"BDD2"~"$BDDPort2"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"BDDHOSTS"~"$ALLHOSTS"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"THECERTS"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERTEMPLATE
-    sed -i -e s~"WSP1"~"$WEBSSHPort1"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"WSP1"~"$WEBSSHPort1"~g $BASE/tmp/$DOCKERTEMPLATE  
+    sed -i -e s~"WSP2"~"$WEBSSH_PASSWORD"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"WSP3"~"$DFS_DATA_DIR/Misc$STACKNAME/webssh"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"WSP4"~"$THEWEBSSHIDLELIMIT"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"WSP5"~"${CLUSTERAPPSMAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"WSP6"~"${CLUSTER_APP_SMAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
     
     if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
     	sed -i -e s~"GETVPN"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
@@ -859,7 +866,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/WebSSH\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APP_SMAPPING["WEBSSH"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APP_SMAPPING["WEBSSH"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -987,6 +994,15 @@ for ip in "${ALL5_IPS[@]}"; do
     sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE
 done
 
+ALL8_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+for ip in "${ALL8_IPS[@]}"; do
+    DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerCleanUpTemplate $BASE/tmp/$DOCKER2TEMPLATE
+    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER2TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER2TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME"
+    sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE
+done
+
 fetch_internal_ip() {
     local IP=$1
     local PORT=${PORTS[$IP]}
@@ -1064,21 +1080,21 @@ sudo rm -f $BASE/tmp/$WJTFP1_FILE
 echo "$DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 # Join remaining manager nodes to the Swarm
 for IP in "${MANAGER_IPS[@]:1}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $MANAGER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $MANAGER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
 for IP in "${MANAGER_IPS[0]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
 # Join worker nodes to the Swarm
 for IP in "${WORKER_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 # Join router nodes to the Swarm
 for IP in "${ROUTER_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 create_encrypted_overlay_network
@@ -1098,6 +1114,61 @@ create_glusterfs_volume_cluster
 create_glusterfs_volume_portainer
     
 create_swarm_labels
+
+final_nodes_list() {
+	declare -a FNL_IPS
+	ALL9_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	ALL92_IPS=("${MANAGER_IPS[@]}" "${ROUTER_IPS[@]}")
+	
+	for ip in "${ALL9_IPS[@]}"; do
+		FNL_IPS+=("$ip,${PORTS[$ip]},${PEM_FILES[$ip]},${LOGIN_USERS[$ip]},${HOST_NAMES[$ip]},${HOST_ALT_NAMES[$ip]},${INTERNAL_IPS[$ip]},${ROLE_TYPE[$ip]}")	
+	done
+
+	DOCKER9TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	for item in "${FNL_IPS[@]}"; do
+	    echo "$item" >> "$BASE/tmp/$DOCKER9TEMPLATE"
+	done	
+
+	sudo mkdir -p $BASE/tmp/Folder$DOCKER9TEMPLATE
+	pem_files=$(awk -F ',' '{print $3}' "$BASE/tmp/$DOCKER9TEMPLATE" | sort | uniq)
+	echo "Distinct PEM files:"
+	for pem_file in $pem_files
+	do
+	    echo "$pem_file"
+	    filenamePEM="${pem_file##*/}"
+	    sudo cp $pem_file $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+	    sudo chmod 777 $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+	    sudo chown root:root $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+	done
+	sudo chown root:root -R $BASE/tmp/Folder$DOCKER9TEMPLATE
+	sudo chmod 777 -R $BASE/tmp/Folder$DOCKER9TEMPLATE
+	pushd $BASE/tmp
+	tar -czf "Folder$DOCKER9TEMPLATE.tar.gz" "Folder$DOCKER9TEMPLATE"
+	sudo chmod 777 Folder$DOCKER9TEMPLATE.tar.gz
+	popd
+	    	
+	for ip in "${ALL92_IPS[@]}"; do
+	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER9TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER9TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && tar -xzf \"Folder$DOCKER9TEMPLATE.tar.gz\" && sudo mv Folder$DOCKER9TEMPLATE/* $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && sudo rm -rf Folder$DOCKER9TEMPLATE && sudo rm -f Folder$DOCKER9TEMPLATE.tar.gz"
+	done
+	
+	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE
+	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz
+	
+	FNNPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.normal"
+	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+		FNNPATH="$BASE/Output/Vision/V$THEVISIONID/Nodes$STACKNAME.vpn"		
+	fi
+
+	FNN_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$DOCKER9TEMPLATE├$FNNPATH├$ADMIN_PASSWORD├$FNN_FILE"
+	sudo chmod 777 $FNNPATH
+	sudo rm -f $BASE/tmp/$FNN_FILE
+	sudo rm -f $BASE/tmp/$DOCKER9TEMPLATE
+}
+
+final_nodes_list
 
 create_cluster_cdn_proxy
 
