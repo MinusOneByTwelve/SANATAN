@@ -18,6 +18,7 @@ PortainerAPort="THEREQAPORT"
 PortainerSPort="THEREQSPORT"
 STACKNAME="THECURSTACK"
 STACKPRETTYNAME="THECURPNSTACK"
+STACKPRETTYNAME=$(echo "$STACKPRETTYNAME" | tr '[:upper:]' '[:lower:]')
 VarahaPort1="VP1"
 VarahaPort2="VP2"
 VarahaPort3="VP3"
@@ -30,8 +31,13 @@ BDD_HOSTS="BDDHOSTS"
 CERTS_DIR="THECERTS"
 ELIGIBLEFORVPN="GETVPN"
 BDD_CURRHOST="BDDCURRHOST"
-WEBSSHPort1="WSP1"
-
+websshPort1="WSP1"
+webssh_PASSWORD="WSP2"
+webssh_DIR="WSP3"
+IDLE_LIMIT="WSP4"
+THEVERWROUTER="WSP5"
+THEVERW1ROUTER="WSP6"
+	
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
 sudo hostnamectl set-hostname $THEHOST --transient
@@ -80,18 +86,179 @@ reconfigure_dpkg
 update_package_list
 echo "System is ready for package installation..."
 
+create_webssh_manager_support_files() {
+	echo '#!/bin/bash
+
+IP=$1
+HASH=$2
+
+first_port=35000
+last_port=65000
+
+function random_unused_port {
+    local port=$(shuf -i $first_port-$last_port -n 1)
+    # Check if the port is being used
+    if ! ss -ltn | grep -q ":$port " ; then
+        echo $port
+        return 0
+    else
+        random_unused_port
+    fi
+}
+
+PORT=$(random_unused_port)
+
+thereqip=$(awk -F '"'"','"'"' '"'"'$1 == "$IP" {print; exit}'"'"' "'"$webssh_DIR"'/.Nodes")
+IFS='"'"','"'"' read -r -a the_reqip <<< $thereqip
+rt1pem="${the_reqip[2]}"
+rt1realpem="${rt1pem##*/}"
+rt1real2pem="'"$webssh_DIR"'/PEMS/$rt1realpem"
+THE1USER="${the_reqip[3]}"
+PO1RT="${the_reqip[1]}"
+
+# Create a dynamic docker-compose file
+cat <<EOF > '"$DFS_DATA_DIR/Tmp$STACKNAME"'/websshDockerCompose$HASH.yml
+version: '"'"'3.7'"'"'
+
+services:
+  wetty:
+    image: webssh'"$STACKPRETTYNAME"'
+    command: "sh '"$webssh_DIR"'/custom_ssh.sh $IP $HASH $rt1real2pem $THE1USER $PO1RT"
+    ports:
+      - "$PORT:3000"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.'"$STACKNAME"'routerreplica == true 
+      restart_policy:
+        condition: none               
+    volumes:
+      - type: bind
+        source: '"$webssh_DIR"'
+        target: '"$webssh_DIR"'
+    networks:
+      - '"$STACKNAME"'-encrypted-overlay
+
+networks:
+  '"$STACKNAME"'-encrypted-overlay:
+    external: true
+EOF
+
+therouter=$(awk -F '"'"','"'"' '"'"'$8 == "ROUTER" {print; exit}'"'"' "'"$webssh_DIR"'/.Nodes")
+hostname=$(awk -F '"'"','"'"' '"'"'$8 == "ROUTER" {print $5; exit}'"'"' "'"$webssh_DIR"'/.Nodes")
+
+IFS='"'"','"'"' read -r -a the_router <<< $therouter
+rtip="${the_router[0]}"
+rtpem="${the_router[2]}"
+rtrealpem="${rtpem##*/}"
+rtreal2pem="'"$webssh_DIR"'/PEMS/$rtrealpem"
+sudo chmod 400 $rtreal2pem
+rtuser="${the_router[3]}"
+rtport="${the_router[1]}"
+
+sudo touch '"$DFS_DATA_DIR/Tmp$STACKNAME"'/$HASH.url && sudo chmod 777 '"$DFS_DATA_DIR/Tmp$STACKNAME"'/$HASH.url && echo "https://$hostname:'"$websshPort1"'/wetty/$HASH" | sudo tee -a '"$DFS_DATA_DIR/Tmp$STACKNAME"'/$HASH.url > /dev/null
+
+# Run the Docker container using Docker Compose on the worker node
+docker stack deploy --compose-file '"$DFS_DATA_DIR/Tmp$STACKNAME"'/websshDockerCompose$HASH.yml webssh$HASH
+		
+# Update HAProxy configuration using Runtime API
+ssh -i "$rtreal2pem" -o StrictHostKeyChecking=no -p $rtport $rtuser@$rtip "'"$webssh_DIR"'/update_haproxy.sh $HASH $PORT"
+' | tee $webssh_DIR/StartContainerwebssh.sh > /dev/null
+	chmod +x $webssh_DIR/StartContainerwebssh.sh
+}
+create_webssh_router_support_files() {
+	echo '#!/bin/bash
+
+HASH=$1
+PORT=$2
+
+# Determine the IP address of the Docker bridge interface (docker0)
+THEROUTER=$(ip addr show docker0 | grep '"'inet '"' | awk '"'"'{print $2}'"'"' | cut -d'"'"'/'"'"' -f1)
+
+# Add new mapping to '"$STACKPRETTYNAME"'backend.map
+echo "/wetty/$HASH '"$STACKPRETTYNAME"'_WebSSH_Back" >> '"$webssh_DIR"'/'"$STACKPRETTYNAME"'backend.map
+
+# Use the HAProxy Runtime API to add the new server to the backend
+echo "add server '"$STACKPRETTYNAME"'_WebSSH_Back/wetty-$HASH $THEROUTER:$PORT check" | sudo socat stdio '"$DFS_DATA_DIR/Misc$STACKNAME"'/RunHAProxy/'"$STACKPRETTYNAME"'admin.sock
+' | tee $webssh_DIR/update_haproxy.sh > /dev/null
+	chmod +x $webssh_DIR/update_haproxy.sh
+	
+	echo '#!/bin/sh
+
+HASH=$1
+
+LOGFILE="'"$webssh_DIR"'/inactivity_check_'"$STACKPRETTYNAME"'-$HASH.log"
+IDLE_LIMIT='"$IDLE_LIMIT"'  # Idle limit in seconds
+
+echo "$(date): Starting inactivity check script" >> $LOGFILE
+
+while true; do
+    # Get the last activity time of the tmux session
+    LAST_ACTIVITY=$(tmux display -p -t $HASH '"'#{client_activity}'"')
+    CURRENT_TIME=$(date +%s)
+
+    # Calculate the idle time
+    IDLE_TIME=$((CURRENT_TIME - LAST_ACTIVITY))
+
+    echo "$(date): Current time: $CURRENT_TIME, Last activity: $LAST_ACTIVITY, Idle time: $IDLE_TIME" >> $LOGFILE
+
+    if [ "$IDLE_TIME" -gt "$IDLE_LIMIT" ]; then
+        echo "$(date): Container idle for more than $IDLE_LIMIT seconds. Exiting." >> $LOGFILE
+        kill 1  # Send SIGTERM to PID 1 to stop the container
+        exit
+    fi
+
+    sleep 60  # Check every 60 seconds
+done' | tee $webssh_DIR/inactivity_check.sh > /dev/null
+	chmod +x $webssh_DIR/inactivity_check.sh
+	
+	echo '#!/bin/bash
+
+IP="$1"
+HASH="$2"
+PEM_FILE="$3"
+THEUSER="$4"
+PORT="$5"
+
+if [ -f "$PEM_FILE" ]; then
+    tmux new-session -d -s $HASH "ssh -i "$PEM_FILE" -o StrictHostKeyChecking=no -p "$PORT" $THEUSER@$IP"
+    '"$webssh_DIR"'/inactivity_check.sh "$HASH" &
+    tmux attach-session -t $HASH
+else
+    echo "PEM file for $IP not found."
+    exit 1
+fi' | tee $webssh_DIR/custom_ssh.sh > /dev/null
+	chmod +x $webssh_DIR/custom_ssh.sh
+		
+	echo 'FROM '"$THEVERW1ROUTER"':'"$THEVERWROUTER"'
+
+# Install tmux
+RUN apk update && apk add tmux
+
+# Copy custom scripts
+COPY custom_ssh.sh '"$webssh_DIR"'/custom_ssh.sh
+COPY inactivity_check.sh '"$webssh_DIR"'/inactivity_check.sh
+
+# Make scripts executable
+RUN chmod +x '"$webssh_DIR"'/custom_ssh.sh '"$webssh_DIR"'/inactivity_check.sh' | tee $webssh_DIR/webssh.Dockerfile > /dev/null
+	cd $webssh_DIR
+	sudo docker build -t webssh$STACKPRETTYNAME -f webssh.Dockerfile .
+	cd ~			
+}
+
 setup_http_server() {
     sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
     sudo chown -R root:root $DFS_DATA2_DIR/Static$STACKNAME
     sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Index.html
-    echo "CDN For $STACKPRETTYNAME" | sudo tee $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    echo "VARAHA For $STACKPRETTYNAME" | sudo tee $DFS_DATA2_DIR/Static$STACKNAME/Index.html
     sudo chmod -R 777 $DFS_DATA2_DIR/Static$STACKNAME
     
-    sudo rm -f /etc/systemd/system/CDN$STACKNAME.service
+    sudo rm -f /etc/systemd/system/VARAHA$STACKNAME.service
     
-    SERVICES=$(systemctl list-units --type=service --state=running | grep 'CDN' | awk '{print $1}')
+    SERVICES=$(systemctl list-units --type=service --state=running | grep 'VARAHA' | awk '{print $1}')
     if [ -z "$SERVICES" ]; then
-        echo "No services starting with CDN found."
+        echo "No services starting with VARAHA found."
     fi
     for service in $SERVICES; do
         echo "Stopping and disabling $service..."
@@ -101,7 +268,7 @@ setup_http_server() {
     done    
     
     echo '[Unit]
-Description=CDN For '"$STACKPRETTYNAME"'
+Description=VARAHA For '"$STACKPRETTYNAME"'
 After=network.target
 
 [Service]
@@ -111,11 +278,11 @@ ExecStart=/usr/bin/python3 -m http.server '"$VarahaPort1"'
 Restart=always
 
 [Install]
-WantedBy=multi-user.target' | sudo tee /etc/systemd/system/CDN$STACKNAME.service > /dev/null
+WantedBy=multi-user.target' | sudo tee /etc/systemd/system/VARAHA$STACKNAME.service > /dev/null
 
     sudo systemctl daemon-reload
-    sudo systemctl enable CDN$STACKNAME
-    sudo systemctl start CDN$STACKNAME
+    sudo systemctl enable VARAHA$STACKNAME
+    sudo systemctl start VARAHA$STACKNAME
 }
 
 create_error_files() {
@@ -473,7 +640,7 @@ if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
     echo 'deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable' | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
     sudo rm -rf /etc/glusterfs/glusterd.vol
-    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard
+    sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois
     sudo NEEDRESTART_MODE=a apt-get install -y tmux cron
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
@@ -586,17 +753,34 @@ sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME
 sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME
 sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME
 
+if [ "$TheReqRL" == "M" ] ; then
+	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS		
+fi
+
 if [ "$TheReqRL" == "R" ] ; then
 	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
 	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
 	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
 
-	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/WebSSH
-	sudo chown -R $CURRENTUSER:$CURRENTUSER $DFS_DATA_DIR/Misc$STACKNAME/WebSSH
-	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/WebSSH
-	
+	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo chown -R $CURRENTUSER:$CURRENTUSER $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+	sudo chown -R $CURRENTUSER:$CURRENTUSER $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+	sudo touch $DFS_DATA_DIR/Misc$STACKNAME/webssh/"$STACKPRETTYNAME"'backend.map'
+	sudo chown $CURRENTUSER:$CURRENTUSER $DFS_DATA_DIR/Misc$STACKNAME/webssh/"$STACKPRETTYNAME"'backend.map'
+	sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/"$STACKPRETTYNAME"'backend.map'
+	sudo chown -R $CURRENTUSER:$CURRENTUSER $DFS_DATA_DIR/Misc$STACKNAME/webssh
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh
+				
 	create_error_files
-	setup_http_server
+	setup_http_server	
 	
 	if ! python3 -c "import PIL" &> /dev/null; then
 	    echo "Pillow is not installed. Installing now..."
@@ -702,7 +886,7 @@ else
 	sudo firewall-cmd --zone=public --add-port=$BDDPort1/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=$BDDPort2/tcp --permanent
 	
-	sudo firewall-cmd --zone=public --add-port=$WEBSSHPort1/tcp --permanent	
+	sudo firewall-cmd --zone=public --add-port=$websshPort1/tcp --permanent	
 
 	sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
@@ -743,6 +927,13 @@ sudo systemctl enable docker
 sudo systemctl restart docker
 
 #install_minio
+
+if [ "$TheReqRL" == "R" ] ; then
+	create_webssh_router_support_files
+fi
+if [ "$TheReqRL" == "M" ] ; then
+	create_webssh_manager_support_files
+fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
 sudo rm -rf /root/.ssh/known_hosts

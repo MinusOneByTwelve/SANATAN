@@ -1,0 +1,51 @@
+#!/bin/bash
+
+CURRENTUSER=$(whoami)
+sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
+sudo rm -rf /root/.ssh/known_hosts
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
+STACKNAME="$1"
+SCRIPTFILELOC="$2"
+
+THENEWFUNC='#!/bin/bash'"
+
+sudo docker container prune -f
+docker container prune -f
+"
+echo "$THENEWFUNC" | sudo tee $SCRIPTFILELOC/DockerClean$STACKNAME.sh > /dev/null
+sudo chmod 777 $SCRIPTFILELOC/DockerClean$STACKNAME.sh
+
+echo "[Unit]
+Description=Docker Clean
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=$SCRIPTFILELOC/DockerClean$STACKNAME.sh" | sudo tee /etc/systemd/system/DockerClean$STACKNAME.service > /dev/null
+
+echo "[Unit]
+Description=Run Docker Clean Script at boot and periodically
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=30min
+Unit=DockerClean$STACKNAME.service
+
+[Install]
+WantedBy=timers.target
+" | sudo tee /etc/systemd/system/DockerClean$STACKNAME.timer > /dev/null
+
+sudo systemctl enable DockerClean$STACKNAME.timer
+sudo systemctl start DockerClean$STACKNAME.timer
+
+sudo systemctl status DockerClean$STACKNAME.timer
+sudo systemctl status DockerClean$STACKNAME.service
+
+echo "Setup completed. The node will be cleaned up regularly at 30 min interval."
+
+sudo rm -rf /root/.bash_history
+sudo rm -rf /home/$CURRENTUSER/.bash_history
+
