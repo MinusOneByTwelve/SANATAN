@@ -111,6 +111,13 @@ VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4")
 BDDPort1=$(GetNewPort) && PORTSLIST+=("$BDDPort1")
 BDDPort2=$(GetNewPort) && PORTSLIST+=("$BDDPort2")
 WEBSSHPort1=$(GetNewPort) && PORTSLIST+=("$WEBSSHPort1")
+ChitraGuptaPort1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort1")
+ChitraGuptaPort2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort2")
+ChitraGuptaPort3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort3")
+ChitraGuptaPort4=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4")
+ChitraGuptaPort5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5")
+ChitraGuptaPort6=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6")
+ChitraGuptaPort7=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7")
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
@@ -121,17 +128,18 @@ DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
 DFS_DATA2_DIR="/shiva/local/storage/dfs$STACKNAME"
 DFS_CLUSTER_DIR="/shiva/bdd/storage/$STACKNAME"
 CERTS_DIR="/shiva/local/storage/certs$STACKNAME"
-
+STACK_PRETTY_NAME=$(echo "$STACKPRETTYNAME" | tr '[:upper:]' '[:lower:]')
 EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$EXECUTESCRIPT && sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 EXECUTE1SCRIPT='#!/bin/bash'"
 "
 echo "$EXECUTE1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 		
 # Arrays to hold manager and worker details
-declare -a MANAGER_IPS
-declare -a WORKER_IPS
-declare -a ROUTER_IPS
-declare -a VPN_IPS
+declare -a BRAHMA_IPS
+declare -a VISHVAKARMA_IPS
+declare -a INDRA_IPS
+declare -a KRISHNA_IPS
+declare -a SAMPOORNA_IPS
 declare -A HOST_NAMES
 declare -A HOST_ALT_NAMES
 declare -A PEM_FILES
@@ -141,9 +149,11 @@ declare -A LOGIN_USERS
 declare -A APP_MEM
 declare -A APP_CORE
 declare -A CLUSTER_TYPE
-declare -A INTERNAL_IPS
+declare -A JIVA_IPS
 declare -A ROLE_TYPE
 NATIVE="1"
+CHITRAGUPTA=""
+CHITRAGUPTA_DET=""
 
 # Function to prepare swarm dynamically
 create_instance_details() {
@@ -170,13 +180,13 @@ create_instance_details() {
     # Assign one manager, one worker, and one router first
     for i in "${!lines[@]}"; do
         if [ $manager_count -eq 0 ]; then
-            updated_lines[$i]="MANAGER"
+            updated_lines[$i]="BRAHMA"
             manager_count=$((manager_count + 1))
         elif [ $worker_count -eq 0 ]; then
-            updated_lines[$i]="WORKER"
+            updated_lines[$i]="VISHVAKARMA"
             worker_count=$((worker_count + 1))
         elif [ $router_count -eq 0 ]; then
-            updated_lines[$i]="ROUTER"
+            updated_lines[$i]="INDRA"
             router_count=$((router_count + 1))
         fi
 
@@ -190,10 +200,10 @@ create_instance_details() {
     for i in "${!lines[@]}"; do
         if [ -z "${updated_lines[$i]}" ]; then
             if [ $manager_count -lt 3 ]; then
-                updated_lines[$i]="MANAGER"
+                updated_lines[$i]="BRAHMA"
                 manager_count=$((manager_count + 1))
             else
-                updated_lines[$i]="WORKER"
+                updated_lines[$i]="VISHVAKARMA"
                 worker_count=$((worker_count + 1))
             fi
         fi
@@ -214,16 +224,16 @@ create_instance_details() {
         columns[7]="$columns7"
         
         if [[ "$thereqmode" == "Y" ]]; then
-            if [[ "${updated_lines[$i]}" == "MANAGER" ]]; then
-                columns[9]="MANAGER"
+            if [[ "${updated_lines[$i]}" == "BRAHMA" ]]; then
+                columns[9]="BRAHMA"
                 columns[10]="1280"
                 columns[11]="1"
-            elif [[ "${updated_lines[$i]}" == "ROUTER" ]]; then
-                columns[9]="ROUTER"
+            elif [[ "${updated_lines[$i]}" == "INDRA" ]]; then
+                columns[9]="INDRA"
                 columns[10]="1024"
                 columns[11]="1"
             else
-                columns[9]="WORKER"
+                columns[9]="VISHVAKARMA"
                 columns[10]="512"
                 columns[11]="0.5"
             fi
@@ -297,10 +307,14 @@ else
 	INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"					
 fi
 
+THEGUACA_SQL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+THEGUACASQL="$BASE/tmp/THEGUACA_SQL_$THEGUACA_SQL.sql" && touch $THEGUACASQL && sudo chmod 777 $THEGUACASQL
+
 # Function to parse the instance details file
 parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    COUNTxER=0
     while IFS=',' read -r SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
@@ -314,28 +328,49 @@ parse_instance_details() {
         ROLE_TYPE["$IP"]="$ROLE"
         
         if [[ "$C1TYPE" == "ONPREM" ]]; then
-        	echo "VPN NA"
+        	echo "KRISHNA NA"
         else
-        	VPN_IPS+=("$IP,$PORT,$PEM,$U1SER")
+        	KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
         fi
+        
+        SAMPOORNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
                        
         echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                     
-        if [ "$ROLE" == "MANAGER" ]; then
-            MANAGER_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-m"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
-        elif [ "$ROLE" == "WORKER" ]; then
-            WORKER_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-w"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
-        elif [ "$ROLE" == "ROUTER" ]; then
-            ROUTER_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-r"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
-        fi                
+        if [ "$ROLE" == "BRAHMA" ]; then
+            BRAHMA_IPS+=("$IP")
+            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+        elif [ "$ROLE" == "VISHVAKARMA" ]; then
+            VISHVAKARMA_IPS+=("$IP")
+            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+        elif [ "$ROLE" == "INDRA" ]; then
+            INDRA_IPS+=("$IP")
+            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
+            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
+            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+        fi        
+        
+        echo "
+insert into guacamole_connection (connection_name,protocol) values (\"${HOST_NAMES[$IP]}\",\"ssh\");
+SET @conid$COUNTxER = (select connection_id from guacamole_connection where connection_name = '${HOST_NAMES[$IP]}');
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"hostname\",\"$IP\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"port\",\"$PORT\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"font-name\",\"Courier New, monospace\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"font-size\",\"12\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"private-key\",\"" | sudo tee -a $THEGUACASQL > /dev/null
+	cat $PEM >> $THEGUACASQL 
+        echo "\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"username\",\"$U1SER\");
+insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"READ\");
+insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"UPDATE\");
+insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"DELETE\");
+insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"ADMINISTER\");
+" | sudo tee -a $THEGUACASQL > /dev/null 
+	COUNTxER=$((COUNTxER + 1))
+	              
     done < "$INSTANCE_DETAILS_FILE"
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
@@ -349,7 +384,10 @@ parse_instance_details() {
     
     if [[ "$ISAUTOMATED" == "N" ]]; then
     	sudo rm -f $INSTANCE_DETAILS_FILE 
-    fi  
+    fi 
+    
+    CHITRAGUPTA="${VISHVAKARMA_IPS[0]}"
+    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""${VISHVAKARMA_IPS[0]},${PORTS[${VISHVAKARMA_IPS[0]}]},${PEM_FILES[${VISHVAKARMA_IPS[0]}]},${LOGIN_USERS[${VISHVAKARMA_IPS[0]}]}"       
 }
 
 # Function to run commands on remote hosts
@@ -442,7 +480,7 @@ copy_ssl_certificates() {
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
-    for IP in "${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+    for IP in "${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
         local THEREQUSER=${LOGIN_USERS[$IP]}
         
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF.pem
@@ -473,8 +511,8 @@ copy_ssl_certificates() {
             sudo rm -f /home/$THEREQUSER/$IPHF-VARAHA.pem                       
         "
     done
-    MGR=$(echo "${MANAGER_IPS[0]}" | sed 's/\./-/g')
-    run_remote ${MANAGER_IPS[0]} "
+    MGR=$(echo "${BRAHMA_IPS[0]}" | sed 's/\./-/g')
+    run_remote ${BRAHMA_IPS[0]} "
             sudo mv $CERTS_DIR/docker/$MGR.pem $CERTS_DIR/docker/$STACKNAME.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-key.pem $CERTS_DIR/docker/$STACKNAME-server-key.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-cert.pem $CERTS_DIR/docker/$STACKNAME-server-cert.pem
@@ -502,17 +540,17 @@ install_docker() {
     TLSSTUFF=""
     TheReqRL=""
     local IPHF="$STACKNAME"
-    if [ "$MACTYPE" == "M" ] ; then
+    if [ "$MACTYPE" == "B" ] ; then
     	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
-    	TheReqRL="M"
+    	TheReqRL="B"
     fi
-    if [ "$MACTYPE" == "W" ] ; then
+    if [ "$MACTYPE" == "V" ] ; then
     	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
-    	TheReqRL="W"
+    	TheReqRL="V"
     fi
-    if [ "$MACTYPE" == "R" ] ; then
+    if [ "$MACTYPE" == "I" ] ; then
     	TLSSTUFF="--tlsverify --tlscacert=$CERTS_DIR/docker/$IPHF.pem --tlscert=$CERTS_DIR/docker/$IPHF-server-cert.pem --tlskey=$CERTS_DIR/docker/$IPHF-server-key.pem "
-    	TheReqRL="R"
+    	TheReqRL="I"
     fi
             
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -552,22 +590,49 @@ install_docker() {
     sed -i -e s~"WSP3"~"$DFS_DATA_DIR/Misc$STACKNAME/webssh"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"WSP4"~"$THEWEBSSHIDLELIMIT"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"WSP5"~"${CLUSTERAPPSMAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
-    sed -i -e s~"WSP6"~"${CLUSTER_APP_SMAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
+    sed -i -e s~"WSP6"~"${CLUSTER_APPS_MAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
     
-    if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
-    	sed -i -e s~"GETVPN"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
+    if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	sed -i -e s~"GETVP"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
     else
-    	sed -i -e s~"GETVPN"~"N"~g $BASE/tmp/$DOCKERTEMPLATE
+    	sed -i -e s~"GETVP"~"N"~g $BASE/tmp/$DOCKERTEMPLATE
     fi
     if [ "$NATIVE" -lt 2 ]; then
     	sed -i -e s~"BDDCURRHOST"~"${HOST_ALT_NAMES[$IP]}"~g $BASE/tmp/$DOCKERTEMPLATE
     else
 	sed -i -e s~"BDDCURRHOST"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$DOCKERTEMPLATE
     fi       
+
+    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
+    	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"
+    	
+    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7" 
+    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}" 
+    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD" 
+	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD" 
+	  	
+	CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
+	
+	sed -i -e s~"GUACAMOLEADMIN"~"admin_$STACK_PRETTY_NAME"~g $BASE/tmp/$CGSQLTEMPLATE
+	sed -i -e s~"GUACAMOLEPWD"~"$WEBSSH_PASSWORD"~g $BASE/tmp/$CGSQLTEMPLATE
+	cat $THEGUACASQL >> $BASE/tmp/$CGSQLTEMPLATE
+	   	
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$CGSQLTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/initdb-redux.sql"
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/boodark.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/boodark.tar.gz"
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/darkwolf.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/darkwolf.tar.gz"   	
+   	sudo rm -f $BASE/tmp/$CGSQLTEMPLATE
+   	sudo rm -f $THEGUACASQL
+   	
+    	sed -i -e s~"GGEPO"~"$CHITRAGUPTA_DET"~g $BASE/tmp/$DOCKERTEMPLATE
+    	echo "$CHITRAGUPTA_DET" 
+    else
+    	sed -i -e s~"GGEPO"~"NA"~g $BASE/tmp/$DOCKERTEMPLATE
+    fi
         
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
 
-    if [ "$MACTYPE" == "R" ] ; then
+    if [ "$MACTYPE" == "I" ] ; then
 	    DOCKER1TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	    sudo cp $BASE/Resources/ImageMaker.py $BASE/tmp/$DOCKER1TEMPLATE
 	    sed -i -e s~"THEREQHEADER"~"$STACKPRETTYNAME"~g $BASE/tmp/$DOCKER1TEMPLATE
@@ -620,7 +685,7 @@ install_docker() {
 
 # Function to create an encrypted overlay network
 create_encrypted_overlay_network() {
-    run_remote ${MANAGER_IPS[0]} "
+    run_remote ${BRAHMA_IPS[0]} "
         docker network create \
           --driver overlay \
           --attachable \
@@ -639,7 +704,7 @@ create_glusterfs_volume_cluster() {
     max_retries=10
     success=false
 
-    ALL_IPS=("${MANAGER_IPS[@]:1}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+    ALL_IPS=("${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
     total_nodes=${#ALL_IPS[@]}
     max_nodes=$(( (total_nodes / 2) * 2 ))
     responsive_peer_ips=()
@@ -687,7 +752,7 @@ create_glusterfs_volume_cluster() {
         for ip in "${peer_ips[@]}"; do
             HOST=${HOST_NAMES[$ip]}
             if [ "$NATIVE" -lt 2 ]; then
-                HOST=${INTERNAL_IPS[$ip]}
+                HOST=${JIVA_IPS[$ip]}
             fi
             peer_probe_cmds+="sudo gluster peer probe $HOST; "
         done
@@ -697,7 +762,7 @@ create_glusterfs_volume_cluster() {
         for ip in "${peer_ips[@]}"; do
 		HOST=${HOST_NAMES[$ip]}
 		if [ "$NATIVE" -lt 2 ]; then
-		    HOST=${INTERNAL_IPS[$ip]}
+		    HOST=${JIVA_IPS[$ip]}
 		fi
 		volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$STACKNAME "
         done
@@ -705,14 +770,14 @@ create_glusterfs_volume_cluster() {
 	echo "create_glusterfs_volume_cluster : $peer_probe_cmds"
 	echo "create_glusterfs_volume_cluster : $volume_create_cmd"        
         # Run the peer probing and volume creation commands
-        run_remote ${MANAGER_IPS[0]} "
+        run_remote ${BRAHMA_IPS[0]} "
             $peer_probe_cmds
             $volume_create_cmd
             sudo gluster volume start $THEFINALVOLUMENAME
         "
 
         # Check if the volume is started successfully
-        if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info $THEFINALVOLUMENAME"; then
+        if run_remote ${BRAHMA_IPS[0]} "sudo gluster volume info $THEFINALVOLUMENAME"; then
             success=true
             echo "Volume created and started successfully."
             break
@@ -731,13 +796,13 @@ create_glusterfs_volume_cluster() {
 	    for ip in "${peer_ips[@]}"; do
 		HOST=${HOST_NAMES[$ip]}
 		if [ "$NATIVE" -lt 2 ]; then
-		    HOST=${INTERNAL_IPS[$ip]}
+		    HOST=${JIVA_IPS[$ip]}
 		fi
 		glusterfs_addresses+="$HOST,"
 	    done
 	    glusterfs_addresses=${glusterfs_addresses%,}  # Remove trailing comma
 
-	    ALL2_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	    ALL2_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 	    for IP in "${ALL2_IPS[@]}"; do
 		run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$THEFINALVOLUMENAME $DFS_CLUSTER_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log"
 	    done    
@@ -748,8 +813,8 @@ THEFINALVOLUME1NAME="$STACKNAME"
 
 # Function to create portainer glusterfs volume
 create_glusterfs_volume_portainer() {
-	primary_ip=${MANAGER_IPS[0]}
-	peer_ips=("${MANAGER_IPS[@]:1}")	
+	primary_ip=${BRAHMA_IPS[0]}
+	peer_ips=("${BRAHMA_IPS[@]:1}")	
 	retry_count=0
 	max_retries=10
 	success=false	
@@ -765,27 +830,27 @@ create_glusterfs_volume_portainer() {
 		for ip in "${peer_ips[@]}"; do
 			H1O1S1T=${HOST_NAMES[$ip]}
 			if [ "$NATIVE" -lt 2 ]; then
-				H1O1S1T=${INTERNAL_IPS[$ip]}
+				H1O1S1T=${JIVA_IPS[$ip]}
 			fi
 			peer_probe_cmds+="sudo gluster peer probe $H1O1S1T; "
 		done
-		volume_create_cmd="sudo gluster volume create Portainer$THEFINALVOLUME1NAME replica ${#MANAGER_IPS[@]} "
-		for ip in "${MANAGER_IPS[@]}"; do
+		volume_create_cmd="sudo gluster volume create Portainer$THEFINALVOLUME1NAME replica ${#BRAHMA_IPS[@]} "
+		for ip in "${BRAHMA_IPS[@]}"; do
 			H1O1S11T=${HOST_NAMES[$ip]}
 			if [ "$NATIVE" -lt 2 ]; then
-				H1O1S11T=${INTERNAL_IPS[$ip]}
+				H1O1S11T=${JIVA_IPS[$ip]}
 			fi
 			volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
 		done
 		volume_create_cmd+="force" 
 		echo "create_glusterfs_volume_portainer : $peer_probe_cmds"
 		echo "create_glusterfs_volume_portainer : $volume_create_cmd" 
-		run_remote ${MANAGER_IPS[0]} "
+		run_remote ${BRAHMA_IPS[0]} "
 		$peer_probe_cmds
 		$volume_create_cmd
 		sudo gluster volume start Portainer$THEFINALVOLUME1NAME
 		"
-		if run_remote ${MANAGER_IPS[0]} "sudo gluster volume info Portainer$THEFINALVOLUME1NAME"; then
+		if run_remote ${BRAHMA_IPS[0]} "sudo gluster volume info Portainer$THEFINALVOLUME1NAME"; then
 		    success=true
 		    echo "Portainer Volume created and started successfully."
 		    break
@@ -802,15 +867,15 @@ create_glusterfs_volume_portainer() {
 		exit
 	else    	
 		glusterfs_addresses=""
-		for ip in "${MANAGER_IPS[@]}"; do
+		for ip in "${BRAHMA_IPS[@]}"; do
 			H11O1S11T=${HOST_NAMES[$ip]}
 			if [ "$NATIVE" -lt 2 ]; then
-				H11O1S11T=${INTERNAL_IPS[$ip]}
+				H11O1S11T=${JIVA_IPS[$ip]}
 			fi
 			glusterfs_addresses+="$H11O1S11T,"
 		done
 		glusterfs_addresses=${glusterfs_addresses%,}
-		for IP in "${MANAGER_IPS[@]}"; do
+		for IP in "${BRAHMA_IPS[@]}"; do
 		    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$THEFINALVOLUME1NAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
 		done
 	fi
@@ -818,22 +883,34 @@ create_glusterfs_volume_portainer() {
 
 # Function to create swarm labels
 create_swarm_labels() {
-	for IP in "${MANAGER_IPS[@]}"; do
+	for IP in "${BRAHMA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
 		if [ -n "$NODE_ID" ]; then
-		    run_remote $IP "docker node update --label-add $STACKNAME""portainerreplica=true $NODE_ID"
+		    run_remote $IP "docker node update --label-add $STACKNAME""BRAHMAreplica=true $NODE_ID"
 		else
 		    echo "Node $IP is not part of a Swarm"
 		fi
 	done
-	for IP in "${ROUTER_IPS[@]}"; do
+	for IP in "${INDRA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
 		if [ -n "$NODE_ID" ]; then
-		    run_remote ${MANAGER_IPS[0]} "docker node update --label-add $STACKNAME""routerreplica=true $NODE_ID"
+		    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRAreplica=true $NODE_ID"
 		else
 		    echo "Node $IP is not part of a Swarm"
 		fi
 	done
+	for IP in "${VISHVAKARMA_IPS[@]}"; do
+		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
+		if [ -n "$NODE_ID" ]; then
+		    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
+			run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
+		    else
+			run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"
+		    fi		
+		else
+		    echo "Node $IP is not part of a Swarm"
+		fi
+	done			
 }
 
 # Function to create cluster level cdn & proxy
@@ -841,19 +918,19 @@ create_cluster_cdn_proxy() {
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Scripts/VARAHA.sh $BASE/tmp/$DOCKERTEMPLATE
 
-    MGRIPS=$(IFS=','; echo "${MANAGER_IPS[*]}")
+    MGRIPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
     THECFGPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     THEDCYPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)    
-    IWP="${ROUTER_IPS[0]}"
+    IWP="${INDRA_IPS[0]}"
     THE1RAM=${APP_MEM[$IWP]}
     R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
     THE1CORE=${APP_CORE[$IWP]}
     C2ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
 
-    THEREQROUTER="${ROUTER_IPS[0]}"
+    THEREQINDRA="${INDRA_IPS[0]}"
     SYNCWITHIFCONFIG="N"
     if [ "$NATIVE" -lt 2 ]; then
-    	THEREQROUTER="${INTERNAL_IPS[${ROUTER_IPS[0]}]}"
+    	THEREQINDRA="${JIVA_IPS[${INDRA_IPS[0]}]}"
     	SYNCWITHIFCONFIG="Y"
     fi
    
@@ -863,10 +940,10 @@ create_cluster_cdn_proxy() {
     attempt=0
     while true; do
     	attempt=$((attempt + 1))
-        scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
+        scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${MANAGER_IPS[0]}]} ${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQROUTER\" \"${CLUSTERAPPSMAPPING["ROUTER"]}\" \"${CLUSTER_APP_SMAPPING["ROUTER"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APP_SMAPPING["WEBSSH"]}\" && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -880,7 +957,7 @@ create_cluster_cdn_proxy() {
 }
 
 # Function to get the VPC
-get_vpc() {
+get_vpc2() {
     local ip="$1"
     local pem_file="${PEM_FILES[$ip]}"
     local port="${PORTS[$ip]}"
@@ -888,65 +965,79 @@ get_vpc() {
 
     ssh -i "$pem_file" -o StrictHostKeyChecking=no -p "$port" "$theuser@$ip" "head -n 1 /opt/VPC"
 }
+get_vpc() {
+    local ip="$1"
+    local pem_file="${PEM_FILES[$ip]}"
+    local port="${PORTS[$ip]}"
+    local theuser="${LOGIN_USERS[$ip]}"
+
+    ssh -i "$pem_file" -o StrictHostKeyChecking=no -p "$port" "$theuser@$ip" "
+        if [ -f /opt/VPC ]; then
+            head -n 1 /opt/VPC
+        else
+            cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1
+        fi
+    "
+}
 
 # Parse instance details
 parse_instance_details
 
 # Generate SSL certificates on the first manager node
-generate_ssl_certificates ${MANAGER_IPS[0]}
+generate_ssl_certificates ${BRAHMA_IPS[0]}
 
 # Copy SSL certificates to the other manager nodes
-copy_ssl_certificates ${MANAGER_IPS[0]}
+copy_ssl_certificates ${BRAHMA_IPS[0]}
 
-# Check If VPN Required
+# Check If KRISHNA Required
 declare -a VPCDET
-for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+for ip in "${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
     VPCDET+=("$(get_vpc "$ip")")
 done
 declare -A unique_counts
 for detail in "${VPCDET[@]}"; do
     ((unique_counts["$detail"]++))
 done
-ELIGIBLEFORVPN="N"
+ELIGIBLEFORKRISHNA="N"
 if [ "${#unique_counts[@]}" -gt 1 ]; then
-    ELIGIBLEFORVPN="Y"
+    ELIGIBLEFORKRISHNA="Y"
 fi
-echo "Eligible for VPN: $ELIGIBLEFORVPN"
-if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
-	VPNTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	sudo cp $BASE/Resources/VPNTemplate $BASE/tmp/$VPNTEMPLATE
+echo "Eligible for KRISHNA: $ELIGIBLEFORKRISHNA"
+if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+	KRISHNATEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	sudo cp $BASE/Resources/KRISHNA $BASE/tmp/$KRISHNATEMPLATE
 	
-	THEVPNIPDET=$(IFS='|'; echo "${VPN_IPS[*]}")
-	sed -i -e s~"THEIPLIST"~"$THEVPNIPDET"~g $BASE/tmp/$VPNTEMPLATE
-	sed -i -e s~"THENIC"~"$STACKNAME"~g $BASE/tmp/$VPNTEMPLATE
-	sed -i -e s~"THEWGPATH"~"/etc/wireguard"~g $BASE/tmp/$VPNTEMPLATE
-	THEVPNPORT=$($BASE/Scripts/GetRandomPortRange.sh 51000 52000)
-	sed -i -e s~"THEVPNPORT"~"$THEVPNPORT"~g $BASE/tmp/$VPNTEMPLATE
+	THEKRISHNAIPDET=$(IFS='|'; echo "${KRISHNA_IPS[*]}")
+	sed -i -e s~"THEIPLIST"~"$THEKRISHNAIPDET"~g $BASE/tmp/$KRISHNATEMPLATE
+	sed -i -e s~"THENIC"~"$STACKNAME"~g $BASE/tmp/$KRISHNATEMPLATE
+	sed -i -e s~"THEWGPATH"~"/etc/wireguard"~g $BASE/tmp/$KRISHNATEMPLATE
+	THEKRISHNAPORT=$($BASE/Scripts/GetRandomPortRange.sh 51000 52000)
+	sed -i -e s~"THEKRISHNAPORT"~"$THEKRISHNAPORT"~g $BASE/tmp/$KRISHNATEMPLATE
 	num1=$((RANDOM % 241 + 10))
 	num2=$((RANDOM % 241 + 10))
 	num3=$((RANDOM % 241 + 10))
 	THESUBNET="${num1}.${num2}.${num3}"	
-	sed -i -e s~"THESUBNET"~"$THESUBNET"~g $BASE/tmp/$VPNTEMPLATE
-	sudo chmod 777 $BASE/tmp/$VPNTEMPLATE
-	$BASE/tmp/$VPNTEMPLATE
-	sudo rm -f $BASE/tmp/$VPNTEMPLATE	
+	sed -i -e s~"THESUBNET"~"$THESUBNET"~g $BASE/tmp/$KRISHNATEMPLATE
+	sudo chmod 777 $BASE/tmp/$KRISHNATEMPLATE
+	$BASE/tmp/$KRISHNATEMPLATE
+	sudo rm -f $BASE/tmp/$KRISHNATEMPLATE	
 fi
 
 # Install Docker on all nodes
-for IP in "${MANAGER_IPS[@]}"; do
-    install_docker "M" $IP
+for IP in "${BRAHMA_IPS[@]}"; do
+    install_docker "B" $IP
 done
-for IP in "${WORKER_IPS[@]}"; do
-    install_docker "W" $IP
+for IP in "${VISHVAKARMA_IPS[@]}"; do
+    install_docker "V" $IP
 done
-for IP in "${ROUTER_IPS[@]}"; do
-    install_docker "R" $IP
+for IP in "${INDRA_IPS[@]}"; do
+    install_docker "I" $IP
 done
 sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 
-ALL1_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+ALL1_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 check_status() {
     local ip=$1
     local pem_file=${PEM_FILES[$ip]}
@@ -985,7 +1076,7 @@ while true; do
 done
 COUNTER=0
 
-ALL5_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+ALL5_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 for ip in "${ALL5_IPS[@]}"; do
     DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerRestartJoinTemplate $BASE/tmp/$DOCKER2TEMPLATE
@@ -994,7 +1085,7 @@ for ip in "${ALL5_IPS[@]}"; do
     sudo rm -f $BASE/tmp/$DOCKER2TEMPLATE
 done
 
-ALL8_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+ALL8_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 for ip in "${ALL8_IPS[@]}"; do
     DOCKER2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerCleanUpTemplate $BASE/tmp/$DOCKER2TEMPLATE
@@ -1007,7 +1098,7 @@ fetch_internal_ip() {
     local IP=$1
     local PORT=${PORTS[$IP]}
     local THEREQUSER=${LOGIN_USERS[$IP]}
-    if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+    if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
     	local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI3") 
     else
     	local internal_ip=$(ssh -i "${PEM_FILES[$IP]}" -o StrictHostKeyChecking=no -p $PORT $THEREQUSER@$IP "cat /opt/WHOAMI2") 
@@ -1022,21 +1113,21 @@ if [ "$NATIVE" -lt 2 ]; then
 	echo "$EXECUTE3SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
 	echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
 	echo 'sudo -H -u root bash -c "echo \"#VAMANA ALT => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
-	for ip in "${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}"; do
+	for ip in "${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
 	    internal_ip=$(fetch_internal_ip $ip)
-	    INTERNAL_IPS["$ip"]="$internal_ip"
+	    JIVA_IPS["$ip"]="$internal_ip"
 	    echo 'sudo -H -u root bash -c "sed -i -e s~'"$internal_ip"'~#'"$internal_ip"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null  
 	    echo 'sudo -H -u root bash -c "echo \"'"$internal_ip"' '"${HOST_ALT_NAMES[$ip]}"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null	    
 	done
-	for ip in "${!INTERNAL_IPS[@]}"; do
-	    echo "$ip : ${INTERNAL_IPS[$ip]}"
+	for ip in "${!JIVA_IPS[@]}"; do
+	    echo "$ip : ${JIVA_IPS[$ip]}"
 	done
 	echo 'sudo -H -u root bash -c "echo \"#VAMANA ALT => '"$STACKPRETTYNAME"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null 
 	echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
 	#echo 'sudo systemctl enable BDDMinio'"$STACKNAME" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
 	#echo 'sudo systemctl start BDDMinio'"$STACKNAME" | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null
 
-	ALL_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+	ALL_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 	for ip in "${ALL_IPS[@]}"; do
 		scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTE2SCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
 		ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT"
@@ -1046,82 +1137,86 @@ if [ "$NATIVE" -lt 2 ]; then
 fi
 
 # Initialize Docker Swarm with custom ports and autolock on the first manager node
-run_remote ${MANAGER_IPS[0]} "docker swarm init --advertise-addr ${MANAGER_IPS[0]} --autolock"
+run_remote ${BRAHMA_IPS[0]} "docker swarm init --advertise-addr ${BRAHMA_IPS[0]} --autolock"
 
 sudo rm -f $UNLOCKFILEPATH
 sudo rm -f $MJTFILEPATH
 sudo rm -f $WJTFILEPATH
 
-SWARM_UNLOCK_KEY=$(run_remote ${MANAGER_IPS[0]} "docker swarm unlock-key -q")
+SWARM_UNLOCK_KEY=$(run_remote ${BRAHMA_IPS[0]} "docker swarm unlock-key -q")
 ULFP_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 ULFP1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 echo $SWARM_UNLOCK_KEY > $BASE/tmp/$ULFP1_FILE
 $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$ULFP1_FILE├$UNLOCKFILEPATH├$ADMIN_PASSWORD├$ULFP_FILE"
 sudo chmod 777 $UNLOCKFILEPATH
 sudo rm -f $BASE/tmp/$ULFP1_FILE
-MGR1IPS=$(IFS=','; echo "${MANAGER_IPS[*]}")
+MGR1IPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
 
 # Get the join token for manager and worker nodes
-MANAGER_JOIN_TOKEN=$(run_remote ${MANAGER_IPS[0]} "docker swarm join-token manager -q")
-WORKER_JOIN_TOKEN=$(run_remote ${MANAGER_IPS[0]} "docker swarm join-token worker -q")
+BRAHMA_JOIN_TOKEN=$(run_remote ${BRAHMA_IPS[0]} "docker swarm join-token manager -q")
+VISHVAKARMA_JOIN_TOKEN=$(run_remote ${BRAHMA_IPS[0]} "docker swarm join-token worker -q")
 MJTFP_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 MJTFP1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-echo $MANAGER_JOIN_TOKEN > $BASE/tmp/$MJTFP1_FILE
+echo $BRAHMA_JOIN_TOKEN > $BASE/tmp/$MJTFP1_FILE
 $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$MJTFP1_FILE├$MJTFILEPATH├$ADMIN_PASSWORD├$MJTFP_FILE"
 sudo chmod 777 $MJTFILEPATH
 sudo rm -f $BASE/tmp/$MJTFP1_FILE
 WJTFP_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 WJTFP1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-echo $WORKER_JOIN_TOKEN > $BASE/tmp/$WJTFP1_FILE
+echo $VISHVAKARMA_JOIN_TOKEN > $BASE/tmp/$WJTFP1_FILE
 $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$WJTFP1_FILE├$WJTFILEPATH├$ADMIN_PASSWORD├$WJTFP_FILE"
 sudo chmod 777 $WJTFILEPATH
 sudo rm -f $BASE/tmp/$WJTFP1_FILE
 
 echo "$DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 # Join remaining manager nodes to the Swarm
-for IP in "${MANAGER_IPS[@]:1}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $MANAGER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+for IP in "${BRAHMA_IPS[@]:1}"; do
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$BRAHMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $BRAHMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
-for IP in "${MANAGER_IPS[0]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$MANAGER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+for IP in "${BRAHMA_IPS[0]}"; do
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$BRAHMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
 # Join worker nodes to the Swarm
-for IP in "${WORKER_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+for IP in "${VISHVAKARMA_IPS[@]}"; do
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 # Join router nodes to the Swarm
-for IP in "${ROUTER_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$WORKER_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $WORKER_JOIN_TOKEN --advertise-addr $IP ${MANAGER_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+for IP in "${INDRA_IPS[@]}"; do
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 create_encrypted_overlay_network
 
-THEMANGIP="${MANAGER_IPS[0]}"
+THEMANGIP="${BRAHMA_IPS[0]}"
 THE1RAM=${APP_MEM[$THEMANGIP]}
 R1AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
 THE1CORE=${APP_CORE[$THEMANGIP]}
 C1ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
-P1O1R1T=${PORTS[${MANAGER_IPS[0]}]}
-THE1R1E1QUSE1R=${LOGIN_USERS[${MANAGER_IPS[0]}]}
-SUBNET=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
+P1O1R1T=${PORTS[${BRAHMA_IPS[0]}]}
+THE1R1E1QUSE1R=${LOGIN_USERS[${BRAHMA_IPS[0]}]}
+SUBNET=$(ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${BRAHMA_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
 echo "Using Subnet $SUBNET ..."
 
 create_glusterfs_volume_cluster
 
-create_glusterfs_volume_portainer
+if [ ${#BRAHMA_IPS[@]} -lt 2 ]; then
+	echo "No need for Portainer HA"
+else
+	create_glusterfs_volume_portainer
+fi
     
 create_swarm_labels
 
 final_nodes_list() {
 	declare -a FNL_IPS
-	ALL9_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
-	ALL92_IPS=("${MANAGER_IPS[@]}" "${ROUTER_IPS[@]}")
+	ALL9_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
+	ALL92_IPS=("${BRAHMA_IPS[@]}" "${INDRA_IPS[@]}" "${VISHVAKARMA_IPS[0]}")
 	
 	for ip in "${ALL9_IPS[@]}"; do
-		FNL_IPS+=("$ip,${PORTS[$ip]},${PEM_FILES[$ip]},${LOGIN_USERS[$ip]},${HOST_NAMES[$ip]},${HOST_ALT_NAMES[$ip]},${INTERNAL_IPS[$ip]},${ROLE_TYPE[$ip]}")	
+		FNL_IPS+=("$ip,${PORTS[$ip]},${PEM_FILES[$ip]},${LOGIN_USERS[$ip]},${HOST_NAMES[$ip]},${HOST_ALT_NAMES[$ip]},${JIVA_IPS[$ip]},${ROLE_TYPE[$ip]}")	
 	done
 
 	DOCKER9TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -1150,14 +1245,14 @@ final_nodes_list() {
 	for ip in "${ALL92_IPS[@]}"; do
 	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
 	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER9TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
-	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER9TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && tar -xzf \"Folder$DOCKER9TEMPLATE.tar.gz\" && sudo mv Folder$DOCKER9TEMPLATE/* $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && sudo rm -rf Folder$DOCKER9TEMPLATE && sudo rm -f Folder$DOCKER9TEMPLATE.tar.gz"
+	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER9TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && tar -xzf \"Folder$DOCKER9TEMPLATE.tar.gz\" && sudo mv Folder$DOCKER9TEMPLATE/* $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && pushd $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && chmod 400 *.pem && popd && sudo rm -rf Folder$DOCKER9TEMPLATE && sudo rm -f Folder$DOCKER9TEMPLATE.tar.gz"
 	done
 	
 	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE
 	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz
 	
 	FNNPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.normal"
-	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+	if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
 		FNNPATH="$BASE/Output/Vision/V$THEVISIONID/Nodes$STACKNAME.vpn"		
 	fi
 
@@ -1170,12 +1265,27 @@ final_nodes_list() {
 
 final_nodes_list
 
-create_cluster_cdn_proxy
-
-ALL3_IPS=("${MANAGER_IPS[@]}" "${WORKER_IPS[@]}" "${ROUTER_IPS[@]}")
+ALL3_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 for ip in "${ALL3_IPS[@]}"; do
 	ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo gluster volume heal $THEFINALVOLUMENAME full"
 done
+
+DOCKERCGTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+sudo cp $BASE/Resources/CHITRAGUPTA $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"THECGVALS"~"$CHITRAGUPTA_DET"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"THECGFOLDER"~"$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"THEBRAHMAIPDET"~"${PEM_FILES[${BRAHMA_IPS[0]}]},${PORTS[${BRAHMA_IPS[0]}]},${LOGIN_USERS[${BRAHMA_IPS[0]}]},${BRAHMA_IPS[0]}"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"TEMPDPLOC"~"$BASE/tmp"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"LOGFILE"~"$BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"SELFME"~"$BASE/tmp/$DOCKERCGTEMPLATE"~g $BASE/tmp/$DOCKERCGTEMPLATE
+
+echo "" && echo "Install Guacamole & MySql..."
+echo "$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7"
+nohup $BASE/tmp/$DOCKERCGTEMPLATE > $BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out 2>&1 &
+
+create_cluster_cdn_proxy
 
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 sudo cp $BASE/Resources/DockerPortainer.yml $BASE/tmp/$DOCKERPTEMPLATE
@@ -1187,14 +1297,14 @@ sed -i -e s~"C1ORE"~"$C1ORE"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"R1AM"~"$R1AM"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"DOCKER_VOLUME_NAME"~"$DFS_DATA_DIR/PortainerMnt$STACKNAME"~g $BASE/tmp/$DOCKERPTEMPLATE
 sed -i -e s~"CERTS_DIR"~"$CERTS_DIR"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"ROUTERNAME"~"${HOST_NAMES[${ROUTER_IPS[0]}]}"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"ROUTERPORT"~"$VarahaPort2"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"WRKRVER"~"${CLUSTERAPPSMAPPING["WORKER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"MGRVER"~"${CLUSTERAPPSMAPPING["MANAGER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"WRKR1VER"~"${CLUSTER_APP_SMAPPING["WORKER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
-sed -i -e s~"MGR1VER"~"${CLUSTER_APP_SMAPPING["MANAGER"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"INDRANAME"~"${HOST_NAMES[${INDRA_IPS[0]}]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"INDRAPORT"~"$VarahaPort2"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"WRKRVER"~"${CLUSTERAPPSMAPPING["VISHVAKARMA"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"MGRVER"~"${CLUSTERAPPSMAPPING["BRAHMA"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"WRKR1VER"~"${CLUSTER_APPS_MAPPING["VISHVAKARMA"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
+sed -i -e s~"MGR1VER"~"${CLUSTER_APPS_MAPPING["BRAHMA"]}"~g $BASE/tmp/$DOCKERPTEMPLATE
 
-IWP="${WORKER_IPS[0]}"
+IWP="${VISHVAKARMA_IPS[0]}"
 THE1RAM=${APP_MEM[$IWP]}
 R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
 THE1CORE=${APP_CORE[$IWP]}
@@ -1208,7 +1318,7 @@ max_attempts=5
 attempt=0
 while true; do
 attempt=$((attempt + 1))
-scp -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${MANAGER_IPS[0]}]} "$BASE/tmp/$DOCKERPTEMPLATE" "${LOGIN_USERS[${MANAGER_IPS[0]}]}@${MANAGER_IPS[0]}:/home/${LOGIN_USERS[${MANAGER_IPS[0]}]}"
+scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERPTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
 status=$?
 if [ $status -eq 0 ]; then
     READYTOROCK="YES"
@@ -1226,18 +1336,36 @@ done
 echo "" && echo "Install Portainer & Agent..."
 # Deploy Portainer on the manager nodes with HTTPS
 if [ "$READYTOROCK" == "YES" ] ; then
-	run_remote ${MANAGER_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml $STACKNAME && sudo rm -f /home/${LOGIN_USERS[${MANAGER_IPS[0]}]}/Portainer.yml"
-fi
-             
-echo "Portainer Proxy : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort3"
-echo "Portainer Admin : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort4"
-echo "Static Local : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort1"
-echo "Static Global : https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort2"
-if [[ "$ISAUTOMATED" == "Y" ]]; then
-	/opt/firefox/firefox "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${ROUTER_IPS[0]}]}:$VarahaPort2" &
+	run_remote ${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml $STACKNAME && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml"
 fi
 
-PORTAINER_URL="https://${MANAGER_IPS[0]}:$PortainerSPort/api"
+echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
+echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
+echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" &
+fi
+
+FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
+echo "[
+  {
+    \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3\"
+  },
+  {
+    \"Guacamole\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/\"
+  },
+  {
+    \"phpMyAdmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6\"
+  },
+  {
+    \"Static Hosting\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2\"
+  },
+  {
+    \"HAProxy\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4\"
+  }
+]" >> "$FNN2PATH"
+
+PORTAINER_URL="https://${BRAHMA_IPS[0]}:$PortainerSPort/api"
 USERNAME="admin"
 MAX_RETRIES=100
 SLEEP_INTERVAL=5
@@ -1279,7 +1407,7 @@ fi
 
 set_admin_password
 
-PortainerGUI=$(ssh -i "${PEM_FILES[${MANAGER_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${MANAGER_IPS[0]} "docker service ps $STACKNAME""_portainer --filter 'desired-state=running' --format '{{.Node}} {{.CurrentState}}' | grep 'Running' | sort -k2 -r | head -n 1 | awk '{print \$1}'")
+PortainerGUI=$(ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${BRAHMA_IPS[0]} "docker service ps $STACKNAME""_portainer --filter 'desired-state=running' --format '{{.Node}} {{.CurrentState}}' | grep 'Running' | sort -k2 -r | head -n 1 | awk '{print \$1}'")
 
 echo "Docker Swarm setup completed successfully.Ports List ${PORTSLIST[@]}.URL : https://$PortainerGUI:$PortainerSPort"
 

@@ -211,6 +211,10 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		length=$(shuf -i 1-15 -n 1)
 		word=$(cat /dev/urandom | tr -dc "$charset" | fold -w "$length" | head -n 1)		
 		ClusterName="$word"
+		RANDOMWORD=$(curl -s "https://random-word-api.herokuapp.com/word?number=1" | jq -r '.[0]')
+		if [ -n "$RANDOMWORD" ]; then
+		    ClusterName="${RANDOMWORD:0:15}"
+		fi		
 		Automated="Y"
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
 		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")	
@@ -1561,10 +1565,11 @@ if [ -f /home/$pusername/Downloads/op-Scope$scopeid.pem ]; then
    sudo chown -R root:root $BASE/Output/Pem/op-Scope$scopeid.pub
    sudo chmod -R u=rx,g=rx,o=rx $BASE/Output/Pem/op-Scope$scopeid.pub      
 fi
-GETMEUNIQUEOUTPUTFILEIPS=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-GETMEUNIQUEIPS \"\$TOTALNOOFIPSREQ\" \"$nic\" \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\"
-GETMEUNIQUEOUTPUTIPS=\$(head -n 1 \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\")
-sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
+#GETMEUNIQUEOUTPUTFILEIPS=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+#GETMEUNIQUEIPS \"\$TOTALNOOFIPSREQ\" \"$nic\" \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\"
+#GETMEUNIQUEOUTPUTIPS=\$(head -n 1 \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\")
+GETMEUNIQUEOUTPUTIPS=\$(GETMEUNIQUEIPSFAST \"\$TOTALNOOFIPSREQ\" \"$nic\")
+#sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"

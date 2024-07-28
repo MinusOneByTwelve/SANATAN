@@ -35,6 +35,9 @@ echo -e "\x1b[3m\x1b[4mPORT MANAGEMENT & ROUTING\x1b[m"
 echo ''
 
 THECHOICE="$1"
+CGP1=""
+CGP2=""
+CGP3=""
 
 if [ "$THECHOICE" == "CORE" ] ; then
 	declare -a MANAGER_IPS
@@ -70,7 +73,8 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	webssh_DIR="${25}"
 	IDLE_LIMIT="${26}"
 	THEVERWROUTER="${27}" 
-	THEVERW1ROUTER="${28}"								
+	THEVERW1ROUTER="${28}"
+	CHITRAGUPTA_DET="${29}"								
 fi
 
 # Generate the HAProxy configuration
@@ -107,21 +111,6 @@ defaults
     errorfile 502 /etc/haproxy/errors/502.http
     errorfile 503 /etc/haproxy/errors/503.http
     errorfile 504 /etc/haproxy/errors/504.http
-
-frontend '"$STACKPRETTYNAME"'_WebSSH_Front
-    bind *:'"$websshPort1"' ssl crt /certs/varaha.pem
-    mode http
-    acl path_wetty path_beg -i /wetty
-    use_backend %[path,map_beg('"$webssh_DIR"'/'"$STACKPRETTYNAME"'backend.map)]
-    http-request auth realm '"$STACKPRETTYNAME"' if !{ http_auth('"$STACKPRETTYNAME"'_webssh_Users) }
-
-backend '"$STACKPRETTYNAME"'_WebSSH_Back
-    mode http
-    balance roundrobin
-    http-reuse always
-
-userlist '"$STACKPRETTYNAME"'_webssh_Users
-    user admin password '"$hash_webssh_PASSWORD"'
     
 frontend '"$STACKPRETTYNAME"'_Portainer_Front
     bind *:'"$PortainerWPort"' ssl crt /certs/varaha.pem
@@ -138,7 +127,9 @@ backend '"$STACKPRETTYNAME"'_Portainer_Back
 	echo "    server portainer$COUNTER ${MANAGER_IPS[$COUNTER]}:$PortainerPort ssl check inter 5s fall 2 rise 2 verify none" | sudo tee -a $THECFGPATH > /dev/null
 	COUNTER=$((COUNTER + 1))
     done
-
+    
+    SetUpCHITRAGUPTA
+    
     echo '
 frontend '"$STACKPRETTYNAME"'_VARAHA_Front
     bind *:'"$GLOBALVARAHAPORT"' ssl crt /certs/varaha.pem
@@ -157,7 +148,51 @@ listen '"$STACKPRETTYNAME"'_Admin_Front
     stats auth admin:'"$ADMIN_PASSWORD"'' | sudo tee -a $THECFGPATH > /dev/null
 
     docker config create VARAHA$STACKNAME.cfg "$THECFGPATH"
-    #cat $THECFGPATH
+    cat $THECFGPATH
+}
+
+SetUpCHITRAGUPTA() {
+	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA_DET
+	
+	CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
+	IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
+	CGP1="${CGPORTS_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP1}/tcp --permanent
+	CGP2="${CGPORTS_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP2}/tcp --permanent
+	CGP3="${CGPORTS_DET[6]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
+	sudo firewall-cmd --reload
+	    
+	echo "
+frontend ""$STACKPRETTYNAME""_Guacamole_Front
+    bind *:$CGP1 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_Guacamole_Back
+
+backend ""$STACKPRETTYNAME""_Guacamole_Back
+    mode http
+    server chitragupta_guacamole guacamole:8080 check" | sudo tee -a $THECFGPATH > /dev/null
+
+	echo "
+frontend ""$STACKPRETTYNAME""_phpMyAdmin_Front
+    bind *:$CGP2 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_phpMyAdmin_Back
+
+backend ""$STACKPRETTYNAME""_phpMyAdmin_Back
+    mode http
+    server chitragupta_phpmyadmin phpmyadmin:80 check" | sudo tee -a $THECFGPATH > /dev/null
+    
+	echo "
+frontend ""$STACKPRETTYNAME""_MySQL_Front
+    bind *:$CGP3 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_MySQL_Back
+
+backend ""$STACKPRETTYNAME""_MySQL_Back
+    mode http
+    server chitragupta_mysql mysql:3306 check ssl verify none" | sudo tee -a $THECFGPATH > /dev/null         			
 }
 
 # Create the Docker Compose file
@@ -174,12 +209,15 @@ services:
       - "'"$PortainerWPort"':'"$PortainerWPort"'"
       - "'"$AdminPort"':'"$AdminPort"'"
       - "'"$GLOBALVARAHAPORT"':'"$GLOBALVARAHAPORT"'" 
-      - "'"$websshPort1"':'"$websshPort1"'"                       
+      - "'"$websshPort1"':'"$websshPort1"'" 
+      - "'"$CGP1"':'"$CGP1"'"
+      - "'"$CGP2"':'"$CGP2"'" 
+      - "'"$CGP3"':'"$CGP3"'"                            
     deploy:
       replicas: 1
       placement:
         constraints:
-          - node.labels.'"$STACKNAME"'routerreplica == true
+          - node.labels.'"$STACKNAME"'INDRAreplica == true
       resources:
         limits:
           cpus: '"'$C1ORE'"'
@@ -209,7 +247,7 @@ configs:
   '"VARAHA$STACKNAME"'.cfg:
     external: true' | sudo tee $THEDCYPATH > /dev/null
     
-    #cat $THEDCYPATH
+    cat $THEDCYPATH
 }
 
 # Create all support files
@@ -223,7 +261,7 @@ create_support_files() {
 # Main function to set up everything
 main() {
 	if [ "$THECHOICE" == "CORE" ] ; then
-	    create_support_files	    	    
+	    #create_support_files	    	    
 	    generate_cfg
 	    create_docker_compose_file
 	    echo "docker stack deploy --compose-file $THEDCYPATH VARAHA$STACKNAME"
