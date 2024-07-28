@@ -1,0 +1,202 @@
+#!/bin/bash
+
+CHITRAGUPTA="THECGVALS"
+REQFOLDER="THECGFOLDER"
+WHERETORUNFROM="THEBRAHMAIPDET"
+TEMPLOC="TEMPDPLOC"
+STACKNAME="THECURSTACK"
+NOHUP="LOGFILE"
+MEMYSELF="SELFME"
+
+IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA
+CGLOGINDET="${CHITRAGUPTA_VAL[0]}"
+
+CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
+IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
+PORT_1="${CGPORTS_DET[0]}"
+PORT_2="${CGPORTS_DET[1]}"
+PORT_3="${CGPORTS_DET[2]}"
+PORT_4="${CGPORTS_DET[3]}"
+
+CGGUACAMOLEDET="${CHITRAGUPTA_VAL[2]}"
+IFS=',' read -r -a CGGUACAMOLE_DET <<< "$CGGUACAMOLEDET"
+V3="${CGGUACAMOLE_DET[0]}"
+V4="${CGGUACAMOLE_DET[1]}"
+V5="${CGGUACAMOLE_DET[2]}"
+V7="${CGGUACAMOLE_DET[5]}"
+V8="${CGGUACAMOLE_DET[6]}"
+V9="${CGGUACAMOLE_DET[7]}"
+IFS=':' read -r -a _V9 <<< "$V9"
+GMMEM="${_V9[0]}"
+GMCRS="${_V9[1]}"
+V10="${CGGUACAMOLE_DET[8]}"
+IFS=':' read -r -a _V10 <<< "$V10"
+GCMEM="${_V10[0]}"
+GCCRS="${_V10[1]}"
+			
+CGMYSQLDET="${CHITRAGUPTA_VAL[3]}"
+IFS=',' read -r -a CGMYSQL_DET <<< "$CGMYSQLDET"
+V1="${CGMYSQL_DET[0]}"
+V2="${CGMYSQL_DET[1]}"
+IFS=':' read -r -a _V2 <<< "$V2"
+PGMEM="${_V2[0]}"
+PGCRS="${_V2[1]}"
+V6="${CGMYSQL_DET[2]}"
+
+CGPHPADDET="${CHITRAGUPTA_VAL[4]}"
+IFS=',' read -r -a CGPHPAD_DET <<< "$CGPHPADDET"
+PHPAD1="${CGPHPAD_DET[0]}"
+PHPAD2="${CGPHPAD_DET[1]}"
+IFS=':' read -r -a _PHPAD2 <<< "$PHPAD2"
+PHPAD3="${_PHPAD2[0]}"
+PHPAD4="${_PHPAD2[1]}"
+PHPAD5="${CGPHPAD_DET[2]}"
+
+DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+echo "version: '3.7'
+services:
+  mysql:
+    image: $V1
+    environment:
+      MYSQL_DATABASE: $V3
+      MYSQL_USER: $V4
+      MYSQL_PASSWORD: $V5
+      MYSQL_ROOT_PASSWORD: $V6
+    ports:
+      - \"$PORT_1:3306\"
+    volumes:   
+      - type: bind
+        source: $REQFOLDER/data/mysql
+        target: /var/lib/mysql
+      - type: bind
+        source: $REQFOLDER/mysql/initdb.sql
+        target: /docker-entrypoint-initdb.d/initdb.sql
+      - type: bind
+        source: $REQFOLDER/mysql/schema/initdb-redux.sql
+        target: /docker-entrypoint-initdb.d/initdb-redux.sql 
+      - type: bind
+        source: $REQFOLDER/mysql/my.cnf
+        target: /etc/mysql/my.cnf
+        read_only: true               
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$PGCRS'
+          memory: '""$PGMEM""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  guacamole:
+    image: $V7
+    environment:
+      GUACAMOLE_HOME: /home/guacamole/.guacamole2
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822 
+      MYSQL_HOSTNAME: mysql
+      MYSQL_DATABASE: $V3
+      MYSQL_USER: $V4
+      MYSQL_PASSWORD: $V5
+      MYSQL_ROOT_PASSWORD: $V6                 
+    depends_on:
+      - mysql
+      - guacd      
+    ports:
+      - \"$PORT_2:8080\"
+    volumes:   
+      - type: bind
+        source: $REQFOLDER/guacamole
+        target: /etc/guacamole
+      - type: bind
+        source: $REQFOLDER/guacamoledata
+        target: /home/guacamole/.guacamole2     
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$GMCRS'
+          memory: '""$GMMEM""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  guacd:
+    image: $V8      
+    ports:
+      - \"$PORT_3:4822\"
+    volumes:   
+      - type: bind
+        source: $REQFOLDER/guacddata
+        target: /usr/local/guacamole    
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$GCCRS'
+          memory: '""$GCMEM""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  phpmyadmin:
+    image: $PHPAD1
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: $PHPAD5          
+    ports:
+      - "$PORT_4:80"
+    volumes:   
+      - type: bind
+        source: $REQFOLDER/phpmyadmin/boodark
+        target: /var/www/html/themes/boodark
+        read_only: true
+      - type: bind
+        source: $REQFOLDER/phpmyadmin/darkwolf
+        target: /var/www/html/themes/darkwolf
+        read_only: true        
+      - type: bind
+        source: $REQFOLDER/phpmyadmin/config.user.inc.php
+        target: /etc/phpmyadmin/config.user.inc.php
+        read_only: true                
+    depends_on:
+      - mysql         
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$PHPAD4'
+          memory: '""$PHPAD3""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+      
+networks:
+  $STACKNAME-encrypted-overlay:
+    external: true" | tee $TEMPLOC/$DOCKERPTEMPLATE > /dev/null
+
+IFS=',' read -r -a WHERETO_RUNFROM <<< "$WHERETORUNFROM"
+VL1="${WHERETO_RUNFROM[0]}"
+VL2="${WHERETO_RUNFROM[1]}"
+VL3="${WHERETO_RUNFROM[2]}"
+VL4="${WHERETO_RUNFROM[3]}"
+
+cat $TEMPLOC/$DOCKERPTEMPLATE
+
+echo "" && echo "Install Guacamole & MySql..."
+scp -i "$VL1" -o StrictHostKeyChecking=no -P $VL2 "$TEMPLOC/$DOCKERPTEMPLATE" "$VL3@$VL4:/home/$VL3"
+ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$VL3/Guacamole.yml && sudo mv /home/$VL3/$DOCKERPTEMPLATE /home/$VL3/Guacamole.yml && docker stack deploy --compose-file /home/$VL3/Guacamole.yml CHITRAGUPTA$STACKNAME && sudo rm -f /home/$VL3/Guacamole.yml"
+
+sudo rm -f $TEMPLOC/$DOCKERPTEMPLATE
+sudo rm -f $MEMYSELF
+sudo rm -f $NOHUP
+

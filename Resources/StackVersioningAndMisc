@@ -20,18 +20,33 @@ AWSOSCHOICE=("UBU├ubuntu" "AZL├ec2-user" "ALMA├ec2-user")
 #https://cloud.google.com/compute/docs/regions-zones
 GCPOSCHOICE=("ROCKY├projects/rocky-linux-cloud/global/images/rocky-linux-9-optimized-gcp-v20240415" "ALMA├projects/almalinux-cloud/global/images/almalinux-9-v20221206" "UBU├projects/ubuntu-os-cloud/global/images/ubuntu-2204-jammy-v20240319")
 
-declare -A CLUSTER_APP_SMAPPING
-CLUSTER_APP_SMAPPING["MANAGER"]="portainer/portainer-ce"
-CLUSTER_APP_SMAPPING["WORKER"]="portainer/agent"
-CLUSTER_APP_SMAPPING["ROUTER"]="haproxy"
-CLUSTER_APP_SMAPPING["WEBSSH"]="wettyoss/wetty"
+declare -A CLUSTER_APPS_MAPPING
+CLUSTER_APPS_MAPPING["BRAHMA"]="portainer/portainer-ce"
+CLUSTER_APPS_MAPPING["VISHVAKARMA"]="portainer/agent"
+CLUSTER_APPS_MAPPING["INDRA"]="haproxy"
+CLUSTER_APPS_MAPPING["WEBSSH"]="wettyoss/wetty"
+CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]="guacamole/guacamole"
+CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]="guacamole/guacd"
+CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]="mysql"
+CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]="phpmyadmin"
 
 declare -A CLUSTERAPPSMAPPING
-CLUSTERAPPSMAPPING["MANAGER"]="2.20.3"
-CLUSTERAPPSMAPPING["WORKER"]="2.20.3"
-CLUSTERAPPSMAPPING["ROUTER"]="3.0.2"
+CLUSTERAPPSMAPPING["BRAHMA"]="2.20.3"
+CLUSTERAPPSMAPPING["VISHVAKARMA"]="2.20.3"
+CLUSTERAPPSMAPPING["INDRA"]="3.0.2"
 CLUSTERAPPSMAPPING["SeaweedFS"]="3.69"
 CLUSTERAPPSMAPPING["WEBSSH"]="latest"
+CLUSTERAPPSMAPPING["CHITRAGUPTA1"]="1.5.5"
+CLUSTERAPPSMAPPING["CHITRAGUPTA2"]="1.5.5"
+#CLUSTERAPPSMAPPING["CHITRAGUPTA3"]="5.7"
+CLUSTERAPPSMAPPING["CHITRAGUPTA3"]="9.0.1"
+CLUSTERAPPSMAPPING["CHITRAGUPTA4"]="5.2.1"
+
+declare -A CLUSTER_MEMORYCORES_MAPPING
+CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]="1024:1"
+CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]="1024:1"
+CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]="2048:2"
+CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]="512:0.5"
 
 THEWEBSSHIDLELIMIT="300"
 
@@ -201,6 +216,38 @@ NARASIMHA() {
 	RANDOMKEY="$RKEY1$R$RKEY2"
         echo "$RANDOMKEY"    
     fi           
+}
+
+GETMEUNIQUEIPSFAST() {
+	NUM_IPS="$1"
+	INTERFACE="$2"
+	
+	# Network interface and required IPs
+	#INTERFACE="enx7cc2c647669e"
+	#NUM_IPS=10
+	FL_1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$FL_1 && sudo chmod 777 $BASE/tmp/$FL_1
+	FL_2=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$FL_2 && sudo chmod 777 $BASE/tmp/$FL_2
+	
+	# Get the subnet of the network interface
+	SUBNET=$(ip -o -f inet addr show $INTERFACE | awk '{print $4}')
+
+	# Scan for active IPs
+	nmap -sn $SUBNET -oG - | awk '/Up$/{print $2}' > $BASE/tmp/$FL_1
+
+	# Generate the list of all possible IPs in the subnet
+	nmap -sL $SUBNET | awk '/Nmap scan report/{print $NF}' > $BASE/tmp/$FL_2
+
+	# Find unused IPs and omit 192.168.0.0 and 192.168.0.1
+	UNUSED_IPS=$(comm -23 <(sort $BASE/tmp/$FL_2) <(sort $BASE/tmp/$FL_1) | grep -v -E '192\.168\.0\.0|192\.168\.0\.1')
+
+	# Randomly pick the required number of IPs and generate a comma-separated string
+	SELECTED_IPS=$(echo "$UNUSED_IPS" | shuf -n $NUM_IPS | paste -sd "," -)
+
+	sudo rm -f $BASE/tmp/$FL_1
+	sudo rm -f $BASE/tmp/$FL_2
+	
+	#echo "Unused IPs:"
+	echo "$SELECTED_IPS"	
 }
 
 GETMEUNIQUEIPS() {

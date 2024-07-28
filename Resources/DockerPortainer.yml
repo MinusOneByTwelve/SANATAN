@@ -31,7 +31,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.labels.STACKNAMEportainerreplica == true
+          - node.labels.STACKNAMEBRAHMAreplica == true
           - node.role == manager
       resources:
         limits:
@@ -56,7 +56,7 @@ services:
         source: CERTS_DIR/docker/STACKNAME-server-key.pem
         target: /certs/skey.pem 
         read_only: true                       
-    command: -H tcp://tasks.agent:PortainerAPort --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem --logo "https://ROUTERNAME:ROUTERPORT/LogoSTACKNAME.png"
+    command: -H tcp://tasks.agent:PortainerAPort --ssl --sslcert /certs/scert.pem --sslkey /certs/skey.pem --logo "https://INDRANAME:INDRAPORT/LogoSTACKNAME.png"
     networks:
       - STACKNAME-encrypted-overlay    
     cap_add:

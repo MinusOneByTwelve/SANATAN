@@ -29,7 +29,7 @@ BDDPort1="BDD1"
 BDDPort2="BDD2"
 BDD_HOSTS="BDDHOSTS"
 CERTS_DIR="THECERTS"
-ELIGIBLEFORVPN="GETVPN"
+ELIGIBLEFORVPN="GETVP"
 BDD_CURRHOST="BDDCURRHOST"
 websshPort1="WSP1"
 webssh_PASSWORD="WSP2"
@@ -37,6 +37,7 @@ webssh_DIR="WSP3"
 IDLE_LIMIT="WSP4"
 THEVERWROUTER="WSP5"
 THEVERW1ROUTER="WSP6"
+CHITRAGUPTA="GGEPO"
 	
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
@@ -44,6 +45,125 @@ sudo hostnamectl set-hostname $THEHOST --transient
 sudo hostnamectl set-hostname "$THEHOST" --pretty
 
 sudo rm -f /opt/DSUDONE$STACKNAME
+
+if [[ "$CHITRAGUPTA" == "NA" ]]; then
+	if [ "$TheReqRL" == "B" ] ; then
+		echo "BRAHMA"
+		sudo touch /opt/BRAHMA
+		sudo chmod 777 /opt/BRAHMA				
+	fi
+
+	if [ "$TheReqRL" == "V" ] ; then
+		echo "VISHVAKARMA"
+		sudo touch /opt/VISHVAKARMA
+		sudo chmod 777 /opt/VISHVAKARMA	
+	fi
+
+	if [ "$TheReqRL" == "I" ] ; then
+		echo "INDRA"
+		sudo touch /opt/INDRA
+		sudo chmod 777 /opt/INDRA		
+	fi	
+else
+	echo "CHITRAGUPTA"
+	sudo touch /opt/CHITRAGUPTA
+	sudo chmod 777 /opt/CHITRAGUPTA
+fi
+
+SetUpCHITRAGUPTA() {
+	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA
+	CGLOGINDET="${CHITRAGUPTA_VAL[0]}"
+	
+	CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
+	IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
+	CG_PORTS_DET="${CGPORTS_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CG_PORTS_DET}/tcp --permanent
+	CG_PORTS2_DET="${CGPORTS_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CG_PORTS2_DET}/tcp --permanent
+	CG_PORTS3_DET="${CGPORTS_DET[6]}"
+	sudo firewall-cmd --zone=public --add-port=${CG_PORTS3_DET}/tcp --permanent
+		
+	CGGUACAMOLEDET="${CHITRAGUPTA_VAL[2]}"
+	IFS=',' read -r -a CGGUACAMOLE_DET <<< "$CGGUACAMOLEDET"
+	V3="${CGGUACAMOLE_DET[0]}"
+	V4="${CGGUACAMOLE_DET[1]}"
+	V5="${CGGUACAMOLE_DET[2]}"
+				
+	CGMYSQLDET="${CHITRAGUPTA_VAL[3]}"
+	IFS=',' read -r -a CGMYSQL_DET <<< "$CGMYSQLDET"
+	V1="${CGMYSQL_DET[0]}"
+	V2="${CGMYSQL_DET[1]}"
+	IFS=':' read -r -a _V2 <<< "$V2"
+	PGMEM="${_V2[0]}"
+	PGCRS="${_V2[1]}"	
+								
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/data
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql 
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/schema 
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamole 
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/data/mysql 
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacddata
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
+
+	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
+	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
+	
+	sudo chown -R 1000:1000 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
+	sudo chmod -R 755 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
+
+	sudo mv /home/$CURRENTUSER/boodark.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
+	sudo mv /home/$CURRENTUSER/darkwolf.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
+	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
+	sudo chmod 777 boodark.tar.gz
+	tar -xzf "boodark.tar.gz"
+	sudo rm -f boodark.tar.gz
+	sudo chmod -R 777 boodark
+	sudo chmod 777 darkwolf.tar.gz
+	tar -xzf "darkwolf.tar.gz"
+	sudo rm -f darkwolf.tar.gz
+	sudo chmod -R 777 darkwolf	
+	popd
+	echo '<?php
+$cfg['"'"'ThemeDefault'"'"'] = '"'"'darkwolf'"'"';' | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin/config.user.inc.php > /dev/null
+	
+	sudo mv /home/$CURRENTUSER/initdb-redux.sql $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/schema
+	
+	echo "[mysqld]
+innodb_buffer_pool_size = 1G
+innodb_log_file_size = 256M
+innodb_log_buffer_size = 64M
+innodb_flush_log_at_trx_commit = 1
+sync_binlog = 1
+max_connections = 500
+query_cache_type = 1
+query_cache_size = 128M
+key_buffer_size = 64M
+thread_cache_size = 50
+tmp_table_size = 64M
+max_heap_table_size = 64M" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/my.cnf > /dev/null
+
+	echo "mysql-hostname: mysql
+mysql-port: 3306
+mysql-database: $V3
+mysql-username: $V4
+mysql-password: $V5
+guacd-hostname: guacd
+guacd-port: 4822" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamole/guacamole.properties > /dev/null
+
+	echo "CREATE DATABASE $V3;
+CREATE USER '$V4'@'%' IDENTIFIED BY '$V5';
+GRANT SELECT,INSERT,UPDATE,DELETE ON $V3.* TO '$V4'@'%';
+FLUSH PRIVILEGES;" > $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/initdb.sql
+	
+	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
+	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
+	
+	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql
+	sudo chmod 600 my.cnf
+	popd
+}
 
 # Function to check and remove lock files
 remove_locks() {
@@ -116,6 +236,8 @@ rt1real2pem="'"$webssh_DIR"'/PEMS/$rt1realpem"
 THE1USER="${the_reqip[3]}"
 PO1RT="${the_reqip[1]}"
 
+echo "sh '"$webssh_DIR"'/custom_ssh.sh $IP $HASH $rt1real2pem $THE1USER $PO1RT"
+
 # Create a dynamic docker-compose file
 cat <<EOF > '"$DFS_DATA_DIR/Tmp$STACKNAME"'/websshDockerCompose$HASH.yml
 version: '"'"'3.7'"'"'
@@ -180,7 +302,9 @@ THEROUTER=$(ip addr show docker0 | grep '"'inet '"' | awk '"'"'{print $2}'"'"' |
 echo "/wetty/$HASH '"$STACKPRETTYNAME"'_WebSSH_Back" >> '"$webssh_DIR"'/'"$STACKPRETTYNAME"'backend.map
 
 # Use the HAProxy Runtime API to add the new server to the backend
+echo "add server '"$STACKPRETTYNAME"'_WebSSH_Back/wetty-$HASH $THEROUTER:$PORT check"
 echo "add server '"$STACKPRETTYNAME"'_WebSSH_Back/wetty-$HASH $THEROUTER:$PORT check" | sudo socat stdio '"$DFS_DATA_DIR/Misc$STACKNAME"'/RunHAProxy/'"$STACKPRETTYNAME"'admin.sock
+echo "enable server '"$STACKPRETTYNAME"'_WebSSH_Back/wetty-$HASH" | sudo socat stdio '"$DFS_DATA_DIR/Misc$STACKNAME"'/RunHAProxy/'"$STACKPRETTYNAME"'admin.sock
 ' | tee $webssh_DIR/update_haproxy.sh > /dev/null
 	chmod +x $webssh_DIR/update_haproxy.sh
 	
@@ -221,12 +345,20 @@ PEM_FILE="$3"
 THEUSER="$4"
 PORT="$5"
 
+LOGFILE="'"$webssh_DIR"'/custom_ssh_'"$STACKPRETTYNAME"'-$HASH.log"
+echo "$(date): Starting custom_ssh_ script IP : $IP HASH : $HASH PEM_FILE : $PEM_FILE THEUSER : $THEUSER PORT : $PORT" >> $LOGFILE
+
 if [ -f "$PEM_FILE" ]; then
+    echo "$(date): custom_ssh_ script came here1" >> $LOGFILE
     tmux new-session -d -s $HASH "ssh -i "$PEM_FILE" -o StrictHostKeyChecking=no -p "$PORT" $THEUSER@$IP"
+    echo "$(date): custom_ssh_ script came here2" >> $LOGFILE
     '"$webssh_DIR"'/inactivity_check.sh "$HASH" &
+    echo "$(date): custom_ssh_ script came here3" >> $LOGFILE
     tmux attach-session -t $HASH
+    echo "$(date): custom_ssh_ script came here4" >> $LOGFILE
 else
     echo "PEM file for $IP not found."
+    echo "$(date): custom_ssh_ script came here5" >> $LOGFILE
     exit 1
 fi' | tee $webssh_DIR/custom_ssh.sh > /dev/null
 	chmod +x $webssh_DIR/custom_ssh.sh
@@ -641,7 +773,7 @@ if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
     sudo apt-get update -y
     sudo rm -rf /etc/glusterfs/glusterd.vol
     sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois
-    sudo NEEDRESTART_MODE=a apt-get install -y tmux cron
+    sudo NEEDRESTART_MODE=a apt-get install -y tmux cron mysql-client
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     #sudo yum install -y yum-utils
@@ -753,7 +885,7 @@ sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME
 sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME
 sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME
 
-if [ "$TheReqRL" == "M" ] ; then
+if [ "$TheReqRL" == "B" ] ; then
 	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh
 	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/webssh
 	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh
@@ -762,7 +894,22 @@ if [ "$TheReqRL" == "M" ] ; then
 	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS		
 fi
 
-if [ "$TheReqRL" == "R" ] ; then
+if [ "$TheReqRL" == "V" ] ; then
+	if [[ "$CHITRAGUPTA" == "NA" ]]; then
+		echo "Not Eligible For WebSSH"
+	else
+		sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh
+		sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/webssh
+		sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh
+		sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+		sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+		sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS
+		
+		SetUpCHITRAGUPTA				
+	fi		
+fi
+
+if [ "$TheReqRL" == "I" ] ; then
 	sudo mkdir -p $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
 	sudo chown -R root:root $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
 	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy
@@ -928,12 +1075,12 @@ sudo systemctl restart docker
 
 #install_minio
 
-if [ "$TheReqRL" == "R" ] ; then
-	create_webssh_router_support_files
-fi
-if [ "$TheReqRL" == "M" ] ; then
-	create_webssh_manager_support_files
-fi
+#if [ "$TheReqRL" == "I" ] ; then
+#	create_webssh_router_support_files
+#fi
+#if [ "$TheReqRL" == "B" ] ; then
+#	create_webssh_manager_support_files
+#fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
 sudo rm -rf /root/.ssh/known_hosts
