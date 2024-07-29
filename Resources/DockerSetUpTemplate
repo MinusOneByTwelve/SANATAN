@@ -106,27 +106,79 @@ SetUpCHITRAGUPTA() {
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacddata
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
-
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/prometheus
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/prometheusdata	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafanadata
+	
 	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	
 	sudo chown -R 1000:1000 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
 	sudo chmod -R 755 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
 
+	echo "global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+
+  - job_name: 'cadvisor'
+    dns_sd_configs:
+    - names:
+      - 'tasks.cadvisor'
+      type: 'A'
+      port: 8080
+
+  - job_name: 'node-exporter'
+    dns_sd_configs:
+    - names:
+      - 'tasks.node-exporter'
+      type: 'A'
+      port: 9100" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/prometheus/prometheus.yml > /dev/null
+
+	sudo mv /home/$CURRENTUSER/1860_rev37.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/dashboard.json
+	sudo mv /home/$CURRENTUSER/container-metrics.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/container-metrics.json
+	sudo mv /home/$CURRENTUSER/node-metrics.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/node-metrics.json
+	echo "apiVersion: 1
+datasources:
+  - name: Prometheus_$STACKPRETTYNAME
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    uid: PBFA97CFB590B2093
+" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/datasource.yml > /dev/null
+
+	echo "apiVersion: 1
+providers:
+  - name: 'Monitoring_$STACKPRETTYNAME'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    options:
+      path: /etc/grafana/provisioning/dashboards
+" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/dashboard.yml > /dev/null
+
 	sudo mv /home/$CURRENTUSER/boodark.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
-	sudo mv /home/$CURRENTUSER/darkwolf.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
+	#sudo mv /home/$CURRENTUSER/darkwolf.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
 	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
 	sudo chmod 777 boodark.tar.gz
 	tar -xzf "boodark.tar.gz"
 	sudo rm -f boodark.tar.gz
 	sudo chmod -R 777 boodark
-	sudo chmod 777 darkwolf.tar.gz
-	tar -xzf "darkwolf.tar.gz"
-	sudo rm -f darkwolf.tar.gz
-	sudo chmod -R 777 darkwolf	
+	#sudo chmod 777 darkwolf.tar.gz
+	#tar -xzf "darkwolf.tar.gz"
+	#sudo rm -f darkwolf.tar.gz
+	#sudo chmod -R 777 darkwolf	
 	popd
 	echo '<?php
-$cfg['"'"'ThemeDefault'"'"'] = '"'"'darkwolf'"'"';' | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin/config.user.inc.php > /dev/null
+$cfg['"'"'ThemeDefault'"'"'] = '"'"'boodark'"'"';' | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin/config.user.inc.php > /dev/null
 	
 	sudo mv /home/$CURRENTUSER/initdb-redux.sql $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/schema
 	
@@ -160,9 +212,9 @@ FLUSH PRIVILEGES;" > $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/initdb.sql
 	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	
-	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql
-	sudo chmod 600 my.cnf
-	popd
+	#pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql
+	#sudo chmod 600 my.cnf
+	#popd
 }
 
 # Function to check and remove lock files

@@ -7,6 +7,9 @@ TEMPLOC="TEMPDPLOC"
 STACKNAME="THECURSTACK"
 NOHUP="LOGFILE"
 MEMYSELF="SELFME"
+REQUNQ="UNQREQ"
+
+BASE="/opt/Matsya"
 
 IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA
 CGLOGINDET="${CHITRAGUPTA_VAL[0]}"
@@ -52,9 +55,169 @@ PHPAD3="${_PHPAD2[0]}"
 PHPAD4="${_PHPAD2[1]}"
 PHPAD5="${CGPHPAD_DET[2]}"
 
+CGMDET="${CHITRAGUPTA_VAL[5]}"
+IFS=',' read -r -a CGM_DET <<< "$CGMDET"
+MT0="${CGM_DET[0]}"
+MT1="${CGM_DET[1]}"
+MT2="${CGM_DET[2]}"
+MT3="${CGM_DET[3]}"
+MT4="${CGM_DET[4]}"
+MT5="${CGM_DET[5]}"
+MT6="${CGM_DET[6]}"
+MT7="${CGM_DET[7]}"
+IFS=':' read -r -a _MT7 <<< "$MT7"
+MT7_M="${_MT7[0]}"
+MT7_C="${_MT7[1]}"
+MT8="${CGM_DET[8]}"
+MT9="${CGM_DET[9]}"
+IFS=':' read -r -a _MT9 <<< "$MT9"
+MT9_M="${_MT9[0]}"
+MT9_C="${_MT9[1]}"
+MT10="${CGM_DET[10]}"
+MT11="${CGM_DET[11]}"
+IFS=':' read -r -a _MT11 <<< "$MT11"
+MT11_M="${_MT11[0]}"
+MT11_C="${_MT11[1]}"
+MT12="${CGM_DET[12]}"
+MT13="${CGM_DET[13]}"
+IFS=':' read -r -a _MT13 <<< "$MT13"
+MT13_M="${_MT13[0]}"
+MT13_C="${_MT13[1]}"
+
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 echo "version: '3.7'
 services:
+  prometheus:
+    image: $MT6
+    volumes:
+      - type: bind
+        source: $REQFOLDER/prometheusdata
+        target: /prometheus
+      - type: bind
+        source: $REQFOLDER/prometheus/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock        
+    ports:
+      - \"$MT1:9090\"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$MT7_C'
+          memory: '""$MT7_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  node-exporter:
+    image: $MT12
+    ports:
+      - \"$MT4:9100\"    
+    volumes:
+      - type: bind
+        source: /proc
+        target: /host/proc
+        read_only: true 
+      - type: bind
+        source: /sys
+        target: /host/sys
+        read_only: true 
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true                      
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'"'
+      - '"'"'--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'"'"'
+    '"deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: '$MT13_C'
+          memory: '""$MT13_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  grafana:
+    image: $MT10
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=$MT0
+    volumes:
+      - type: bind
+        source: $REQFOLDER/grafanadata
+        target: /var/lib/grafana
+      - type: bind
+        source: $REQFOLDER/grafana/datasource.yml
+        target: /etc/grafana/provisioning/datasources/datasource.yml
+      - type: bind
+        source: $REQFOLDER/grafana/dashboard.yml
+        target: /etc/grafana/provisioning/dashboards/dashboard.yml
+      - type: bind
+        source: $REQFOLDER/grafana/dashboard.json
+        target: /etc/grafana/provisioning/dashboards/dashboard.json 
+      - type: bind
+        source: $REQFOLDER/grafana/container-metrics.json
+        target: /etc/grafana/provisioning/dashboards/container-metrics.json
+      - type: bind
+        source: $REQFOLDER/grafana/node-metrics.json
+        target: /etc/grafana/provisioning/dashboards/node-metrics.json
+    ports:
+      - \"$MT3:3000\"
+    depends_on:
+      - prometheus
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$MT11_C'
+          memory: '""$MT11_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+
+  cadvisor:
+    image: $MT8
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true 
+      - type: bind
+        source: /var/run
+        target: /var/run
+        read_only: true 
+      - type: bind
+        source: /sys
+        target: /sys
+        read_only: true 
+      - type: bind
+        source: /var/lib/docker/
+        target: /var/lib/docker
+        read_only: true                                        
+    ports:
+      - \"$MT2:8080\"
+    depends_on:
+      - prometheus
+    deploy:
+      mode: global  
+      resources:
+        limits:
+          cpus: '$MT9_C'
+          memory: '""$MT9_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+          
   mysql:
     image: $V1
     environment:
@@ -157,11 +320,7 @@ services:
       - type: bind
         source: $REQFOLDER/phpmyadmin/boodark
         target: /var/www/html/themes/boodark
-        read_only: true
-      - type: bind
-        source: $REQFOLDER/phpmyadmin/darkwolf
-        target: /var/www/html/themes/darkwolf
-        read_only: true        
+        read_only: true       
       - type: bind
         source: $REQFOLDER/phpmyadmin/config.user.inc.php
         target: /etc/phpmyadmin/config.user.inc.php
@@ -193,10 +352,11 @@ VL4="${WHERETO_RUNFROM[3]}"
 cat $TEMPLOC/$DOCKERPTEMPLATE
 
 echo "" && echo "Install Guacamole & MySql..."
+echo "" && echo "Install Prometheus, Grafana, Node Exporter & cAdvisor..."
 scp -i "$VL1" -o StrictHostKeyChecking=no -P $VL2 "$TEMPLOC/$DOCKERPTEMPLATE" "$VL3@$VL4:/home/$VL3"
-ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$VL3/Guacamole.yml && sudo mv /home/$VL3/$DOCKERPTEMPLATE /home/$VL3/Guacamole.yml && docker stack deploy --compose-file /home/$VL3/Guacamole.yml CHITRAGUPTA$STACKNAME && sudo rm -f /home/$VL3/Guacamole.yml"
+ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$VL3/ChitraGupta.yml && sudo mv /home/$VL3/$DOCKERPTEMPLATE /home/$VL3/ChitraGupta.yml && docker stack deploy --compose-file /home/$VL3/ChitraGupta.yml $STACKNAME""_CHITRAGUPTA && sudo rm -f /home/$VL3/ChitraGupta.yml"
 
 sudo rm -f $TEMPLOC/$DOCKERPTEMPLATE
 sudo rm -f $MEMYSELF
-sudo rm -f $NOHUP
+sudo mv $NOHUP $BASE/Output/Logs/$REQUNQ-CHITRAGUPTA$STACKNAME.out
 
