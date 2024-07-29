@@ -61,7 +61,7 @@ function GetNewPort {
 }
 
 function GetNewPortRange {
-    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 9100 9500)
+    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 10000 11000)
     if printf '%s\0' "${PORTSLIST[@]}" | grep -Fxqz -- $FreshPortRange; then
     	GetNewPortRange
     fi
@@ -95,6 +95,7 @@ STACKPRETTYNAME="${THE_ARGS[5]}"
 ISAUTOMATED="${THE_ARGS[6]}"
 THENOHUPFILE="${THE_ARGS[7]}"
 WEBSSH_PASSWORD="${THE_ARGS[8]}"
+REQUNQ="${THE_ARGS[9]}"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -118,6 +119,13 @@ ChitraGuptaPort4=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4")
 ChitraGuptaPort5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5")
 ChitraGuptaPort6=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6")
 ChitraGuptaPort7=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7")
+ChitraGuptaPort8=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort8")
+ChitraGuptaPortU1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortU1")
+ChitraGuptaPortV1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1")
+ChitraGuptaPortW1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1")
+ChitraGuptaPortY1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1")
+ChitraGuptaPortZ1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1")
+
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
@@ -353,6 +361,11 @@ parse_instance_details() {
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         fi        
         
+        ls -l $PEM
+        sudo chown $CURRENTUSER:$CURRENTUSER $PEM
+        sudo chmod 600 $PEM
+        ls -l $PEM
+                
         echo "
 insert into guacamole_connection (connection_name,protocol) values (\"${HOST_NAMES[$IP]}\",\"ssh\");
 SET @conid$COUNTxER = (select connection_id from guacamole_connection where connection_name = '${HOST_NAMES[$IP]}');
@@ -385,7 +398,10 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
     if [[ "$ISAUTOMATED" == "N" ]]; then
     	sudo rm -f $INSTANCE_DETAILS_FILE 
     fi 
-    
+    if [[ "$ISAUTOMATED" == "Y" ]]; then
+    	sudo rm -f $INSTANCE_DETAILS_FILE 
+    fi
+        
     CHITRAGUPTA="${VISHVAKARMA_IPS[0]}"
     CHITRAGUPTA_DET="$CHITRAGUPTA_DET""${VISHVAKARMA_IPS[0]},${PORTS[${VISHVAKARMA_IPS[0]}]},${PEM_FILES[${VISHVAKARMA_IPS[0]}]},${LOGIN_USERS[${VISHVAKARMA_IPS[0]}]}"       
 }
@@ -439,6 +455,25 @@ generate_ssl_certificates() {
         sudo rm -f $IPHF-server-cert.pem
         sudo rm -f $IPHF-VARAHA.pem        
         cd ~
+        
+        sudo mkdir -p $CERTS_DIR && sudo chmod -R 777 $CERTS_DIR && cd $CERTS_DIR
+        openssl genpkey -algorithm RSA -out $IPHF-share-key.pem
+        openssl req -x509 -new -nodes -key $IPHF-share-key.pem -sha256 -days 3650 -out $IPHF-share.pem -subj '/CN=common-share'
+        openssl genpkey -algorithm RSA -out $IPHF-share-server-key.pem
+        openssl req -new -key $IPHF-share-server-key.pem -out $IPHF-share.csr -subj '/CN=$IP'
+        openssl x509 -req -in $IPHF-share.csr -CA $IPHF-share.pem -CAkey $IPHF-share-key.pem -CAcreateserial -out $IPHF-share-server-cert.pem -days 3650 -sha256  
+        cat $IPHF-share-server-cert.pem $IPHF-share-server-key.pem > $IPHF-share-VARAHA.pem
+                      
+        sudo mkdir -p $CERTS_DIR/common && sudo chmod -R 777 $CERTS_DIR/common
+        sudo rm -f $CERTS_DIR/common/*
+        sudo cp $IPHF-share.pem $IPHF-share-server-cert.pem $IPHF-share-server-key.pem $IPHF-share-VARAHA.pem $CERTS_DIR/common/
+        sudo rm -f $IPHF-share-key.pem
+        sudo rm -f $IPHF-share.pem
+        sudo rm -f $IPHF-share-server-key.pem
+        sudo rm -f $IPHF-share.csr
+        sudo rm -f $IPHF-share-server-cert.pem
+        sudo rm -f $IPHF-share-VARAHA.pem        
+        cd ~        
     "
 }
 
@@ -452,26 +487,31 @@ copy_ssl_certificates() {
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-            
+    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem
+                
     # Download certificates from the first manager to the local machine
     run_remote $SRC_IP "
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-key.pem
-        sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem        
+        sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem 
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem               
     "    
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem        
     run_remote $SRC_IP "
         sudo chown root:root $CERTS_DIR/docker/$IPHF.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-key.pem  
-        sudo chown root:root $CERTS_DIR/docker/$IPHF-VARAHA.pem   
+        sudo chown root:root $CERTS_DIR/docker/$IPHF-VARAHA.pem 
+        sudo chown root:root $CERTS_DIR/common/$IPHF-share-VARAHA.pem          
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem        
         sudo chmod 600 $CERTS_DIR/docker/$IPHF-server-key.pem
     " 
         
@@ -479,7 +519,8 @@ copy_ssl_certificates() {
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
+    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
+    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem        
     for IP in "${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
         local THEREQUSER=${LOGIN_USERS[$IP]}
         
@@ -487,7 +528,8 @@ copy_ssl_certificates() {
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-cert.pem
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-key.pem
         scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-VARAHA.pem
-                
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-share-VARAHA.pem
+                        
         # Move the certificates to the correct location on the target manager
         I1PHF="$STACKNAME"
         run_remote $IP "
@@ -496,19 +538,23 @@ copy_ssl_certificates() {
             sudo mv /home/$THEREQUSER/$IPHF.pem $CERTS_DIR/docker/$I1PHF.pem
             sudo mv /home/$THEREQUSER/$IPHF-server-key.pem $CERTS_DIR/docker/$I1PHF-server-key.pem
             sudo mv /home/$THEREQUSER/$IPHF-server-cert.pem $CERTS_DIR/docker/$I1PHF-server-cert.pem
-            sudo mv /home/$THEREQUSER/$IPHF-VARAHA.pem $CERTS_DIR/docker/$I1PHF-VARAHA.pem            
+            sudo mv /home/$THEREQUSER/$IPHF-VARAHA.pem $CERTS_DIR/docker/$I1PHF-VARAHA.pem  
+            sudo mv /home/$THEREQUSER/$IPHF-share-VARAHA.pem $CERTS_DIR/docker/$I1PHF-share-VARAHA.pem                       
             sudo chown root:root $CERTS_DIR/docker/$I1PHF.pem
             sudo chown root:root $CERTS_DIR/docker/$I1PHF-server-cert.pem
             sudo chown root:root $CERTS_DIR/docker/$I1PHF-server-key.pem       
-            sudo chown root:root $CERTS_DIR/docker/$I1PHF-VARAHA.pem                              
+            sudo chown root:root $CERTS_DIR/docker/$I1PHF-VARAHA.pem  
+            sudo chown root:root $CERTS_DIR/docker/$I1PHF-share-VARAHA.pem                                         
             sudo chmod 644 $CERTS_DIR/docker/$I1PHF.pem
             sudo chmod 644 $CERTS_DIR/docker/$I1PHF-server-cert.pem
             sudo chmod 600 $CERTS_DIR/docker/$I1PHF-server-key.pem    
-            sudo chmod 644 $CERTS_DIR/docker/$I1PHF-VARAHA.pem                    
+            sudo chmod 644 $CERTS_DIR/docker/$I1PHF-VARAHA.pem 
+            sudo chmod 644 $CERTS_DIR/docker/$I1PHF-share-VARAHA.pem                                
             sudo rm -f /home/$THEREQUSER/$IPHF.pem
             sudo rm -f /home/$THEREQUSER/$IPHF-server-key.pem
             sudo rm -f /home/$THEREQUSER/$IPHF-server-cert.pem 
-            sudo rm -f /home/$THEREQUSER/$IPHF-VARAHA.pem                       
+            sudo rm -f /home/$THEREQUSER/$IPHF-VARAHA.pem     
+            sudo rm -f /home/$THEREQUSER/$IPHF-share-VARAHA.pem                               
         "
     done
     MGR=$(echo "${BRAHMA_IPS[0]}" | sed 's/\./-/g')
@@ -516,14 +562,16 @@ copy_ssl_certificates() {
             sudo mv $CERTS_DIR/docker/$MGR.pem $CERTS_DIR/docker/$STACKNAME.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-key.pem $CERTS_DIR/docker/$STACKNAME-server-key.pem
             sudo mv $CERTS_DIR/docker/$MGR-server-cert.pem $CERTS_DIR/docker/$STACKNAME-server-cert.pem
-            sudo mv $CERTS_DIR/docker/$MGR-VARAHA.pem $CERTS_DIR/docker/$STACKNAME-VARAHA.pem            
+            sudo mv $CERTS_DIR/docker/$MGR-VARAHA.pem $CERTS_DIR/docker/$STACKNAME-VARAHA.pem
+            sudo mv $CERTS_DIR/common/$MGR-share-VARAHA.pem $CERTS_DIR/docker/$STACKNAME-share-VARAHA.pem            
     "      
     
     # Clean up local files
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem    
+    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
+    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share-VARAHA.pem    
 }
 
 # Function to setup Docker
@@ -606,26 +654,31 @@ install_docker() {
     if [[ "$IP" == "$CHITRAGUPTA" ]]; then
     	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"
     	
-    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7" 
-    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}" 
-    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD" 
-	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD" 
+    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}"
 	  	
 	CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
-	
-	sed -i -e s~"GUACAMOLEADMIN"~"admin_$STACK_PRETTY_NAME"~g $BASE/tmp/$CGSQLTEMPLATE
+	echo "Acamehere1"
+	sed -i -e s~"GUACAMOLEADMIN"~"admin"~g $BASE/tmp/$CGSQLTEMPLATE
+	echo "Bcamehere2"
 	sed -i -e s~"GUACAMOLEPWD"~"$WEBSSH_PASSWORD"~g $BASE/tmp/$CGSQLTEMPLATE
+	echo "Ccamehere3"
 	cat $THEGUACASQL >> $BASE/tmp/$CGSQLTEMPLATE
 	   	
    	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$CGSQLTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/initdb-redux.sql"
    	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/boodark.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/boodark.tar.gz"
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/darkwolf.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/darkwolf.tar.gz"   	
+   	#scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/darkwolf.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/darkwolf.tar.gz"
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/1860_rev37.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/1860_rev37.json" 
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/container-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/container-metrics.json"
+   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/node-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/node-metrics.json"  	   	
    	sudo rm -f $BASE/tmp/$CGSQLTEMPLATE
    	sudo rm -f $THEGUACASQL
    	
+   	echo "Dcamehere4"
     	sed -i -e s~"GGEPO"~"$CHITRAGUPTA_DET"~g $BASE/tmp/$DOCKERTEMPLATE
-    	echo "$CHITRAGUPTA_DET" 
+    	echo "Ecamehere5"
+    	echo "$CHITRAGUPTA_DET"
+    	#exit 
     else
     	sed -i -e s~"GGEPO"~"NA"~g $BASE/tmp/$DOCKERTEMPLATE
     fi
@@ -863,7 +916,7 @@ create_glusterfs_volume_portainer() {
     	
 	if [ "$success" = false ]; then
 		echo "Failed to create/start Portainer volume after $max_retries attempts."
-		sudo mv $THENOHUPFILE $BASE/tmp/FATAL_ERROR_$STACKNAME && sudo chmod 777 FATAL_ERROR_$STACKNAME
+		sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-FATAL_ERROR-$STACKPRETTYNAME.out
 		exit
 	else    	
 		glusterfs_addresses=""
@@ -1280,9 +1333,12 @@ sed -i -e s~"TEMPDPLOC"~"$BASE/tmp"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"LOGFILE"~"$BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"SELFME"~"$BASE/tmp/$DOCKERCGTEMPLATE"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"UNQREQ"~"$REQUNQ"~g $BASE/tmp/$DOCKERCGTEMPLATE
 
 echo "" && echo "Install Guacamole & MySql..."
 echo "$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7"
+echo "" && echo "Install Prometheus, Grafana, Node Exporter & cAdvisor..."
+echo "$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1"
 nohup $BASE/tmp/$DOCKERCGTEMPLATE > $BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out 2>&1 &
 
 create_cluster_cdn_proxy
@@ -1343,13 +1399,19 @@ echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" &
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
 echo "[
   {
     \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3\"
+  },
+  {
+    \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1\"
+  },
+  {
+    \"Grafana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1\"
   },
   {
     \"Guacamole\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/\"
@@ -1449,11 +1511,12 @@ until is_environment_ready || [ $RETRIES -eq $MAX_RETRIES ]; do
 done
 if [ $RETRIES -eq $MAX_RETRIES ]; then
     echo "Local environment did not become ready in time. Exiting."
+    sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
     exit 1
 fi
 rename_environment
 
-sudo rm -f $THENOHUPFILE
+sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
 fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts

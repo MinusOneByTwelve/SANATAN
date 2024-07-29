@@ -321,6 +321,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	THE1VISION1KEY="$6"
 	SOFTSTACK="$7"
 	VAMANA="$8"
+	UNQRUNID="$9"
+	RNDMJX1="${10}"
 		
 	source $BASE/Resources/StackVersioningAndMisc
 
@@ -383,7 +385,6 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		fi
 		
 		sudo rm -rf $THEMAINJOBFOLDER						
-		sudo rm -rf /home/$CURRENTUSER/nohup.out
 							
 		echo "All files processed. Exiting."
 		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync B Function"
@@ -394,20 +395,34 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			echo "Processing VAMANA..."
 			notify-send -t 5000 "Progress" "Processing VAMANA..."
 			IFS='├' read -r -a THE_ARGS <<< $VAMANA
+			echo "VAMANA : $VAMANA"
 			INSTANCE_DETAILS_FILE="${THE_ARGS[0]}"
 			VISION_KEY="${THE_ARGS[1]}"
 			THEVISIONID="${THE_ARGS[2]}"			
 			ADMIN_PASSWORD="${THE_ARGS[3]}"	
-			WEBSSH_PASSWORD="${THE_ARGS[4]}"			
-			/opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
+			WEBSSH_PASSWORD="${THE_ARGS[4]}"
+			echo '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
   "VisionKey": "'"$VISION_KEY"'",
+  "Identity": "'"$UNQRUNID"'",  
   "VisionId": "'"$THEVISIONID"'",
   "FromMatsya": "Y",
   "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
   "AdminKey": "'"$ADMIN_PASSWORD"'"      
-}'							
+}'			
+			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
+  "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
+  "VisionKey": "'"$VISION_KEY"'",
+  "Identity": "'"$UNQRUNID"'",  
+  "VisionId": "'"$THEVISIONID"'",
+  "FromMatsya": "Y",
+  "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
+  "AdminKey": "'"$ADMIN_PASSWORD"'"      
+}' > $BASE/Output/Logs/$UNQRUNID-Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
+		
+		#sudo mv $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out $BASE/Output/Logs/$UNQRUNID-$RNDMJX1-Cloud-Instance-Sync-B.out
+		sudo rm -f $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out
 				
 		break
 	    fi

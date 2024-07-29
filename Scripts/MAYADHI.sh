@@ -199,6 +199,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	THEJSON=$2
 
 	FromMatsya=$(jq -r '.FromMatsya' <<< "$THEJSON")
+	REQUNQ=$(jq -r '.Identity' <<< "$THEJSON")
 	
 	if [ "$FromMatsya" == "Y" ] ; then
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
@@ -230,8 +231,10 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")
 	fi
 	
+	sudo rm -f $BASE/Output/Logs/$REQUNQ-Cloud-Instance-Sync-B-VAMANA-Initiate.out
+	
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
@@ -240,7 +243,8 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	THESTACKFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")
-		
+	UNQRUNID=$(jq -r '.Identity' <<< "$THEJSON")
+			
 	ALLWORKFOLDER=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	sudo mkdir $BASE/tmp/$ALLWORKFOLDER
 	sudo chmod -R 777 $BASE/tmp/$ALLWORKFOLDER
@@ -428,8 +432,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "onprem : $THEWORKFILE"
 			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
-			#nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'"}' 2>&1 &
-			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' 2>&1 &
 		fi
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
@@ -438,14 +441,14 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDGCPXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}' 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "aws" ] ; then
 			echo "aws : $THEWORKFILE"
 			RNDAWSXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDAWSXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
-			nohup $BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}' 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
@@ -454,7 +457,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDAZRXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' 2>&1 &						
+			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' 2>&1 &						
 		fi
 		
 		if [ "$THEWORK_FILE" == "e2e" ] ; then
@@ -463,7 +466,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDE2EXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}' 2>&1 &	
+			nohup $BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}' 2>&1 &	
 		fi		
 	done	
 	# INSTANCE TYPE BASED FILE ACTION
@@ -474,8 +477,10 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
 		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey"	
-	fi	
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" 2>&1 &		
+	fi
+	
+	RNDMJX1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" "$UNQRUNID" "$RNDMJX1" > $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out 2>&1 &
 fi
 
 if [ "$TASKIDENTIFIER" == "e2e" ] ; then
@@ -565,9 +570,6 @@ if [ "$TASKIDENTIFIER" == "e2e" ] ; then
 	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
 	
-	#cat $BASE/tmp/$AIFCTR
-	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKE2EFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDE2E1XM\" \"E2E\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"
-	#exit
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKE2EFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDE2E1XM" "E2E" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &					
 fi
@@ -816,8 +818,7 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKGCPFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDGCP1XM" "GCP" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
-	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKGCPFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDGCP1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKGCPFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDGCP1XM" "GCP" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &				
 fi
 
 if [ "$TASKIDENTIFIER" == "azure" ] ; then
@@ -1064,8 +1065,7 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	#exit
 	#$BASE/tmp/$AIFCTR
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAZUREFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAZURE1XM" "AZURE" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &
-	#echo "nohup $BASE/Scripts/Cloud-Instance-Sync.sh \"A\" \"$THESTACKFILESYNC\" \"$THESTACKFOLDERSYNC\" \"$THEVISIONKEY\" \"$THESTACKREALFILE\" \"$THESTACKAZUREFILE\" \"$RNDMJ1\" \"$ALLWORKFOLDER1SYNC\" \"$RNDAZURE1XM\" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &"				
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKAZUREFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDAZURE1XM" "AZURE" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &				
 fi
 
 if [ "$TASKIDENTIFIER" == "aws" ] ; then
@@ -1303,14 +1303,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 		fi
 		
 		if [ "$THEREQMODE" == "REPEAT" ] ; then
-			#if [ "$THEFIRSTTIME" == "YES" ] ; then
-				#THEFIRSTTIME="NO"
-				#RND2M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-				#THEREPEAT1ITEMS='1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
-				#echo "$BASE/Scripts/MATSYA.sh \"$THEREPEAT1ITEMS\" \"$RND2M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
-				#echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null				
-				#TERRAVFILETRACKING+=("$RND2M1")				
-			#else
+
 				THEREPEATITEMS="$THEREPEATITEMS"'1¤'"$TASKIDENTIFIER"'¤'"$THEVAL7"'¤'"v$THEVAL1""s$THEVAL2""i$THEVAL3"'¤1¤'"$THEVAL4¬$THEVAL3HASH¬$THEVAL1HASH¬$THESTACKFOLDERSYNC¬$RNDXM¬$THEVAL2¬$THEVAL3"'¤'"$THEVAL5"'¬'"$THEVAL6"'├'
 			#fi
 			echo "$THESTACKFOLDERSYNC/$RNDXM" | sudo tee -a $THESTACKFILESYNC > /dev/null
@@ -1331,12 +1324,6 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	
 	THEREPEATITEMS="${THEREPEATITEMS%├}"
 	
-	#if [ "$THEREPEAT1ITEMS" != "" ] ; then
-	#	RND2M1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	#	echo "$BASE/Scripts/MATSYA.sh \"$THEREPEAT1ITEMS\" \"$RND2M1\" \"YES\" 5 \"$THEVISIONKEY\" \"$THEVAL1HASH\"" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
-	#	echo '' | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
-	#	TERRAVFILETRACKING+=("$RND2M1")	
-	#fi
 	
 	if [ "$THEREPEATITEMS" != "" ] ; then	
 		RNDM1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -1367,7 +1354,9 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
 	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
-	RNDOPRMXM=$(jq -r '.AllWorkFile' <<< "$THEJSON")	
+	RNDOPRMXM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
+	UNQRQ1=$(jq -r '.Identity' <<< "$THEJSON")
+		
 	#THESTACKFILE="$2"
 	#THEVISIONKEY="$3"
 	declare -A PICRFLOCATIONMAPPING
@@ -1573,7 +1562,7 @@ GETMEUNIQUEOUTPUTIPS=\$(GETMEUNIQUEIPSFAST \"\$TOTALNOOFIPSREQ\" \"$nic\")
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"
-nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS├$THEVISIONKEY\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
+nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS├$THEVISIONKEY├$UNQRQ1\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
 ")
 		CONSIDERTHISMACHINE="YES"
 		if [ -z "$only3from_filtered_json2_otherinfo" ] || [ -z "$the4thfrom_filtered_json2_otherinfo" ]; then

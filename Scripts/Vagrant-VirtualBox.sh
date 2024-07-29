@@ -79,6 +79,7 @@ SSHKEYCREATE="YES"
 ISSAMEASHOST="YES"
 THEPARENTAUTHDETAILS="NOTHING"
 THEUSERCHOICE="Z"
+UNQRQ1=""
 
 if [ "$#" -ne 2 ]; then
 	USERVALS=""
@@ -144,7 +145,8 @@ else
 			SSHKEYCREATE="${USERLISTVALS[25]}"
 			ISSAMEASHOST="${USERLISTVALS[26]}"
 			THEPARENTAUTHDETAILS="${USERLISTVALS[27]}"
-			THEREALVISIONKEY="${USERLISTVALS[28]}"				
+			THEREALVISIONKEY="${USERLISTVALS[28]}"
+			UNQRQ1="${USERLISTVALS[29]}"				
 		fi
 	fi					
 fi
@@ -274,7 +276,7 @@ if [ "$THEUSERCHOICE" == "D" ] ; then
 		fi
 	done
 	
-	sudo rm -rf /home/$CURRENTUSER/nohup.out
+	sudo mv /home/$CURRENTUSER/nohup.out $BASE/Output/Logs/VVB-D-$CLUSTERNAME-JOBLOG4.out
 	
 	exit
 fi
@@ -1886,8 +1888,7 @@ echo \"\"
 	    THEMACHPARENT=""; \
 	    if [ -e "/opt/MYPARENT" ]; then THEMACHPARENT=$(head -n 1 "/opt/MYPARENT"); fi; \
 	    THEMACHPARENTAUTH=""; \
-	    if [ -e "/opt/THEPARENTAUTHDETAILS" ]; then THEMACHPARENTAUTH=$(head -n 1 "/opt/THEPARENTAUTHDETAILS"); fi; \    
-	    #sudo rm -f /opt/THEPARENTAUTHDETAILS; \
+	    if [ -e "/opt/THEPARENTAUTHDETAILS" ]; then THEMACHPARENTAUTH=$(head -n 1 "/opt/THEPARENTAUTHDETAILS"); fi; \
 	    THEOTHERINFO=""; \
 	    if [ -e "/opt/THEOTHERINFO" ]; then THEOTHERINFO=$(head -n 1 "/opt/THEOTHERINFO"); fi; \	    	    
 	    nic=$(ip addr | grep -B 2 "'"$VMIP"'" | awk '"'"'/^[0-9]/ {print $2; exit}'"'"'); \
@@ -1895,6 +1896,8 @@ echo \"\"
 	    gateway=$(ip route show dev "$nic" | grep -oP "^default via \K\S+"); \
 	    netmask=$(ifconfig "$nic" | awk '"'"'/inet / {print $4}'"'"'); \
 	    echo "$os_type├$hostname├$vagrant_virtualbox_installed├$total_ram├$free_ram├$cpu_cores├$isvm_exists├$THEMACHPARENT├$nic├$gateway├$netmask├$THEMACHPARENTAUTH├$THEOTHERINFO"')
+				
+				echo "ssh_info : $VMIP => $ssh_info"
 				
 				IFS='├' read -ra _gi <<< "$ssh_info"
 				_gi0="${_gi[0]}"				
@@ -1992,7 +1995,7 @@ echo \"\"
 	echo ''	
 	
 	sleep 2
-	clear
+	#clear
 		
 	echo -e "${ORANGE}==========================================================${NC}"
 	echo -e "${BLUE}${BOLD}\x1b[4mM${NORM}${NC}odular ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}malgamation ${BLUE}${BOLD}\x1b[4mT${NORM}${NC}ransforming ${BLUE}${BOLD}\x1b[4mS${NORM}${NC}ystems ${BLUE}${BOLD}\x1b[4mY${NORM}${NC}ielding ${BLUE}${BOLD}\x1b[4mA${NORM}${NC}gility"
@@ -2110,9 +2113,9 @@ echo \"\"
 		echo ""
 		$BASE/Scripts/BashTabularPrint.sh "$FINALPROCESSOUTPUT■-1■,"
 		echo ""	
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
-		sudo rm -rf $BASE/tmp/$CLUSTERNAME-JOBLOG3.out		
+		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
+		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
+		sudo mv $BASE/tmp/$CLUSTERNAME-JOBLOG3.out $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-JOBLOG3.out		
 	else
 		sudo rm -rf $BASE/op-$CLUSTERNAME-kill-opvvb.sh
 	fi	

@@ -74,7 +74,8 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	IDLE_LIMIT="${26}"
 	THEVERWROUTER="${27}" 
 	THEVERW1ROUTER="${28}"
-	CHITRAGUPTA_DET="${29}"								
+	CHITRAGUPTA_DET="${29}"
+	hash_admin_PASSWORD=$(mkpasswd -m sha-256 $ADMIN_PASSWORD)								
 fi
 
 # Generate the HAProxy configuration
@@ -154,6 +155,8 @@ listen '"$STACKPRETTYNAME"'_Admin_Front
 SetUpCHITRAGUPTA() {
 	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA_DET
 	
+	echo $CHITRAGUPTA_DET
+	
 	CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
 	IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
 	CGP1="${CGPORTS_DET[4]}"
@@ -162,6 +165,12 @@ SetUpCHITRAGUPTA() {
 	sudo firewall-cmd --zone=public --add-port=${CGP2}/tcp --permanent
 	CGP3="${CGPORTS_DET[6]}"
 	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
+	CGP5="${CGPORTS_DET[7]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP5}/tcp --permanent	
+	CGPORTS2DET="${CHITRAGUPTA_VAL[5]}"		
+	IFS=',' read -r -a CGPORTS2_DET <<< "$CGPORTS2DET"	
+	CGP4="${CGPORTS2_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent				
 	sudo firewall-cmd --reload
 	    
 	echo "
@@ -186,13 +195,41 @@ backend ""$STACKPRETTYNAME""_phpMyAdmin_Back
     
 	echo "
 frontend ""$STACKPRETTYNAME""_MySQL_Front
-    bind *:$CGP3 ssl crt /certs/varaha.pem
+    bind *:$CGP3 ssl crt /certs/share-varaha.pem
     mode http
     default_backend ""$STACKPRETTYNAME""_MySQL_Back
 
 backend ""$STACKPRETTYNAME""_MySQL_Back
     mode http
-    server chitragupta_mysql mysql:3306 check ssl verify none" | sudo tee -a $THECFGPATH > /dev/null         			
+    server chitragupta_mysql mysql:3306 check" | sudo tee -a $THECFGPATH > /dev/null 
+
+	echo "
+frontend ""$STACKPRETTYNAME""_Prometheus_Front
+    bind *:$CGP5 ssl crt /certs/varaha.pem
+    mode http
+    acl auth_prometheus http_auth(""$STACKPRETTYNAME""_Prometheus_Users)
+    acl is_prometheus path_beg /
+    http-request auth realm \"Prometheus Authentication\" if is_prometheus !auth_prometheus
+    default_backend ""$STACKPRETTYNAME""_Prometheus_Back
+
+backend ""$STACKPRETTYNAME""_Prometheus_Back
+    mode http
+    server chitragupta_prometheus prometheus:9090 check
+    http-request set-header X-Forwarded-Proto https if { ssl_fc }
+    http-request set-header X-Forwarded-Port %[dst_port]
+
+userlist ""$STACKPRETTYNAME""_Prometheus_Users
+    user admin password $hash_admin_PASSWORD" | sudo tee -a $THECFGPATH > /dev/null 
+        
+	echo "
+frontend ""$STACKPRETTYNAME""_Grafana_Front
+    bind *:$CGP4 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_Grafana_Back
+
+backend ""$STACKPRETTYNAME""_Grafana_Back
+    mode http
+    server chitragupta_grafana grafana:3000 check" | sudo tee -a $THECFGPATH > /dev/null            			
 }
 
 # Create the Docker Compose file
@@ -212,7 +249,9 @@ services:
       - "'"$websshPort1"':'"$websshPort1"'" 
       - "'"$CGP1"':'"$CGP1"'"
       - "'"$CGP2"':'"$CGP2"'" 
-      - "'"$CGP3"':'"$CGP3"'"                            
+      - "'"$CGP3"':'"$CGP3"'" 
+      - "'"$CGP4"':'"$CGP4"'"
+      - "'"$CGP5"':'"$CGP5"'"                                       
     deploy:
       replicas: 1
       placement:
@@ -227,6 +266,10 @@ services:
         source: '"$CERTS_DIR"'/docker/'"$STACKNAME"'-VARAHA.pem
         target: /certs/varaha.pem
         read_only: true
+      - type: bind
+        source: '"$CERTS_DIR"'/docker/'"$STACKNAME"'-share-VARAHA.pem
+        target: /certs/share-varaha.pem
+        read_only: true        
       - type: bind
         source: '"$ERRORS_DIR"'
         target: /etc/haproxy/errors 
@@ -264,8 +307,8 @@ main() {
 	    #create_support_files	    	    
 	    generate_cfg
 	    create_docker_compose_file
-	    echo "docker stack deploy --compose-file $THEDCYPATH VARAHA$STACKNAME"
-	    docker stack deploy --compose-file $THEDCYPATH VARAHA$STACKNAME
+	    echo "docker stack deploy --compose-file $THEDCYPATH $STACKNAME""_VARAHA"
+	    docker stack deploy --compose-file $THEDCYPATH $STACKNAME"_VARAHA"
 	    sudo rm -f $THECFGPATH  
 	    sudo rm -f $THEDCYPATH 
 	fi          
