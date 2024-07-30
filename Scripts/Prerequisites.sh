@@ -4,7 +4,9 @@
 dirs=("/usr/local/bin" "/usr/local/sbin" "/usr/bin" "/usr/sbin")
 
 # Directory with files to search in
-search_dir="/opt/Matsya/Scripts"
+#search_dir="/opt/Matsya/Scripts"
+#search_dir="/opt/Matsya/Resources"
+search_dir="/home/prathamos/Downloads/t1"
 
 # Array to hold the distinct commands found
 declare -A distinct_commands

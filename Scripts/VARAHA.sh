@@ -167,10 +167,26 @@ SetUpCHITRAGUPTA() {
 	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
 	CGP5="${CGPORTS_DET[7]}"
 	sudo firewall-cmd --zone=public --add-port=${CGP5}/tcp --permanent	
+	
 	CGPORTS2DET="${CHITRAGUPTA_VAL[5]}"		
 	IFS=',' read -r -a CGPORTS2_DET <<< "$CGPORTS2DET"	
 	CGP4="${CGPORTS2_DET[5]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent				
+	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent	
+	
+	CGPORTS3DET="${CHITRAGUPTA_VAL[6]}"		
+	IFS=',' read -r -a CGPORTS3_DET <<< "$CGPORTS3DET"	
+	CGP6="${CGPORTS3_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP6}/tcp --permanent	
+	CGP7="${CGPORTS3_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP7}/tcp --permanent
+	
+	CGPORTS4DET="${CHITRAGUPTA_VAL[7]}"		
+	IFS=',' read -r -a CGPORTS4_DET <<< "$CGPORTS4DET"	
+	CGP8="${CGPORTS4_DET[3]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP8}/tcp --permanent	
+	CGP9="${CGPORTS4_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP9}/tcp --permanent	
+								
 	sudo firewall-cmd --reload
 	    
 	echo "
@@ -229,7 +245,50 @@ frontend ""$STACKPRETTYNAME""_Grafana_Front
 
 backend ""$STACKPRETTYNAME""_Grafana_Back
     mode http
-    server chitragupta_grafana grafana:3000 check" | sudo tee -a $THECFGPATH > /dev/null            			
+    server chitragupta_grafana grafana:3000 check" | sudo tee -a $THECFGPATH > /dev/null 
+    
+	echo "
+frontend ""$STACKPRETTYNAME""_phpLDAPadmin_Front
+    bind *:$CGP6 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_phpLDAPadmin_Back
+
+backend ""$STACKPRETTYNAME""_phpLDAPadmin_Back
+    mode http
+    server chitragupta_phpldapadmin phpldapadmin:443 ssl verify none" | sudo tee -a $THECFGPATH > /dev/null   
+    
+	echo "
+frontend ""$STACKPRETTYNAME""_OpenLDAP_Front
+    bind *:$CGP7 ssl crt /certs/share-varaha.pem
+    mode tcp
+    default_backend ""$STACKPRETTYNAME""_OpenLDAP_Back
+
+backend ""$STACKPRETTYNAME""_OpenLDAP_Back
+    mode tcp
+    option tcp-check
+    server chitragupta_openldap openldap:389 check" | sudo tee -a $THECFGPATH > /dev/null 
+    
+	echo "
+frontend ""$STACKPRETTYNAME""_KerberosKDC_Front
+    bind *:$CGP8 ssl crt /certs/share-varaha.pem
+    mode tcp
+    default_backend ""$STACKPRETTYNAME""_KerberosKDC_Back
+
+backend ""$STACKPRETTYNAME""_KerberosKDC_Back
+    mode tcp
+    option tcp-check
+    server chitragupta_Kerberoskdc kerberos:88 check" | sudo tee -a $THECFGPATH > /dev/null 
+    
+	echo "
+frontend ""$STACKPRETTYNAME""_KerberosAdmin_Front
+    bind *:$CGP9 ssl crt /certs/share-varaha.pem
+    mode tcp
+    default_backend ""$STACKPRETTYNAME""_KerberosAdmin_Back
+
+backend ""$STACKPRETTYNAME""_KerberosAdmin_Back
+    mode tcp
+    option tcp-check
+    server chitragupta_Kerberosadmin kerberos:749 check" | sudo tee -a $THECFGPATH > /dev/null                          			
 }
 
 # Create the Docker Compose file
@@ -251,7 +310,11 @@ services:
       - "'"$CGP2"':'"$CGP2"'" 
       - "'"$CGP3"':'"$CGP3"'" 
       - "'"$CGP4"':'"$CGP4"'"
-      - "'"$CGP5"':'"$CGP5"'"                                       
+      - "'"$CGP5"':'"$CGP5"'"
+      - "'"$CGP6"':'"$CGP6"'"   
+      - "'"$CGP7"':'"$CGP7"'"  
+      - "'"$CGP8"':'"$CGP8"'"   
+      - "'"$CGP9"':'"$CGP9"'"                                                    
     deploy:
       replicas: 1
       placement:

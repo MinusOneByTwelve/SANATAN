@@ -61,7 +61,7 @@ function GetNewPort {
 }
 
 function GetNewPortRange {
-    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 10000 11000)
+    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 10000 12000)
     if printf '%s\0' "${PORTSLIST[@]}" | grep -Fxqz -- $FreshPortRange; then
     	GetNewPortRange
     fi
@@ -103,6 +103,7 @@ if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 fi
 
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
+
 PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort")
 PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort")
 VarahaPort1=$(GetNewPortRange) && PORTSLIST+=("$VarahaPort1")
@@ -125,6 +126,15 @@ ChitraGuptaPortV1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1")
 ChitraGuptaPortW1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1")
 ChitraGuptaPortY1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1")
 ChitraGuptaPortZ1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1")
+ChitraGuptaPortLDP1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP1")
+ChitraGuptaPortLDP2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP2")
+ChitraGuptaPortLDP3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP3")
+ChitraGuptaPortLDP4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP4")
+ChitraGuptaPortLDP5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP5")
+ChitraGuptaPortKERB1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB1")
+ChitraGuptaPortKERB2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB2")
+ChitraGuptaPortKERB3=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB3")
+ChitraGuptaPortKERB4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB4")
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
@@ -323,6 +333,7 @@ parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
     COUNTxER=0
+    COUNTvER=0
     while IFS=',' read -r SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
@@ -351,9 +362,18 @@ parse_instance_details() {
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         elif [ "$ROLE" == "VISHVAKARMA" ]; then
             VISHVAKARMA_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+            if (( $COUNTvER == 0 )) ; then
+		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
+		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		    CHITRAGUPTA="$IP"
+		    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""$IP,$PORT,$PEM,$U1SER"		                
+            else
+		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+            fi
+            COUNTvER=$((COUNTvER + 1))
         elif [ "$ROLE" == "INDRA" ]; then
             INDRA_IPS+=("$IP")
             HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
@@ -376,6 +396,9 @@ insert into guacamole_connection_parameter values(@conid$COUNTxER,\"font-size\",
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"private-key\",\"" | sudo tee -a $THEGUACASQL > /dev/null
 	cat $PEM >> $THEGUACASQL 
         echo "\");
+insert into guacamole_connection_parameter values(@conid$COUNTxER,\"color-scheme\",\"" | sudo tee -a $THEGUACASQL > /dev/null
+	cat $BASE/Resources/ColourSchemeWebSSH >> $THEGUACASQL 
+        echo "\");        
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"username\",\"$U1SER\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"READ\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"UPDATE\");
@@ -400,10 +423,7 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
     fi 
     if [[ "$ISAUTOMATED" == "Y" ]]; then
     	sudo rm -f $INSTANCE_DETAILS_FILE 
-    fi
-        
-    CHITRAGUPTA="${VISHVAKARMA_IPS[0]}"
-    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""${VISHVAKARMA_IPS[0]},${PORTS[${VISHVAKARMA_IPS[0]}]},${PEM_FILES[${VISHVAKARMA_IPS[0]}]},${LOGIN_USERS[${VISHVAKARMA_IPS[0]}]}"       
+    fi               
 }
 
 # Function to run commands on remote hosts
@@ -488,6 +508,7 @@ copy_ssl_certificates() {
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem
+    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem
                 
     # Download certificates from the first manager to the local machine
     run_remote $SRC_IP "
@@ -495,23 +516,27 @@ copy_ssl_certificates() {
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-key.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem 
-        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem               
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem 
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                      
     "    
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem        
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem        
     run_remote $SRC_IP "
         sudo chown root:root $CERTS_DIR/docker/$IPHF.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-key.pem  
         sudo chown root:root $CERTS_DIR/docker/$IPHF-VARAHA.pem 
-        sudo chown root:root $CERTS_DIR/common/$IPHF-share-VARAHA.pem          
+        sudo chown root:root $CERTS_DIR/common/$IPHF-share-VARAHA.pem    
+        sudo chown root:root $CERTS_DIR/common/$IPHF-share.pem              
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-server-cert.pem
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem
-        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem        
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                
         sudo chmod 600 $CERTS_DIR/docker/$IPHF-server-key.pem
     " 
         
@@ -520,7 +545,8 @@ copy_ssl_certificates() {
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem        
+    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem 
+    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem           
     for IP in "${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
         local THEREQUSER=${LOGIN_USERS[$IP]}
         
@@ -571,7 +597,8 @@ copy_ssl_certificates() {
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
     sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share-VARAHA.pem    
+    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share-VARAHA.pem 
+    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share.pem   
 }
 
 # Function to setup Docker
@@ -652,10 +679,13 @@ install_docker() {
     fi       
 
     if [[ "$IP" == "$CHITRAGUPTA" ]]; then
-    	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"
-    	
+    	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"   	
     	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}"
-	  	
+
+	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}"
+
+	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}"
+		  	
 	CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
 	echo "Acamehere1"
@@ -957,9 +987,8 @@ create_swarm_labels() {
 		if [ -n "$NODE_ID" ]; then
 		    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
 			run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
-		    else
-			run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"
-		    fi		
+		    fi
+		    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"		
 		else
 		    echo "Node $IP is not part of a Swarm"
 		fi
@@ -1392,14 +1421,14 @@ done
 echo "" && echo "Install Portainer & Agent..."
 # Deploy Portainer on the manager nodes with HTTPS
 if [ "$READYTOROCK" == "YES" ] ; then
-	run_remote ${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml $STACKNAME && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml"
+	run_remote ${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml $STACKNAME""_GANESHA && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml"
 fi
 
 echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" &
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
@@ -1420,10 +1449,25 @@ echo "[
     \"phpMyAdmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6\"
   },
   {
+    \"phpLDAPadmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4\"
+  },
+  {
     \"Static Hosting\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2\"
   },
   {
-    \"HAProxy\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4\"
+    \"HAProxy Admin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4\"
+  },
+  {
+    \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7\"
+  },
+  {
+    \"OpenLDAP\": \"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5\"
+  },
+  {
+    \"Kerberos KDC\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3\"
+  },
+  {
+    \"Kerberos Admin\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4\"
   }
 ]" >> "$FNN2PATH"
 
