@@ -1,0 +1,101 @@
+#!/bin/bash
+
+set -e
+
+# Variables
+LDAP_URI="ldaps://onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:39000"
+KDC_SERVER="onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:45000"
+KADMIN_SERVER="onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:45001"
+REALM="AWESOME.COM"
+DOMAIN="awesome.com"
+USER="ubuntu1"
+KERB_PASSWD="your_kerberos_password"
+LDAP_BASE_DN="dc=awesome,dc=com"
+
+# Pre-seed answers for debconf
+debconf-set-selections <<EOF
+krb5-config krb5-config/default_realm string $REALM
+krb5-config krb5-config/kerberos_servers string $KDC_SERVER
+krb5-config krb5-config/admin_server string $KADMIN_SERVER
+krb5-config krb5-config/add_servers_realm string $REALM
+krb5-config krb5-config/add_servers boolean true
+krb5-config krb5-config/read_config boolean true
+EOF
+
+# Install necessary packages
+DEBIAN_FRONTEND=noninteractive apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y libnss-ldap libpam-ldap ldap-utils krb5-user nscd
+
+# Configure LDAP
+cat <<EOF > /etc/ldap/ldap.conf
+BASE    $LDAP_BASE_DN
+URI     $LDAP_URI
+TLS_CACERT /etc/ssl/certs/ca-certificates.crt
+EOF
+
+auth-client-config -t nss -p lac_ldap
+
+# Configure Kerberos
+cat <<EOF > /etc/krb5.conf
+[libdefaults]
+    default_realm = $REALM
+    dns_lookup_realm = false
+    dns_lookup_kdc = false
+    ticket_lifetime = 24h
+    renew_lifetime = 7d
+    forwardable = true
+
+[realms]
+    $REALM = {
+        kdc = $KDC_SERVER
+        admin_server = $KADMIN_SERVER
+    }
+
+[domain_realm]
+    .$DOMAIN = $REALM
+    $DOMAIN = $REALM
+EOF
+
+# Configure PAM for LDAP and Kerberos
+cat <<EOF > /etc/pam.d/common-auth
+auth    [success=1 default=ignore]  pam_krb5.so minimum_uid=1000
+auth    [success=1 default=ignore]  pam_unix.so nullok_secure try_first_pass
+auth    requisite           pam_deny.so
+auth    required            pam_permit.so
+auth    optional            pam_cap.so
+EOF
+
+cat <<EOF > /etc/pam.d/common-account
+account [success=1 new_authtok_reqd=done default=ignore]    pam_unix.so 
+account [success=1 default=ignore]  pam_krb5.so
+account requisite           pam_deny.so
+account required            pam_permit.so
+EOF
+
+cat <<EOF > /etc/pam.d/common-session
+session required    pam_unix.so 
+session optional    pam_krb5.so
+session optional    pam_mkhomedir.so skel=/etc/skel umask=077
+session required    pam_limits.so
+EOF
+
+cat <<EOF > /etc/pam.d/common-password
+password   [success=1 default=ignore] pam_krb5.so minimum_uid=1000
+password   requisite           pam_deny.so
+password   required            pam_permit.so
+password   optional            pam_gnome_keyring.so
+EOF
+
+# Configure NSS
+sed -i 's/^passwd:.*/passwd:         compat ldap/g' /etc/nsswitch.conf
+sed -i 's/^group:.*/group:          compat ldap/g' /etc/nsswitch.conf
+sed -i 's/^shadow:.*/shadow:         compat ldap/g' /etc/nsswitch.conf
+
+# Restart necessary services
+systemctl restart nscd
+
+# Add user to Kerberos
+echo "addprinc -pw $KERB_PASSWD $USER" | kadmin -p admin/admin -w admin_password
+
+echo "Setup complete. System is now configured for LDAP and Kerberos authentication."
+

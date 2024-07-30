@@ -84,9 +84,150 @@ IFS=':' read -r -a _MT13 <<< "$MT13"
 MT13_M="${_MT13[0]}"
 MT13_C="${_MT13[1]}"
 
+CG1MDET="${CHITRAGUPTA_VAL[6]}"
+IFS=',' read -r -a CG1M_DET <<< "$CG1MDET"
+M1T0="${CG1M_DET[0]}"
+M1T1="${CG1M_DET[1]}"
+M1T2="${CG1M_DET[2]}"
+M1T3="${CG1M_DET[3]}"
+M1T4="${CG1M_DET[6]}"
+M1T_4=$(echo "$M1T4" | tr '[:upper:]' '[:lower:]')	
+M1T6="${CG1M_DET[7]}"
+M1T7="${CG1M_DET[8]}"
+IFS=':' read -r -a _M1T7 <<< "$M1T7"
+M1T7_M="${_M1T7[0]}"
+M1T7_C="${_M1T7[1]}"
+M1T8="${CG1M_DET[9]}"
+M1T9="${CG1M_DET[10]}"
+IFS=':' read -r -a _M1T9 <<< "$M1T9"
+M1T9_M="${_M1T9[0]}"
+M1T9_C="${_M1T9[1]}"    
+
+CG7MDET="${CHITRAGUPTA_VAL[7]}"
+IFS=',' read -r -a CG7M_DET <<< "$CG7MDET"
+MK1T0="${CG7M_DET[0]}"
+MK1T1="${CG7M_DET[1]}"
+MK1T2="${CG7M_DET[2]}"
+MK1T4="${CG7M_DET[5]}"
+MK1T_4=$(echo "$MK1T4" | tr '[:upper:]' '[:lower:]')	
+MK1T6="${CG7M_DET[6]}"
+MK1T7="${CG7M_DET[7]}"
+IFS=':' read -r -a _MK1T7 <<< "$MK1T7"
+MK1T7_M="${_MK1T7[0]}"
+MK1T7_C="${_MK1T7[1]}"
+
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 echo "version: '3.7'
 services:
+  kerberos:
+    image: $MK1T6
+    hostname: \"kerberos\"
+    domainname: \"$MK1T_4.vamana\"
+    environment:
+      KERB_PASSWD: \"$MK1T0\"
+    volumes:
+      - type: bind
+        source: $REQFOLDER/kerberos/krb5.conf
+        target: /etc/krb5.conf
+      - type: bind
+        source: $REQFOLDER/kerberos/kdc.conf
+        target: /etc/krb5kdc/kdc.conf
+      - type: bind
+        source: $REQFOLDER/kerberos/kadm5.acl
+        target: /etc/krb5kdc/kadm5.acl
+    ports:
+      - \"$MK1T1:88\"
+      - \"$MK1T2:749\"      
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$MK1T7_C'
+          memory: '""$MK1T7_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+          
+  openldap:
+    image: $M1T6
+    domainname: \"$M1T_4.vamana\"
+    hostname: \"openldap\"
+    environment:
+      LDAP_LOG_LEVEL: \"256\"
+      LDAP_ORGANISATION: \"$M1T4\"
+      LDAP_DOMAIN: \"$M1T_4.vamana\"
+      LDAP_BASE_DN: \"dc=$M1T_4,dc=vamana\"
+      LDAP_ADMIN_PASSWORD: \"$M1T0\"
+      LDAP_CONFIG_PASSWORD: \"$M1T0\"
+      LDAP_READONLY_USER: \"false\"
+      LDAP_READONLY_USER_USERNAME: \"readonly\"
+      LDAP_READONLY_USER_PASSWORD: \"readonly\"
+      LDAP_RFC2307BIS_SCHEMA: \"false\"
+      LDAP_BACKEND: \"mdb\"
+      LDAP_TLS: \"false\"
+      LDAP_TLS_CRT_FILENAME: \"ldap.crt\"
+      LDAP_TLS_KEY_FILENAME: \"ldap.key\"
+      LDAP_TLS_CA_CRT_FILENAME: \"ca.crt\"
+      LDAP_TLS_ENFORCE: \"false\"
+      LDAP_TLS_CIPHER_SUITE: \"SECURE256:-VERS-SSL3.0\"
+      LDAP_TLS_PROTOCOL_MIN: \"3.1\"
+      LDAP_TLS_VERIFY_CLIENT: \"demand\"
+      LDAP_REPLICATION: \"false\"
+      KEEP_EXISTING_CONFIG: \"false\"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: \"false\"
+      LDAP_SSL_HELPER_PREFIX: \"ldap\"
+    tty: true
+    stdin_open: true
+    volumes:
+      - type: bind
+        source: $REQFOLDER/ldapdata
+        target: /var/lib/ldap
+      - type: bind
+        source: $REQFOLDER/ldapconfig
+        target: /etc/ldap/slapd.d 
+      - type: bind
+        source: $REQFOLDER/ldapcerts
+        target: /container/service/slapd/assets/certs/
+      - type: bind
+        source: ${REQFOLDER}/ldif
+        target: /container/service/slapd/assets/config/bootstrap/ldif/custom
+    ports:
+      - \"$M1T1:389\"
+      - \"$M1T2:636\"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$M1T7_C'
+          memory: '""$M1T7_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+      
+  phpldapadmin:
+    image: $M1T8
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: openldap
+    ports:
+      - \"$M1T3:443\"
+    depends_on:
+      - openldap
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""CHITRAGUPTAreplica == true   
+      resources:
+        limits:
+          cpus: '$M1T9_C'
+          memory: '""$M1T9_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+          
   prometheus:
     image: $MT6
     volumes:

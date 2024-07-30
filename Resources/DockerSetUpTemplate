@@ -19,6 +19,7 @@ PortainerSPort="THEREQSPORT"
 STACKNAME="THECURSTACK"
 STACKPRETTYNAME="THECURPNSTACK"
 STACKPRETTYNAME=$(echo "$STACKPRETTYNAME" | tr '[:upper:]' '[:lower:]')
+SPNUPPER=$(echo "$STACKPRETTYNAME" | tr '[:lower:]' '[:upper:]')
 VarahaPort1="VP1"
 VarahaPort2="VP2"
 VarahaPort3="VP3"
@@ -110,12 +111,65 @@ SetUpCHITRAGUPTA() {
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana	
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/prometheusdata	
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafanadata
-	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldap	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldif	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldapdata	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldapconfig
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldapcerts	
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpldapadmin
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/kerberos
+			
 	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	
 	sudo chown -R 1000:1000 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
 	sudo chmod -R 755 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/guacamoledata
+
+	echo "[libdefaults]
+    default_realm = $SPNUPPER.VAMANA
+    dns_lookup_realm = false
+    dns_lookup_kdc = false
+
+[realms]
+    $SPNUPPER.VAMANA = {
+        kdc = kerberos.$STACKPRETTYNAME.vamana
+        admin_server = kerberos.$STACKPRETTYNAME.vamana
+    }
+
+[domain_realm]
+    .$STACKPRETTYNAME.vamana = $SPNUPPER.VAMANA
+    $STACKPRETTYNAME.vamana = $SPNUPPER.VAMANA
+" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/kerberos/krb5.conf > /dev/null
+	echo "[kdcdefaults]
+    kdc_ports = 88
+
+[realms]
+    $SPNUPPER.VAMANA = {
+        database_name = /var/lib/krb5kdc/principal
+        admin_keytab = FILE:/etc/krb5kdc/kadm5.keytab
+        acl_file = /etc/krb5kdc/kadm5.acl
+        dict_file = /usr/share/dict/words
+        key_stash_file = /etc/krb5kdc/stash
+        kdc_ports = 88
+        max_life = 10h 0m 0s
+        max_renewable_life = 7d 0h 0m 0s
+        default_principal_flags = +preauth
+    }
+" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/kerberos/kdc.conf > /dev/null
+	echo "*/admin@$SPNUPPER.VAMANA *
+" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/kerberos/kadm5.acl > /dev/null
+		
+	echo "dn: cn=users,ou=groups,dc=$STACKPRETTYNAME,dc=vamana
+objectClass: top
+objectClass: posixGroup
+cn: users
+gidNumber: 1000
+
+dn: cn=admins,ou=groups,dc=$STACKPRETTYNAME,dc=vamana
+objectClass: top
+objectClass: posixGroup
+cn: admins
+gidNumber: 1001" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldif/groups.ldif > /dev/null
 
 	echo "global:
   scrape_interval:     15s
@@ -165,17 +219,22 @@ providers:
       path: /etc/grafana/provisioning/dashboards
 " | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/dashboard.yml > /dev/null
 
+	sudo cp /home/$CURRENTUSER/boodark.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpldapadmin
+	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpldapadmin
+	sudo chmod 777 boodark.tar.gz
+	tar -xzf "boodark.tar.gz"
+	sudo rm -f boodark.tar.gz
+	sudo chmod -R 777 boodark	
+	popd
+	echo '<?php
+$cfg['"'"'ThemeDefault'"'"'] = '"'"'boodark'"'"';' | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpldapadmin/config.user.inc.php > /dev/null
+
 	sudo mv /home/$CURRENTUSER/boodark.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
-	#sudo mv /home/$CURRENTUSER/darkwolf.tar.gz $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
 	pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin
 	sudo chmod 777 boodark.tar.gz
 	tar -xzf "boodark.tar.gz"
 	sudo rm -f boodark.tar.gz
-	sudo chmod -R 777 boodark
-	#sudo chmod 777 darkwolf.tar.gz
-	#tar -xzf "darkwolf.tar.gz"
-	#sudo rm -f darkwolf.tar.gz
-	#sudo chmod -R 777 darkwolf	
+	sudo chmod -R 777 boodark	
 	popd
 	echo '<?php
 $cfg['"'"'ThemeDefault'"'"'] = '"'"'boodark'"'"';' | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpmyadmin/config.user.inc.php > /dev/null
