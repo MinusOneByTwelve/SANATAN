@@ -1,6 +1,56 @@
 version: '3.7'
  
 services:
+  cloudcmd:
+    image: FL_BR_VAL_1
+    volumes: 
+      - FL_BR_VAL_2:/root/fs/SBS
+      - FL_BR_VAL_3:/root/fs/CLOUD          
+    environment:
+      - CLOUDCMD_AUTH=true
+      - CLOUDCMD_USERNAME=admin
+      - CLOUDCMD_PASSWORD=FL_BR_VAL_4
+      - CLOUDCMD_ROOT=/root/fs      
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.STACKNAMEBRAHMAreplica == true
+          - node.role == manager
+      resources:
+        limits:
+          cpus: 'FL_BR_VAL_5'
+          memory: 'FL_BR_VAL_6M'
+    ports:
+      - "FL_BR_VAL_7:8000"
+    networks:
+      - STACKNAME-encrypted-overlay
+
+  minio:
+    image: MIN_IO_VAL_1
+    entrypoint: /usr/local/bin/EntryPoint.sh
+    volumes:
+      - MIN_IO_VAL_2:/data
+      - MIN_IO_VAL_3:/usr/local/bin/EntryPoint.sh
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: MIN_IO_VAL_4
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.STACKNAMEBRAHMAreplica == true
+          - node.role == manager
+      resources:
+        limits:
+          cpus: 'MIN_IO_VAL_5'
+          memory: 'MIN_IO_VAL_6M'
+    ports:
+      - "MIN_IO_VAL_7:9000"
+      - "MIN_IO_VAL_8:9001"
+    networks:
+      - STACKNAME-encrypted-overlay
+      
   agent:
     image: WRKR1VER:WRKRVER
     ports:
@@ -27,6 +77,7 @@ services:
     environment:
       - AGENT_PORT=PortainerAPort
       - AGENT_SECRET=REVERSED_PASSWORD
+      - ANALYTICS=0      
     deploy:
       replicas: 1
       placement:

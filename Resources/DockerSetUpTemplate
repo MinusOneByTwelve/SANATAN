@@ -39,11 +39,13 @@ IDLE_LIMIT="WSP4"
 THEVERWROUTER="WSP5"
 THEVERW1ROUTER="WSP6"
 CHITRAGUPTA="GGEPO"
+REVERSED_PASSWORD="THEREVPWD"
 	
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
 sudo hostnamectl set-hostname $THEHOST --transient
 sudo hostnamectl set-hostname "$THEHOST" --pretty
+sudo rm -f /opt/THEMENAME && sudo touch /opt/THEMENAME && echo "$THEHOST" | sudo tee -a /opt/THEMENAME > /dev/null && sudo chmod 777 /opt/THEMENAME
 
 sudo rm -f /opt/DSUDONE$STACKNAME
 
@@ -675,82 +677,56 @@ install_python() {
 }
 
 install_minio() {
+	sudo chmod 777 /home/$CURRENTUSER/mc
 	sudo rm -f /usr/bin/mc
-	wget https://dl.min.io/client/mc/release/linux-amd64/mc
-	chmod +x mc
-	sudo mv mc /usr/bin
+	sudo mv /home/$CURRENTUSER/mc /usr/bin
 	
-	wget https://dl.min.io/server/minio/release/linux-amd64/minio
-	chmod +x minio
-	sudo mv minio /usr/bin
-	
+	sudo mkdir -p /shiva/bdd/bucket && sudo chown -R root:root /shiva/bdd/bucket && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/bdd/bucket
+	sudo mkdir -p /shiva/bdd/bucket/$STACKNAME && sudo chown -R root:root /shiva/bdd/bucket/$STACKNAME && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/bdd/bucket/$STACKNAME
+		
 	sudo mkdir -p $DFS_DATA_DIR/MINIO
 	sudo chown -R root:root $DFS_DATA_DIR/MINIO
 	sudo chmod -R 777 $DFS_DATA_DIR/MINIO
-	sudo mkdir -p $DFS_DATA_DIR/MINIO/DATA
-	sudo chown -R root:root $DFS_DATA_DIR/MINIO/DATA
-	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/DATA
-	sudo mkdir -p $DFS_DATA_DIR/MINIO/CERTS
-	sudo chown -R root:root $DFS_DATA_DIR/MINIO/CERTS
-	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/CERTS
-	sudo mkdir -p $DFS_DATA_DIR/MINIO/CA
-	sudo chown -R root:root $DFS_DATA_DIR/MINIO/CA
-	sudo chmod -R 777 $DFS_DATA_DIR/MINIO/CA	
-	sudo cp $CERTS_DIR/docker/$STACKNAME-server-key.pem $DFS_DATA_DIR/MINIO/CERTS/private.key
-	sudo cp $CERTS_DIR/docker/$STACKNAME-server-cert.pem $DFS_DATA_DIR/MINIO/CERTS/public.crt
-	sudo cp $CERTS_DIR/docker/$STACKNAME.pem $DFS_DATA_DIR/MINIO/CA/ca.crt	
-	sudo chmod 644 $DFS_DATA_DIR/MINIO/CERTS/public.crt
-	sudo chmod 600 $DFS_DATA_DIR/MINIO/CERTS/private.key
-	sudo chmod 644 $DFS_DATA_DIR/MINIO/CA/ca.crt
+	sudo mkdir -p $DFS_DATA_DIR/MINIODATA
+	sudo chown -R root:root $DFS_DATA_DIR/MINIODATA
+	sudo chmod -R 777 $DFS_DATA_DIR/MINIODATA
+	sudo mkdir -p $DFS_DATA_DIR/miniogdata
+	sudo chown -R root:root $DFS_DATA_DIR/miniogdata
+	sudo chmod -R 777 $DFS_DATA_DIR/miniogdata
 		
-	sudo rm -f /etc/systemd/system/BDDMinio$STACKNAME.service
-	SERVICES=$(systemctl list-units --type=service --state=running | grep 'BDDMinio' | awk '{print $1}')
-	if [ -z "$SERVICES" ]; then
-		echo "No services starting with BDDMinio found."
-	fi
-	for service in $SERVICES; do
-		echo "Stopping and disabling $service..."
-		sudo systemctl stop "$service"
-		sudo systemctl disable "$service"
-		echo "$service stopped and disabled."
-	done
-	
-	DATAFOLDER="$DFS_DATA_DIR/MINIO/DATA"	
-	IFS=',' read -r -a hosts <<< "$BDD_HOSTS"
-	command="minio server"
-	for host in "${hosts[@]}"; do
-	    command="${command} https://${host}:${BDDPort1}${DATAFOLDER}"
-	done
-	command="${command} --console-address :${BDDPort2}"
-	echo "$command"
-	
-	echo '[Unit]
-Description=BDDMinio For '"$STACKPRETTYNAME"'
-After=network.target
+	pushd $DFS_DATA_DIR/MINIO		
+	echo "admin:$REVERSED_PASSWORD" | tee .$STACKPRETTYNAME > /dev/null
+	echo '#!/bin/sh
 
-[Service]
-User=root
-ExecStart='"$command"'
-Environment="MINIO_ROOT_USER=admin"
-Environment="MINIO_ROOT_PASSWORD='"$BDD_PASSWORD"'"
-Environment="MINIO_CERTS_DIR='"$DFS_DATA_DIR/MINIO/CERTS"'"
-Environment="MINIO_CERTS_CAS_DIR='"$DFS_DATA_DIR/MINIO/CA"'"
-Restart=always
-LimitNOFILE=65536
+# Get the current list of Minio nodes
+#MINIO_SERVER_URLS=$(nslookup tasks.minio | grep Address | awk '"'"'{ print $3 }'"'"' | grep -v '"'"'127.0.0.11'"'"' | sed '"'"'s/$/:9000/'"'"' | paste -sd "," -)
 
-[Install]
-WantedBy=multi-user.target
-' | sudo tee /etc/systemd/system/BDDMinio$STACKNAME.service > /dev/null
-	sudo systemctl daemon-reload
-	if [ ! -f /opt/CLD ]; then
-		sudo systemctl enable BDDMinio$STACKNAME
-		sudo systemctl start BDDMinio$STACKNAME	
-	else
-		sudo systemctl stop BDDMinio$STACKNAME
-		sudo systemctl disable BDDMinio$STACKNAME		
-	fi
+# Start Minio server with dynamically generated MINIO_SERVER_URLS
+#exec minio server --address :9000 --console-address :9001 $MINIO_SERVER_URLS
+exec minio server /data --address :9000 --console-address :9001' | tee EntryPoint.sh > /dev/null
+	sudo chmod 777 EntryPoint.sh
+	sudo mv /home/$CURRENTUSER/MountSBB.sh .
+	sudo chmod 777 MountSBB.sh
 	
-	pip3 install s3ql
+	echo '{
+  "port": 80,
+  "address": "",
+  "log": "stdout",
+  "database": "/database/filebrowser.db",
+  "root": "/srv",
+  "auth": {
+    "method": "password",
+    "password": "'"$REVERSED_PASSWORD"'"
+  }
+}' | tee filebrowser.json > /dev/null
+	popd
+	
+	sudo mkdir -p $DFS_DATA_DIR/NEXTCLOUD
+	sudo chown -R root:root $DFS_DATA_DIR/NEXTCLOUD
+	sudo chmod -R 777 $DFS_DATA_DIR/NEXTCLOUD
+	sudo mkdir -p $DFS_DATA_DIR/nextgcloud
+	sudo chown -R root:root $DFS_DATA_DIR/nextgcloud
+	sudo chmod -R 777 $DFS_DATA_DIR/nextgcloud				
 }
 
 THEOSCHOICE="NA"
@@ -885,6 +861,7 @@ if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
     sudo rm -rf /etc/glusterfs/glusterd.vol
     sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois
     sudo NEEDRESTART_MODE=a apt-get install -y tmux cron mysql-client
+    sudo NEEDRESTART_MODE=a apt-get install -y s3fs
 elif [[ "$OS" == "AZL" ]]; then
     #sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine
     #sudo yum install -y yum-utils
@@ -1184,7 +1161,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable docker
 sudo systemctl restart docker
 
-#install_minio
+install_minio
 
 #if [ "$TheReqRL" == "I" ] ; then
 #	create_webssh_router_support_files
