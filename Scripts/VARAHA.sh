@@ -39,6 +39,9 @@ CGP1=""
 CGP2=""
 CGP3=""
 
+MIN1IO=""
+MIN2IO=""
+
 if [ "$THECHOICE" == "CORE" ] ; then
 	declare -a MANAGER_IPS
 	MGRIPS="$2"
@@ -75,7 +78,13 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	THEVERWROUTER="${27}" 
 	THEVERW1ROUTER="${28}"
 	CHITRAGUPTA_DET="${29}"
-	hash_admin_PASSWORD=$(mkpasswd -m sha-256 $ADMIN_PASSWORD)								
+	hash_admin_PASSWORD=$(mkpasswd -m sha-256 $ADMIN_PASSWORD)
+	MIN_IO_DET="${30}"
+	#MYNAME=$(head -n 1 /opt/THEMENAME)
+	MYNAME="${31}"
+	
+	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
+	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
 fi
 
 # Generate the HAProxy configuration
@@ -129,6 +138,7 @@ backend '"$STACKPRETTYNAME"'_Portainer_Back
 	COUNTER=$((COUNTER + 1))
     done
     
+    SetUpMinIO
     SetUpCHITRAGUPTA
     
     echo '
@@ -138,7 +148,7 @@ frontend '"$STACKPRETTYNAME"'_VARAHA_Front
 
 backend '"$STACKPRETTYNAME"'_VARAHA_Back
     mode http
-    server static_server '"$THEROUTER"':'"$LOCALVARAHAPORT"'
+    server static_cdn '"$THEROUTER"':'"$LOCALVARAHAPORT"'
 
 listen '"$STACKPRETTYNAME"'_Admin_Front
     bind *:'"$AdminPort"' ssl crt /certs/varaha.pem
@@ -150,6 +160,64 @@ listen '"$STACKPRETTYNAME"'_Admin_Front
 
     docker config create VARAHA$STACKNAME.cfg "$THECFGPATH"
     cat $THECFGPATH
+}
+
+SetUpMinIO() {
+	IFS=',' read -r -a MINIO_DET <<< $MIN_IO_DET
+	
+	echo $MIN_IO_DET
+	
+	MIN1IO="${MINIO_DET[3]}"
+	sudo firewall-cmd --zone=public --add-port=${MIN1IO}/tcp --permanent
+	MIN2IO="${MINIO_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${MIN2IO}/tcp --permanent
+	FBR1="${MINIO_DET[9]}"
+	sudo firewall-cmd --zone=public --add-port=${FBR1}/tcp --permanent
+		
+	sudo firewall-cmd --reload
+	
+	echo "
+#resolvers docker
+#    nameserver dns1 127.0.0.11:53
+#    resolve_retries       3
+#    timeout resolve       1s
+#    timeout retry         1s
+#    hold other           30s
+#    hold refused         30s
+#    hold nx              30s
+#    hold timeout         30s
+#    hold valid           10s
+#    hold obsolete        30s
+
+frontend ""$STACKPRETTYNAME""_CloudCommander_Front
+    bind *:$FBR1 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_CloudCommander_Back
+
+backend ""$STACKPRETTYNAME""_CloudCommander_Back
+    mode http
+    server ganesha_cloudcommander cloudcmd:8000 check
+    	
+frontend ""$STACKPRETTYNAME""_MinIO_Front
+    bind *:$MIN1IO ssl crt /certs/self-varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_MinIO_Back
+
+backend ""$STACKPRETTYNAME""_MinIO_Back
+#    balance roundrobin
+#    server-template minio 1-_N_ minio:9000 check resolvers docker
+    mode http
+    server ganesha_minio minio:9000 check
+        
+frontend ""$STACKPRETTYNAME""_MinIOConsole_Front
+    bind *:$MIN2IO ssl crt /certs/varaha.pem
+    default_backend ""$STACKPRETTYNAME""_MinIOConsole_Back    
+    
+backend ""$STACKPRETTYNAME""_MinIOConsole_Back
+#    balance roundrobin
+#    server-template minio_console 1-_N_ minio:9001 check resolvers docker
+    mode http
+    server ganesha_minioconsole minio:9001 check" | sudo tee -a $THECFGPATH > /dev/null			
 }
 
 SetUpCHITRAGUPTA() {
@@ -305,7 +373,10 @@ services:
       - "'"$PortainerWPort"':'"$PortainerWPort"'"
       - "'"$AdminPort"':'"$AdminPort"'"
       - "'"$GLOBALVARAHAPORT"':'"$GLOBALVARAHAPORT"'" 
-      - "'"$websshPort1"':'"$websshPort1"'" 
+      - "'"$websshPort1"':'"$websshPort1"'"  
+      - "'"$MIN1IO"':'"$MIN1IO"'"
+      - "'"$MIN2IO"':'"$MIN2IO"'"  
+      - "'"$FBR1"':'"$FBR1"'"                
       - "'"$CGP1"':'"$CGP1"'"
       - "'"$CGP2"':'"$CGP2"'" 
       - "'"$CGP3"':'"$CGP3"'" 
@@ -332,7 +403,11 @@ services:
       - type: bind
         source: '"$CERTS_DIR"'/docker/'"$STACKNAME"'-share-VARAHA.pem
         target: /certs/share-varaha.pem
-        read_only: true        
+        read_only: true 
+      - type: bind
+        source: '"$CERTS_DIR"'/cluster/full/'"$MYNAME"'.pem
+        target: /certs/self-varaha.pem
+        read_only: true               
       - type: bind
         source: '"$ERRORS_DIR"'
         target: /etc/haproxy/errors 
