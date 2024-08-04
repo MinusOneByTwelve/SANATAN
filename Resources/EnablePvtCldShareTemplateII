@@ -1,0 +1,15 @@
+#!/bin/bash
+
+gosu root chmod -R 777 /var/www/html/config
+
+echo -e "PVTCLD1\nPVTCLD1" | gosu root php occ user:add --group="PVTCLD2" PVTCLD2
+gosu root php occ app:enable files_external
+gosu root php occ files_external:create "PVTCLD2" local null::null -c datadir=/media/share
+MOUNT_ID=$(gosu root php occ files_external:list | grep "PVTCLD2" | awk '{print $2}')
+gosu root php occ files_external:applicable $MOUNT_ID --add-group "PVTCLD2"
+gosu root php occ files_external:applicable $MOUNT_ID --add-group "admin"
+gosu root php occ files_external:option $MOUNT_ID enable_sharing true
+gosu root php occ files_external:option $MOUNT_ID allow_all_users true
+
+gosu root chown -R www-data:www-data /var/www/html
+gosu www-data chmod -R 777 /var/www/html/config

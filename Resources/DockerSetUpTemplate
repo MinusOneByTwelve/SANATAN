@@ -120,7 +120,8 @@ SetUpCHITRAGUPTA() {
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/ldapcerts	
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/phpldapadmin
 	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/kerberos
-			
+	sudo mkdir -p $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld
+					
 	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	
@@ -196,6 +197,12 @@ scrape_configs:
       type: 'A'
       port: 9100" | tee $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/prometheus/prometheus.yml > /dev/null
 
+	sudo mv /home/$CURRENTUSER/EnablePvtCldShare.sh $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh
+	sudo chmod 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh
+	sudo mv /home/$CURRENTUSER/EnablePvtCldShare2.sh $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh
+	sudo chmod 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh	
+	sudo mv /home/$CURRENTUSER/EnablePvtCldShare3.sh $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare3.sh
+	sudo chmod 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare3.sh	
 	sudo mv /home/$CURRENTUSER/1860_rev37.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/dashboard.json
 	sudo mv /home/$CURRENTUSER/container-metrics.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/container-metrics.json
 	sudo mv /home/$CURRENTUSER/node-metrics.json $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/grafana/node-metrics.json
@@ -273,9 +280,18 @@ FLUSH PRIVILEGES;" > $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql/initdb.sql
 	sudo chown -R root:root $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	sudo chmod -R 777 $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME
 	
-	#pushd $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/mysql
-	#sudo chmod 600 my.cnf
-	#popd
+	echo "ServerName $THEHOST" | tee $DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf > /dev/null
+	sudo mv /home/$CURRENTUSER/config.php $DFS_DATA_DIR/Misc$STACKNAME/config.php
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf
+	sudo chmod -R 777 $DFS_DATA_DIR/Misc$STACKNAME/config.php
+	
+	CGV8DET="${CHITRAGUPTA_VAL[8]}"		
+	IFS=',' read -r -a CGV8_DET <<< "$CGV8DET"	
+	CG_V8_1="${CGV8_DET[1]}"
+	CG_V8_11="${CGV8_DET[11]}"	
+	sudo firewall-cmd --zone=public --permanent --add-rich-rule='rule family="ipv4" source address="'"$CG_V8_11"'" port port="'"$CG_V8_1"'" protocol="tcp" accept'
+	sudo firewall-cmd --zone=public --permanent --add-rich-rule='rule family="ipv4" port port="'"$CG_V8_1"'" protocol="tcp" reject'
+	sudo firewall-cmd --reload		
 }
 
 # Function to check and remove lock files
@@ -726,7 +742,10 @@ exec minio server /data --address :9000 --console-address :9001' | tee EntryPoin
 	sudo chmod -R 777 $DFS_DATA_DIR/NEXTCLOUD
 	sudo mkdir -p $DFS_DATA_DIR/nextgcloud
 	sudo chown -R root:root $DFS_DATA_DIR/nextgcloud
-	sudo chmod -R 777 $DFS_DATA_DIR/nextgcloud				
+	sudo chmod -R 777 $DFS_DATA_DIR/nextgcloud
+	
+	sudo mv /home/$CURRENTUSER/SetUpKerberos.sh $DFS_DATA_DIR/Misc$STACKNAME
+	sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/SetUpKerberos.sh						
 }
 
 THEOSCHOICE="NA"

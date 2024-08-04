@@ -116,9 +116,70 @@ IFS=':' read -r -a _MK1T7 <<< "$MK1T7"
 MK1T7_M="${_MK1T7[0]}"
 MK1T7_C="${_MK1T7[1]}"
 
+PVT8CLDDET="${CHITRAGUPTA_VAL[8]}"
+IFS=',' read -r -a PVT8CLD_DET <<< "$PVT8CLDDET"
+MK1PC0="${PVT8CLD_DET[0]}"
+MK1PC1="${PVT8CLD_DET[1]}"
+MK1PC2="${PVT8CLD_DET[2]}"
+MK1PC4="${PVT8CLD_DET[3]}"
+MK1PC_4=$(echo "$MK1PC4" | tr '[:upper:]' '[:lower:]')	
+MK1PC6="${PVT8CLD_DET[4]}"
+MK1PC7="${PVT8CLD_DET[5]}"
+IFS=':' read -r -a _MK1PC7 <<< "$MK1PC7"
+MK1PC7_M="${_MK1PC7[0]}"
+MK1PC7_C="${_MK1PC7[1]}"
+MK1PC8="${PVT8CLD_DET[6]}"
+MK1PC9="${PVT8CLD_DET[7]}"
+MK1PC10="${PVT8CLD_DET[8]}"
+MK1PC11="${PVT8CLD_DET[9]}"
+MK1PC12="${PVT8CLD_DET[10]}"
+MK1PC13="${PVT8CLD_DET[13]}"
+MK1PC14="${PVT8CLD_DET[14]}"
+
+sudo mkdir -p $MK1PC8
+sudo chown -R root:root $MK1PC8
+sudo chmod -R u=rwx,g=rwx,o=rwx $MK1PC8
+sudo mkdir -p $MK1PC9
+sudo chown -R root:root $MK1PC9
+sudo chmod -R u=rwx,g=rwx,o=rwx $MK1PC9
+
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 echo "version: '3.7'
 services:
+  pvtcld:
+    image: $MK1PC6
+    ports:
+      - \"$MK1PC1:80\"
+    volumes:
+      - $MK1PC9:/var/www/html/data
+      - $MK1PC8:/media/share
+      - $MK1PC11:/EnablePvtCldShare.sh
+      - $MK1PC14:/EnablePvtCldShare2.sh      
+      - $MK1PC12:/etc/apache2/conf-enabled/custom-apache-config.conf
+      - $MK1PC13:/media/share2/phpconfig.txt
+    environment:
+      #MYSQL_HOST: mysql
+      #MYSQL_DATABASE: pvtcld_$MK1PC10
+      #MYSQL_USER: pvtcld_$MK1PC10
+      #MYSQL_PASSWORD: $MK1PC0
+      #MYSQL_ROOT_PASSWORD: $V6
+      NEXTCLOUD_ADMIN_USER: admin
+      NEXTCLOUD_ADMIN_PASSWORD: $MK1PC0
+      NEXTCLOUD_DATA_DIR: /var/www/html/data      
+    #depends_on:
+    #  - mysql
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.""$STACKNAME""THE_PVT_CLDreplica == true   
+      resources:
+        limits:
+          cpus: '$MK1PC7_C'
+          memory: '""$MK1PC7_M""M'
+    networks:
+      - $STACKNAME-encrypted-overlay
+      
   kerberos:
     image: $MK1T6
     hostname: \"kerberos\"

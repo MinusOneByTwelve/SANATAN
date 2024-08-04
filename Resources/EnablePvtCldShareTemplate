@@ -1,0 +1,17 @@
+#!/bin/bash
+
+gosu root chmod -R 777 /var/www/html/config
+
+pushd /var/www/html
+VAL1=$(grep "'instanceid'" config/config.php | awk -F " => " '{print $2}' | sed "s/[',]//g") && echo $VAL1
+VAL2=$(grep "'passwordsalt'" config/config.php | awk -F " => " '{print $2}' | sed "s/[',]//g") && echo $VAL2
+VAL3=$(grep "'secret'" config/config.php | awk -F " => " '{print $2}' | sed "s/[',]//g") && echo $VAL3
+cp /media/share2/phpconfig.txt finalphpconfig.txt
+sed -i -e s~"THEINSTANCEID"~"$VAL1"~g finalphpconfig.txt
+sed -i -e s~"THEPWDSALT"~"$VAL2"~g finalphpconfig.txt
+sed -i -e s~"THESECRET"~"$VAL3"~g finalphpconfig.txt
+mv config/config.php oldphpconfig.txt
+mv finalphpconfig.txt config/config.php
+popd
+
+gosu root chmod -R 777 /var/www/html/config

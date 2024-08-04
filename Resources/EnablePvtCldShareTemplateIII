@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Define variables
+FOLDER_PATH="THEFLDRPATH"
+MAX_ITERATIONS=100
+SLEEP_DURATION=10
+IMAGE_NAME="minus1by12/sanatan:pvtcld-1.0"
+
+# Check if the folder exists, loop until it does or until max iterations
+iterations=0
+while [ ! -d "$FOLDER_PATH" ]; do
+    echo "Waiting for folder to exist: $FOLDER_PATH"
+    sleep $SLEEP_DURATION
+    ((iterations++))
+    if [ $iterations -ge $MAX_ITERATIONS ]; then
+        echo "Max iterations reached, exiting..."
+        exit 1
+    fi
+done
+
+# Get the latest running container based on the specified image
+CONTAINER_ID=$(docker ps | grep "$IMAGE_NAME" | awk '{print $1}' | head -n 1)
+
+if [ -z "$CONTAINER_ID" ]; then
+    echo "No running container found for image: $IMAGE_NAME"
+    exit 1
+fi
+
+# Execute the first script inside the container
+docker exec $CONTAINER_ID /EnablePvtCldShare.sh
+docker exec $CONTAINER_ID /EnablePvtCldShare2.sh
+
