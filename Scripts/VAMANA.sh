@@ -141,6 +141,8 @@ MINPortIO3=$(GetNewPort) && PORTSLIST+=("$MINPortIO3")
 MINPortIO4=$(GetNewPort) && PORTSLIST+=("$MINPortIO4")
 FLBRPortIO1=$(GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1")
 FLBRPortIO2=$(GetNewPort) && PORTSLIST+=("$FLBRPortIO2")
+PVTCLDPortIO1=$(GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1")
+PVTCLDPortIO2=$(GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2")
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
@@ -177,6 +179,7 @@ declare -A JIVA_IPS
 declare -A ROLE_TYPE
 NATIVE="1"
 CHITRAGUPTA=""
+THE_PVT_CLD=""
 CHITRAGUPTA_DET=""
 MIN_IO_DET=""
 
@@ -374,6 +377,7 @@ parse_instance_details() {
 		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
 		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 		    CHITRAGUPTA="$IP"
+            THE_PVT_CLD="$IP"
 		    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""$IP,$PORT,$PEM,$U1SER"		                
             else
 		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
@@ -690,9 +694,13 @@ install_docker() {
     sed -i -e s~"MNIO4"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO3"~g $BASE/tmp/$MIOTEMPLATE 
     sed -i -e s~"MNIO5"~"$STACK_PRETTY_NAME"~g $BASE/tmp/$MIOTEMPLATE 
     sed -i -e s~"MNIO6"~"$CERTS_DIR/cluster/ca/${HOST_NAMES[${INDRA_IPS[0]}]}.pem"~g $BASE/tmp/$MIOTEMPLATE
-
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$MIOTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/MountSBB.sh"
     sudo rm -f $BASE/tmp/$MIOTEMPLATE
+
+    KRBBTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/SetUpKerberosLDAP $BASE/tmp/$KRBBTEMPLATE
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$KRBBTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/SetUpKerberos.sh"
+    sudo rm -f $BASE/tmp/$KRBBTEMPLATE
     
     if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
     	sed -i -e s~"GETVP"~"Y"~g $BASE/tmp/$DOCKERTEMPLATE
@@ -707,26 +715,55 @@ install_docker() {
 
     if [[ "$IP" == "$CHITRAGUPTA" ]]; then
     	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"   	
-    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}"
-		  	
-	CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
-	echo "Acamehere1"
-	sed -i -e s~"GUACAMOLEADMIN"~"admin"~g $BASE/tmp/$CGSQLTEMPLATE
-	echo "Bcamehere2"
-	sed -i -e s~"GUACAMOLEPWD"~"$WEBSSH_PASSWORD"~g $BASE/tmp/$CGSQLTEMPLATE
-	echo "Ccamehere3"
-	cat $THEGUACASQL >> $BASE/tmp/$CGSQLTEMPLATE
-	   	
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$CGSQLTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/initdb-redux.sql"
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/boodark.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/boodark.tar.gz"
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/1860_rev37.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/1860_rev37.json" 
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/container-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/container-metrics.json"
-   	scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/node-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/node-metrics.json"  	   	
-   	sudo rm -f $BASE/tmp/$CGSQLTEMPLATE
-   	sudo rm -f $THEGUACASQL
-   	
-   	echo "Dcamehere4"
+    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}■$ADMIN_PASSWORD,$PVTCLDPortIO1,$PVTCLDPortIO2,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["PVTCLD"]}:${CLUSTERAPPSMAPPING["PVTCLD"]},${CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]},$DFS_CLUSTER_DIR/NextcloudShared,$DFS_DATA_DIR/NEXTCLOUD/CONTENT,$STACK_PRETTY_NAME,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh,$DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf,${INDRA_IPS[0]},${HOST_NAMES[$IP]},$DFS_DATA_DIR/Misc$STACKNAME/config.php,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh"
+  	
+        CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
+        echo "Acamehere1"
+        sed -i -e s~"GUACAMOLEADMIN"~"admin"~g $BASE/tmp/$CGSQLTEMPLATE
+        echo "Bcamehere2"
+        sed -i -e s~"GUACAMOLEPWD"~"$WEBSSH_PASSWORD"~g $BASE/tmp/$CGSQLTEMPLATE
+        echo "Ccamehere3"
+        cat $THEGUACASQL >> $BASE/tmp/$CGSQLTEMPLATE
+
+        PVT_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/EnablePvtCldShareTemplate $BASE/tmp/$PVT_CLDTEMPLATE
+        sed -i -e s~"PVTCLD1"~"$ADMIN_PASSWORD"~g $BASE/tmp/$PVT_CLDTEMPLATE
+        sed -i -e s~"PVTCLD2"~"$STACKPRETTYNAME"~g $BASE/tmp/$PVT_CLDTEMPLATE
+
+        P2VT2_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/EnablePvtCldShareTemplateII $BASE/tmp/$P2VT2_CLDTEMPLATE
+        sed -i -e s~"PVTCLD1"~"$ADMIN_PASSWORD"~g $BASE/tmp/$P2VT2_CLDTEMPLATE
+        sed -i -e s~"PVTCLD2"~"$STACKPRETTYNAME"~g $BASE/tmp/$P2VT2_CLDTEMPLATE
+
+        P3VT3_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/EnablePvtCldShareTemplateIII $BASE/tmp/$P3VT3_CLDTEMPLATE
+        sed -i -e s~"THEFLDRPATH"~"$DFS_DATA_DIR/NEXTCLOUD/CONTENT/admin"~g $BASE/tmp/$P3VT3_CLDTEMPLATE
+
+        PVT1_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+        sudo cp $BASE/Resources/PvtCldConfigTemplate $BASE/tmp/$PVT1_CLDTEMPLATE
+        sed -i -e s~"INDRA"~"${HOST_NAMES[${INDRA_IPS[0]}]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
+        sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE        
+        sed -i -e s~"THE_PORT"~"$PVTCLDPortIO2"~g $BASE/tmp/$PVT1_CLDTEMPLATE
+
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT1_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/config.php"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/EnablePvtCldShare.sh"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$P2VT2_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/EnablePvtCldShare2.sh"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$P3VT3_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/EnablePvtCldShare3.sh"
+                		   	
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$CGSQLTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/initdb-redux.sql"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/boodark.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/boodark.tar.gz"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/1860_rev37.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/1860_rev37.json" 
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/container-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/container-metrics.json"
+        scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/node-metrics.json" "$THE1REQUSER@$IP:/home/$THE1REQUSER/node-metrics.json"  	   	
+        sudo rm -f $BASE/tmp/$CGSQLTEMPLATE
+        sudo rm -f $BASE/tmp/$PVT_CLDTEMPLATE 
+        sudo rm -f $BASE/tmp/$PVT1_CLDTEMPLATE  
+        sudo rm -f $BASE/tmp/$P2VT2_CLDTEMPLATE	
+        sudo rm -f $BASE/tmp/$P3VT3_CLDTEMPLATE        
+        sudo rm -f $THEGUACASQL
+        
+        echo "Dcamehere4"
     	sed -i -e s~"GGEPO"~"$CHITRAGUPTA_DET"~g $BASE/tmp/$DOCKERTEMPLATE
     	echo "Ecamehere5"
     	echo "$CHITRAGUPTA_DET"
@@ -1010,8 +1047,11 @@ create_swarm_labels() {
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
 		if [ -n "$NODE_ID" ]; then
 		    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
-			run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
+			    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
 		    fi
+		    if [[ "$IP" == "$THE_PVT_CLD" ]]; then
+			    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""THE_PVT_CLDreplica=true $NODE_ID"
+		    fi            
 		    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"		
 		else
 		    echo "Node $IP is not part of a Swarm"
@@ -1578,11 +1618,19 @@ if [ "$READYTOROCK" == "YES" ] ; then
 	run_remote ${BRAHMA_IPS[0]} "sudo mkdir -p $DFS_CLUSTER_DIR/NextcloudShared && sudo chown -R root:root $DFS_CLUSTER_DIR/NextcloudShared && sudo chmod -R u=rwx,g=rwx,o=rwx $DFS_CLUSTER_DIR/NextcloudShared && sudo mkdir -p $DFS_DATA_DIR/NEXTCLOUD/CONTENT && sudo chown -R root:root $DFS_DATA_DIR/NEXTCLOUD/CONTENT && sudo chmod -R u=rwx,g=rwx,o=rwx $DFS_DATA_DIR/NEXTCLOUD/CONTENT && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERPTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && cat /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml && docker stack deploy --compose-file /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml $STACKNAME""_GANESHA && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/Portainer.yml"
 fi
 
+ALLL_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
+for ip in "${ALLL_IPS[@]}"; do
+    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f /tmp/MountSBB-RUN.out && nohup $DFS_DATA_DIR/MINIO/MountSBB.sh > /tmp/MountSBB-RUN.out 2>&1 &" < /dev/null > /dev/null 2>&1 &
+    if [[ "$THE_PVT_CLD" == "$ip" ]]; then
+        ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f /tmp/PvtCldShare-RUN.out && nohup sudo $DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare3.sh > /tmp/PvtCldShare-RUN.out 2>&1 &" < /dev/null > /dev/null 2>&1 &
+    fi
+done
+
 echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" &
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
@@ -1595,6 +1643,9 @@ echo "[
   },
   {
     \"Cloud Commander\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2\"
+  },
+  {
+    \"Nextcloud\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2\"
   },
   {
     \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1\"

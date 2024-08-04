@@ -254,9 +254,26 @@ SetUpCHITRAGUPTA() {
 	sudo firewall-cmd --zone=public --add-port=${CGP8}/tcp --permanent	
 	CGP9="${CGPORTS4_DET[4]}"
 	sudo firewall-cmd --zone=public --add-port=${CGP9}/tcp --permanent	
+
+	CGPORTS5DET="${CHITRAGUPTA_VAL[8]}"		
+	IFS=',' read -r -a CGPORTS5_DET <<< "$CGPORTS5DET"	
+	CGP35="${CGPORTS5_DET[2]}"
+	CGP34="${CGPORTS5_DET[1]}"
+	CGP36="${CGPORTS5_DET[12]}"	
+	sudo firewall-cmd --zone=public --add-port=${CGP35}/tcp --permanent
 								
 	sudo firewall-cmd --reload
-	    
+
+	echo "
+frontend ""$STACKPRETTYNAME""_Nextcloud_Front
+    bind *:$CGP35 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_Nextcloud_Back
+
+backend ""$STACKPRETTYNAME""_Nextcloud_Back
+    mode http
+    server chitragupta_pvtcld $CGP36:$CGP34 check" | sudo tee -a $THECFGPATH > /dev/null
+    	    
 	echo "
 frontend ""$STACKPRETTYNAME""_Guacamole_Front
     bind *:$CGP1 ssl crt /certs/varaha.pem
@@ -385,7 +402,8 @@ services:
       - "'"$CGP6"':'"$CGP6"'"   
       - "'"$CGP7"':'"$CGP7"'"  
       - "'"$CGP8"':'"$CGP8"'"   
-      - "'"$CGP9"':'"$CGP9"'"                                                    
+      - "'"$CGP9"':'"$CGP9"'"  
+      - "'"$CGP35"':'"$CGP35"'"                                                  
     deploy:
       replicas: 1
       placement:
