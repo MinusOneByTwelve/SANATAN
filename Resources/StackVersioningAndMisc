@@ -214,7 +214,10 @@ GETMEUNIQUEIPSFAST() {
 	nmap -sL $SUBNET | awk '/Nmap scan report/{print $NF}' > $BASE/tmp/$FL_2
 
 	# Find unused IPs and omit 192.168.0.0 and 192.168.0.1
-	UNUSED_IPS=$(comm -23 <(sort $BASE/tmp/$FL_2) <(sort $BASE/tmp/$FL_1) | grep -v -E '192\.168\.0\.0|192\.168\.0\.1')
+	UNUSED_IPS=$(comm -23 <(sort $BASE/tmp/$FL_2) <(sort $BASE/tmp/$FL_1) | grep -v -E '192\.168\.0\.0|192\.168\.0\.1|192\.168\.0\.255|192\.168\.0\.254')
+
+	# Remove brackets if present
+	UNUSED_IPS=$(echo "$UNUSED_IPS" | sed 's/[()]//g')
 
 	# Randomly pick the required number of IPs and generate a comma-separated string
 	SELECTED_IPS=$(echo "$UNUSED_IPS" | shuf -n $NUM_IPS | paste -sd "," -)

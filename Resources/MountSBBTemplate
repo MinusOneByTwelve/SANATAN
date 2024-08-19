@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# Variables
+BUCKET_NAME="MNIO1"
+MOUNT_POINT="MNIO2"
+S3FS_PASSWD_FILE="MNIO3"
+MINIO_URL="MNIO4"
+MINIO_ALIAS="MNIO5"
+CA_CERT_FILE="MNIO6"
+MAX_RETRIES=50
+RETRY_INTERVAL=10
+
+# Read MinIO credentials from the S3FS_PASSWD_FILE
+MINIO_ACCESS_KEY=$(awk -F ':' '{print $1}' $S3FS_PASSWD_FILE)
+MINIO_SECRET_KEY=$(awk -F ':' '{print $2}' $S3FS_PASSWD_FILE)
+
+# Poll the MinIO URL to check if it is reachable
+retry_count=0
+while ! mc alias set $MINIO_ALIAS $MINIO_URL $MINIO_ACCESS_KEY $MINIO_SECRET_KEY --insecure && mc ls $MINIO_ALIAS --insecure > /dev/null 2>&1; do
+  retry_count=$((retry_count + 1))
+  if [ $retry_count -ge $MAX_RETRIES ]; then
+    echo "MinIO server at $MINIO_URL is not reachable after $MAX_RETRIES attempts. Exiting."
+    exit 1
+  fi
+  echo "MinIO server at $MINIO_URL is not reachable. Retrying in $RETRY_INTERVAL seconds... ($retry_count/$MAX_RETRIES)"
+  sleep $RETRY_INTERVAL
+done
+
+echo "MinIO server at $MINIO_URL is reachable."
+
+# Configure MinIO Client (mc) with alias
+mc alias set $MINIO_ALIAS $MINIO_URL $MINIO_ACCESS_KEY $MINIO_SECRET_KEY --insecure
+
+# Check if bucket exists
+if mc ls $MINIO_ALIAS --insecure | grep -q $BUCKET_NAME; then
+  echo "Bucket $BUCKET_NAME already exists."
+else
+  echo "Bucket $BUCKET_NAME does not exist. Creating..."
+  mc mb $MINIO_ALIAS/$BUCKET_NAME --insecure
+fi
+
+# Mount the bucket using s3fs
+#s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style -o ssl_verify_hostname
+#s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style -o nocheckcertificate
+#s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style
+sudo chmod 600 $S3FS_PASSWD_FILE
+#s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style -o nonempty -o ca_certs=$CA_CERT_FILE
+#s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style -o nonempty -o ca_certs=$CA_CERT_FILE -o dbglevel=info -f -o curldbg
+export CURL_CA_BUNDLE=$CA_CERT_FILE
+
+CURRENTUSER=$(whoami)
+sudo chown -R $CURRENTUSER:$CURRENTUSER $MOUNT_POINT
+sudo chmod -R 777 $MOUNT_POINT
+
+s3fs $BUCKET_NAME $MOUNT_POINT -o passwd_file=$S3FS_PASSWD_FILE -o url=$MINIO_URL -o use_path_request_style -o nonempty -o ssl_verify_hostname=0 -o dbglevel=info
+
+echo "Bucket $BUCKET_NAME mounted on $MOUNT_POINT"
+

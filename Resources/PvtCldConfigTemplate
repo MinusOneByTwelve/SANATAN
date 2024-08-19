@@ -1,0 +1,37 @@
+<?php
+$CONFIG = array (
+  'htaccess.RewriteBase' => '/',
+  'memcache.local' => '\\OC\\Memcache\\APCu',
+  'apps_paths' => 
+  array (
+    0 => 
+    array (
+      'path' => '/var/www/html/apps',
+      'url' => '/apps',
+      'writable' => false,
+    ),
+    1 => 
+    array (
+      'path' => '/var/www/html/custom_apps',
+      'url' => '/custom_apps',
+      'writable' => true,
+    ),
+  ),
+  'upgrade.disable-web' => true,
+  'instanceid' => 'THEINSTANCEID',
+  'passwordsalt' => 'THEPWDSALT',
+  'secret' => 'THESECRET',
+  'trusted_domains' => 
+  array (
+    0 => 'INDRA',
+    1 => 'CHITRAGUPTA',
+    2 => 'localhost',
+  ),
+  'datadirectory' => '/var/www/html/data',
+  'dbtype' => 'sqlite3',
+  'version' => '29.0.4.1',
+  'overwrite.cli.url' => 'https://INDRA:THE_PORT',
+  'overwritehost' => 'INDRA:THE_PORT',
+  'overwriteprotocol' => 'https',
+  'installed' => true,
+);
