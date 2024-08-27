@@ -8,6 +8,7 @@ STACKNAME="THECURSTACK"
 NOHUP="LOGFILE"
 MEMYSELF="SELFME"
 REQUNQ="UNQREQ"
+EFKSTACK="E1F1K"
 
 BASE="/opt/Matsya"
 
@@ -556,7 +557,7 @@ cat $TEMPLOC/$DOCKERPTEMPLATE
 echo "" && echo "Install Guacamole & MySql..."
 echo "" && echo "Install Prometheus, Grafana, Node Exporter & cAdvisor..."
 scp -i "$VL1" -o StrictHostKeyChecking=no -P $VL2 "$TEMPLOC/$DOCKERPTEMPLATE" "$VL3@$VL4:/home/$VL3"
-ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$VL3/ChitraGupta.yml && sudo mv /home/$VL3/$DOCKERPTEMPLATE /home/$VL3/ChitraGupta.yml && docker stack deploy --compose-file /home/$VL3/ChitraGupta.yml $STACKNAME""_CHITRAGUPTA && sudo rm -f /home/$VL3/ChitraGupta.yml"
+ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$VL3/ChitraGupta.yml && sudo mv /home/$VL3/$DOCKERPTEMPLATE /home/$VL3/ChitraGupta.yml && docker stack deploy --compose-file /home/$VL3/ChitraGupta.yml $STACKNAME""_CHITRAGUPTA && sudo rm -f /home/$VL3/ChitraGupta.yml && docker stack deploy --compose-file $EFKSTACK $STACKNAME""_EFK_CHITRAGUPTA"
 
 sudo rm -f $TEMPLOC/$DOCKERPTEMPLATE
 sudo rm -f $MEMYSELF

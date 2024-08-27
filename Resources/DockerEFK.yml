@@ -1,0 +1,79 @@
+version: '3.7'
+
+services:
+  elasticsearch:
+    image: EFKV1:EFKV2
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - ELASTIC_PASSWORD=EFKPWD
+      - xpack.security.enabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - EFKV3:/usr/share/elasticsearch/data
+      - EFKV7:/usr/share/elasticsearch/create_elastic_users.sh
+    ports:
+      - EFKV4:9200
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.STACKNAMECHITRAGUPTAreplica == true
+      resources:
+        limits:
+          cpus: 'EFKV5'
+          memory: 'EFKV6M'               
+    networks:
+      - STACKNAME-encrypted-overlay
+    entrypoint: ["/bin/bash", "-c", "/usr/local/bin/docker-entrypoint.sh & /usr/share/elasticsearch/create_elastic_users.sh && wait"]      
+      
+  kibana:
+    image: EFKKV1:EFKKV2
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibanauser
+      - ELASTICSEARCH_PASSWORD=EFKPWD
+      - xpack.security.enabled=true
+    ports:
+      - EFKKV3:5601
+    depends_on:
+      - elasticsearch
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.STACKNAMECHITRAGUPTAreplica == true
+      resources:
+        limits:
+          cpus: 'EFKKV4'
+          memory: 'EFKKV5M'               
+    networks:
+      - STACKNAME-encrypted-overlay
+      
+  filebeat:
+    image: EFKFV1:EFKFV2
+    user: root
+    volumes:
+      - EFKFV3:/shiva
+      - EFKFV4:/usr/share/filebeat/config
+      - EFKFV5:/usr/share/filebeat/filebeat.yml
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=EFKPWD
+    deploy:
+      mode: global
+      resources:
+        limits:
+          cpus: 'EFKFV6'
+          memory: 'EFKFV7M'      
+    networks:
+      - STACKNAME-encrypted-overlay
+
+networks:
+  STACKNAME-encrypted-overlay:
+    external: true
+

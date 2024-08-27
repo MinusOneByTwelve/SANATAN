@@ -2,16 +2,24 @@
 
 set -e
 
-# Variables
-LDAP_URI="ldaps://onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:39000"
-KDC_SERVER="onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:45000"
-KADMIN_SERVER="onprem-192-168-0-94-v2061-s2000-i2001-c35617-c:45001"
-REALM="AWESOME.COM"
-DOMAIN="awesome.com"
-USER="ubuntu1"
-KERB_PASSWD="your_kerberos_password"
-LDAP_BASE_DN="dc=awesome,dc=com"
+THEMODEOFEXECUTION="$1"
 
+# Variables
+LDAP_URI="THEVAL1"
+KDC_SERVER="THEVAL2"
+KADMIN_SERVER="THEVAL3"
+REALM="THEVAL4"
+DOMAIN="THEVAL5"
+KERB_PASSWD="THEVAL6"
+LDAP_BASE_DN="THEVAL7"
+
+if [ "$THEMODEOFEXECUTION" == "B" ]; then
+	USER="$2"
+	USERPWD="$3"	
+	echo "addprinc -pw $USERPWD $USER" | kadmin -p admin/admin -w $KERB_PASSWD
+fi
+
+if [ "$THEMODEOFEXECUTION" == "A" ]; then
 # Pre-seed answers for debconf
 debconf-set-selections <<EOF
 krb5-config krb5-config/default_realm string $REALM
@@ -94,8 +102,6 @@ sed -i 's/^shadow:.*/shadow:         compat ldap/g' /etc/nsswitch.conf
 # Restart necessary services
 systemctl restart nscd
 
-# Add user to Kerberos
-echo "addprinc -pw $KERB_PASSWD $USER" | kadmin -p admin/admin -w admin_password
-
 echo "Setup complete. System is now configured for LDAP and Kerberos authentication."
+fi
 

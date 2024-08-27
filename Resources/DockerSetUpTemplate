@@ -699,6 +699,54 @@ install_minio() {
 	
 	sudo mkdir -p /shiva/bdd/bucket && sudo chown -R root:root /shiva/bdd/bucket && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/bdd/bucket
 	sudo mkdir -p /shiva/bdd/bucket/$STACKNAME && sudo chown -R root:root /shiva/bdd/bucket/$STACKNAME && sudo chmod -R u=rwx,g=rwx,o=rwx /shiva/bdd/bucket/$STACKNAME
+
+	sudo mkdir -p $DFS_DATA_DIR/EFK
+	sudo chown -R root:root $DFS_DATA_DIR/EFK
+	sudo mv /home/$CURRENTUSER/DockerEFK.yml $DFS_DATA_DIR/EFK
+	sudo chown root:root $DFS_DATA_DIR/EFK/DockerEFK.yml
+	sudo chmod 777 $DFS_DATA_DIR/EFK/DockerEFK.yml	
+	sudo mv /home/$CURRENTUSER/DockerEFK.sh $DFS_DATA_DIR/EFK
+	sudo chown root:root $DFS_DATA_DIR/EFK/DockerEFK.sh	
+	sudo chmod 777 $DFS_DATA_DIR/EFK/DockerEFK.sh
+	sudo mv /home/$CURRENTUSER/DockerEFK2.sh $DFS_DATA_DIR/EFK
+	sudo chown root:root $DFS_DATA_DIR/EFK/DockerEFK2.sh	
+	sudo chmod 777 $DFS_DATA_DIR/EFK/DockerEFK2.sh	
+	sudo ln -s $DFS_DATA_DIR/EFK/DockerEFK2.sh /usr/bin/efklog 
+	#efklog "app1" "/shiva/local/storage/content.log"
+	sudo chmod -R 777 $DFS_DATA_DIR/EFK
+	sudo mkdir -p $DFS_DATA_DIR/EFKDATA
+	sudo chown -R root:root $DFS_DATA_DIR/EFKDATA
+	sudo chmod -R 777 $DFS_DATA_DIR/EFKDATA
+	sudo mkdir -p $DFS_DATA_DIR/EFKFBC
+	sudo chown -R root:root $DFS_DATA_DIR/EFKFBC
+	sudo chmod -R 777 $DFS_DATA_DIR/EFKFBC
+	sudo mkdir -p $DFS_DATA_DIR/EFKFBY
+	sudo chown -R root:root $DFS_DATA_DIR/EFKFBY
+	sudo chmod -R 777 $DFS_DATA_DIR/EFKFBY
+
+	pushd $DFS_DATA_DIR/EFKFBY
+	echo "# Dynamic reloading of input configurations
+filebeat.config.inputs:
+  path: /usr/share/filebeat/config/*.yml  # Directory to monitor for input configurations
+  reload.enabled: true                   # Enable dynamic reloading of inputs
+  reload.period: 10s                     # Check for changes every 10 seconds
+
+# Output configuration to send data to Elasticsearch
+output.elasticsearch:
+  hosts: [\"http://elasticsearch:9200\"]   # Elasticsearch host
+  username: \"elastic\"                    # Username for authentication
+  password: \"$REVERSED_PASSWORD\"      # Password for authentication
+
+# Setup Kibana connection for loading dashboards and index patterns
+setup.kibana:
+  host: \"http://kibana:5601\"             # Kibana host
+  username: \"elastic\"                    # Optional: Use if Kibana requires authentication
+  password: \"$REVERSED_PASSWORD\"      # Optional: Password for Kibana user
+" | tee filebeat.yml > /dev/null
+	sudo chown root:root filebeat.yml
+	sudo chmod 777 filebeat.yml
+	sudo chmod go-w filebeat.yml
+	popd
 		
 	sudo mkdir -p $DFS_DATA_DIR/MINIO
 	sudo chown -R root:root $DFS_DATA_DIR/MINIO
