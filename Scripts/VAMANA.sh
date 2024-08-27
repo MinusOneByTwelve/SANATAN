@@ -143,6 +143,10 @@ FLBRPortIO1=$(GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1")
 FLBRPortIO2=$(GetNewPort) && PORTSLIST+=("$FLBRPortIO2")
 PVTCLDPortIO1=$(GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1")
 PVTCLDPortIO2=$(GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2")
+EFKPort1=$(GetNewPortRange) && PORTSLIST+=("$EFKPort1")
+EFKPort2=$(GetNewPortRange) && PORTSLIST+=("$EFKPort2")
+EFKPort3=$(GetNewPort) && PORTSLIST+=("$EFKPort3")
+EFKPort4=$(GetNewPort) && PORTSLIST+=("$EFKPort4")
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
@@ -699,6 +703,15 @@ install_docker() {
 
     KRBBTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/SetUpKerberosLDAP $BASE/tmp/$KRBBTEMPLATE
+    
+    sed -i -e s~"THEVAL1"~"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL2"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL3"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL4"~"$STACK_PRETTY_NAME.VAMANA"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL5"~"$STACKPRETTYNAME.vamana"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL6"~"$ADMIN_PASSWORD"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL7"~"dc=$STACKPRETTYNAME,dc=vamana"~g $BASE/tmp/$KRBBTEMPLATE
+                               
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$KRBBTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/SetUpKerberos.sh"
     sudo rm -f $BASE/tmp/$KRBBTEMPLATE
     
@@ -774,6 +787,56 @@ install_docker() {
         
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
 
+    EFKTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerEFK.yml $BASE/tmp/$EFKTEMPLATE
+
+    IFS=':' read -r -a _EFK1 <<< "${CLUSTER_MEMORYCORES_MAPPING["EFK1"]}"
+    _EFK1_M="${_EFK1[0]}"
+    _EFK1_C="${_EFK1[1]}"    
+    IFS=':' read -r -a _EFK2 <<< "${CLUSTER_MEMORYCORES_MAPPING["EFK2"]}"
+    _EFK2_M="${_EFK2[0]}"
+    _EFK2_C="${_EFK2[1]}"
+    IFS=':' read -r -a _EFK3 <<< "${CLUSTER_MEMORYCORES_MAPPING["EFK3"]}"
+    _EFK3_M="${_EFK3[0]}"
+    _EFK3_C="${_EFK3[1]}"
+             
+    sed -i -e s~"EFKV1"~"${CLUSTER_APPS_MAPPING["EFK1"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV2"~"${CLUSTERAPPSMAPPING["EFK1"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV3"~"$DFS_DATA_DIR/EFKDATA"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV4"~"$EFKPort1"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV5"~"$_EFK1_C"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV6"~"$_EFK1_M"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKV7"~"$DFS_DATA_DIR/EFK/DockerEFK.sh"~g $BASE/tmp/$EFKTEMPLATE    
+    sed -i -e s~"EFKKV1"~"${CLUSTER_APPS_MAPPING["EFK2"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKKV2"~"${CLUSTERAPPSMAPPING["EFK2"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKKV3"~"$EFKPort2"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKKV4"~"$_EFK2_C"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKKV5"~"$_EFK2_M"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV1"~"${CLUSTER_APPS_MAPPING["EFK3"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV2"~"${CLUSTERAPPSMAPPING["EFK3"]}"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV3"~"/shiva"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV4"~"$DFS_DATA_DIR/EFKFBC"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV5"~"$DFS_DATA_DIR/EFKFBY/filebeat.yml"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV6"~"$_EFK3_C"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKFV7"~"$_EFK3_M"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"EFKPWD"~"$ADMIN_PASSWORD"~g $BASE/tmp/$EFKTEMPLATE
+    sed -i -e s~"STACKNAME"~"$STACKNAME"~g $BASE/tmp/$EFKTEMPLATE
+ 
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$EFKTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/DockerEFK.yml"
+    sudo rm -f $BASE/tmp/$EFKTEMPLATE
+
+    EFK2TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerEFK.sh $BASE/tmp/$EFK2TEMPLATE
+    sed -i -e s~"THEPWD"~"$ADMIN_PASSWORD"~g $BASE/tmp/$EFK2TEMPLATE
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$EFK2TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/DockerEFK.sh"
+    sudo rm -f $BASE/tmp/$EFK2TEMPLATE
+
+    EFK3TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/DockerEFK2.sh $BASE/tmp/$EFK3TEMPLATE
+    sed -i -e s~"THEFILELOC"~"$DFS_DATA_DIR/EFKFBC"~g $BASE/tmp/$EFK3TEMPLATE
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$EFK3TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/DockerEFK2.sh"
+    sudo rm -f $BASE/tmp/$EFK3TEMPLATE
+                                                        
     if [ "$MACTYPE" == "I" ] ; then
 	    DOCKER1TEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	    sudo cp $BASE/Resources/ImageMaker.py $BASE/tmp/$DOCKER1TEMPLATE
@@ -1091,7 +1154,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[${INDRA_IPS[0]}]}\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[${INDRA_IPS[0]}]}\" \"$EFKPort3\" \"$EFKPort4\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -1534,6 +1597,7 @@ sed -i -e s~"THECURSTACK"~"$STACKNAME"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"LOGFILE"~"$BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"SELFME"~"$BASE/tmp/$DOCKERCGTEMPLATE"~g $BASE/tmp/$DOCKERCGTEMPLATE
 sed -i -e s~"UNQREQ"~"$REQUNQ"~g $BASE/tmp/$DOCKERCGTEMPLATE
+sed -i -e s~"E1F1K"~"$DFS_DATA_DIR/EFK/DockerEFK.yml"~g $BASE/tmp/$DOCKERCGTEMPLATE
 
 echo "" && echo "Install Guacamole & MySql..."
 echo "$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7"
@@ -1630,7 +1694,7 @@ echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
@@ -1667,6 +1731,12 @@ echo "[
   },
   {
     \"HAProxy Admin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4\"
+  },
+  {
+    \"Elastic Search\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort3\"
+  },
+  {
+    \"Kibana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4\"
   },
   {
     \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7\"

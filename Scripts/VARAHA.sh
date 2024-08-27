@@ -82,7 +82,9 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	MIN_IO_DET="${30}"
 	#MYNAME=$(head -n 1 /opt/THEMENAME)
 	MYNAME="${31}"
-	
+	EFKPort3="${32}"
+	EFKPort4="${33}"
+		
 	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
 	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
 fi
@@ -265,6 +267,26 @@ SetUpCHITRAGUPTA() {
 	sudo firewall-cmd --reload
 
 	echo "
+frontend ""$STACKPRETTYNAME""_Elastic_Front
+    bind *:$EFKPort3 ssl crt /certs/share-varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_Elastic_Back
+
+backend ""$STACKPRETTYNAME""_Elastic_Back
+    mode http
+    server chitragupta_elastic elasticsearch:9200 check" | sudo tee -a $THECFGPATH > /dev/null 
+
+	echo "
+frontend ""$STACKPRETTYNAME""_Kibana_Front
+    bind *:$EFKPort4 ssl crt /certs/varaha.pem
+    mode http
+    default_backend ""$STACKPRETTYNAME""_Kibana_Back
+
+backend ""$STACKPRETTYNAME""_Kibana_Back
+    mode http
+    server chitragupta_kibana kibana:5601 check" | sudo tee -a $THECFGPATH > /dev/null
+    
+	echo "
 frontend ""$STACKPRETTYNAME""_Nextcloud_Front
     bind *:$CGP35 ssl crt /certs/varaha.pem
     mode http
@@ -403,7 +425,9 @@ services:
       - "'"$CGP7"':'"$CGP7"'"  
       - "'"$CGP8"':'"$CGP8"'"   
       - "'"$CGP9"':'"$CGP9"'"  
-      - "'"$CGP35"':'"$CGP35"'"                                                  
+      - "'"$CGP35"':'"$CGP35"'"
+      - "'"$EFKPort3"':'"$EFKPort3"'"  
+      - "'"$EFKPort4"':'"$EFKPort4"'"                                                        
     deploy:
       replicas: 1
       placement:
