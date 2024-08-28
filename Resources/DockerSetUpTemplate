@@ -902,6 +902,11 @@ else
 		INTERNALIP=$(ip addr show eth1 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
 	fi
+
+	if [[ "$THEOSCHOICE" == "CSMP_UBU" ]]; then
+		INTERNALIP=$(ip route get 8.8.8.8 | awk 'NR==1 {print $7}')
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+	fi
 	
 	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
 		INTERNALIP2=$(ip addr show $STACKNAME | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
