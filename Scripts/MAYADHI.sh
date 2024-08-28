@@ -200,7 +200,8 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 
 	FromMatsya=$(jq -r '.FromMatsya' <<< "$THEJSON")
 	REQUNQ=$(jq -r '.Identity' <<< "$THEJSON")
-	
+	PREP_ONLY=$(jq -r '.PrepOnly' <<< "$THEJSON")
+		
 	if [ "$FromMatsya" == "Y" ] ; then
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
@@ -234,7 +235,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	sudo rm -f $BASE/Output/Logs/$REQUNQ-Cloud-Instance-Sync-B-VAMANA-Initiate.out
 	
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
@@ -476,9 +477,14 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	if [ "$ToVamana" == "Y" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey"	
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N"	
 	fi
-	
+	if [ "$ToVamana" == "X" ]; then
+		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
+		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y"	
+	fi
+		
 	RNDMJX1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" "$UNQRUNID" "$RNDMJX1" > $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out 2>&1 &
 fi

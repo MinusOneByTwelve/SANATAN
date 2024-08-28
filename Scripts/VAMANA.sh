@@ -96,6 +96,7 @@ ISAUTOMATED="${THE_ARGS[6]}"
 THENOHUPFILE="${THE_ARGS[7]}"
 WEBSSH_PASSWORD="${THE_ARGS[8]}"
 REQUNQ="${THE_ARGS[9]}"
+PREP_ONLY="${THE_ARGS[10]}"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -244,16 +245,45 @@ create_instance_details() {
     # Process each line
     for i in "${!lines[@]}"; do
         line="${lines[$i]}"
+        echo "THE LINE : $line"
         IFS=',' read -ra columns <<< "$line"
         
         uppercase_text=$(echo "${columns[8]}" | tr '[:lower:]' '[:upper:]')
         columns[8]="$uppercase_text"
-        columns4=$(NARASIMHA "decrypt" "${columns[4]}" "$VISION_KEY")
-        columns5=$(NARASIMHA "decrypt" "${columns[5]}" "$VISION_KEY")
-        columns7=$(NARASIMHA "decrypt" "${columns[7]}" "$VISION_KEY")
-        columns[4]="$columns4"
-        columns[5]="$columns5"
-        columns[7]="$columns7"
+        
+        if [ "$uppercase_text" == "CSMP" ]; then
+        	#SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE
+        	THE1REQ1PORT="${columns[4]}"
+        	echo "THE1REQ1PORT : $THE1REQ1PORT"
+		NEW_USER=""
+		NEW_PASSWORD=""
+		SSH_USER=""
+		SSH__PASSWORD=""        	
+        	if [ "${columns[5]}" == "NA" ]; then
+        		IFS='├' read -r -a columns_7 <<< "${columns[7]}"
+        		SSH_USER="${columns_7[0]}"
+        		SSH__PASSWORD="${columns_7[1]}"
+			NEW_USER=$(cat /dev/urandom | tr -dc 'a-z' | fold -w 10 | head -n 1)
+			NEW_USER="u""$NEW_USER"
+			NEW_PASSWORD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) 
+			NEW_PEM_NAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)       		
+        		$BASE/Scripts/PrepCSMP.sh "$NEW_USER├$NEW_PASSWORD├$SSH_USER├NA├$SSH__PASSWORD├""${columns[2]}""├$BASE/Output/Pem/$NEW_PEM_NAME.pem├$THE1REQ1PORT"
+			columns[4]="$THE1REQ1PORT"
+			columns[5]="$BASE/Output/Pem/$NEW_PEM_NAME.pem"
+			columns[7]="$NEW_USER"        		
+        	else
+        		$BASE/Scripts/PrepCSMP.sh "├├""${columns[7]}""├""${columns[5]}""├├""${columns[2]}""├├$THE1REQ1PORT" 
+        	fi		       		
+        else
+		if [ "$PREP_ONLY" == "N" ]; then
+			columns4=$(NARASIMHA "decrypt" "${columns[4]}" "$VISION_KEY")
+			columns5=$(NARASIMHA "decrypt" "${columns[5]}" "$VISION_KEY")
+			columns7=$(NARASIMHA "decrypt" "${columns[7]}" "$VISION_KEY")
+			columns[4]="$columns4"
+			columns[5]="$columns5"
+			columns[7]="$columns7"
+		fi
+        fi
         
         if [[ "$thereqmode" == "Y" ]]; then
             if [[ "${updated_lines[$i]}" == "BRAHMA" ]]; then
@@ -278,6 +308,7 @@ create_instance_details() {
     # Write the updated lines to the output file
     printf "%s\n" "${lines[@]}" > "$output_file"
     echo "Updated file saved as $output_file"
+    cat $output_file
 }
 
 if [[ "$ISAUTOMATED" == "Y" ]]; then
@@ -332,11 +363,19 @@ NR > 1 {
 	sudo rm -f $THE1SFTSTKFILE
 	
 	INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"
+	if [ "$PREP_ONLY" == "Y" ]; then
+        	echo "Swarm File Prep Done."
+        	exit 1
+	fi
 else
-	THE1SFTSTK2_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
-	THE1SFTSTK1FILE="$BASE/tmp/Stack_$THE1SFTSTK2_FILE.csv"
-	create_instance_details "$INSTANCE_DETAILS_FILE" "$THE1SFTSTK1FILE" "N"
-	INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"					
+	if [[ "$ISAUTOMATED" == "X" ]]; then
+		echo "Swarm File Prep Done."
+	else
+		THE1SFTSTK2_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		THE1SFTSTK1FILE="$BASE/tmp/Stack_$THE1SFTSTK2_FILE.csv"
+		create_instance_details "$INSTANCE_DETAILS_FILE" "$THE1SFTSTK1FILE" "N"
+		INSTANCE_DETAILS_FILE="$THE1SFTSTK1FILE"
+	fi					
 fi
 
 THEGUACA_SQL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)

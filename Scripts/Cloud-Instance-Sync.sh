@@ -401,6 +401,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			THEVISIONID="${THE_ARGS[2]}"			
 			ADMIN_PASSWORD="${THE_ARGS[3]}"	
 			WEBSSH_PASSWORD="${THE_ARGS[4]}"
+			PREP_ONLY="${THE_ARGS[5]}"			
 			echo '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
   "VisionKey": "'"$VISION_KEY"'",
@@ -408,7 +409,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "VisionId": "'"$THEVISIONID"'",
   "FromMatsya": "Y",
   "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
-  "AdminKey": "'"$ADMIN_PASSWORD"'"      
+  "AdminKey": "'"$ADMIN_PASSWORD"'",       
+  "PrepOnly": "'"$PREP_ONLY"'"      
 }'			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
@@ -417,7 +419,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "VisionId": "'"$THEVISIONID"'",
   "FromMatsya": "Y",
   "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
-  "AdminKey": "'"$ADMIN_PASSWORD"'"      
+  "AdminKey": "'"$ADMIN_PASSWORD"'",       
+  "PrepOnly": "'"$PREP_ONLY"'"      
 }' > $BASE/Output/Logs/$UNQRUNID-Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		
