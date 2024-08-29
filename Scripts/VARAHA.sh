@@ -84,9 +84,111 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	MYNAME="${31}"
 	EFKPort3="${32}"
 	EFKPort4="${33}"
-		
+	CDNPRX="${34}"	
+	ALT_INDR_HA_PRT="${35}"
+	
 	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
 	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
+	
+	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA_DET
+	
+	echo $CHITRAGUPTA_DET
+	
+	CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
+	IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
+	CGP1="${CGPORTS_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP1}/tcp --permanent
+	CGP2="${CGPORTS_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP2}/tcp --permanent
+	CGP3="${CGPORTS_DET[6]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
+	CGP5="${CGPORTS_DET[7]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP5}/tcp --permanent	
+	
+	CGPORTS2DET="${CHITRAGUPTA_VAL[5]}"		
+	IFS=',' read -r -a CGPORTS2_DET <<< "$CGPORTS2DET"	
+	CGP4="${CGPORTS2_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent	
+	
+	CGPORTS3DET="${CHITRAGUPTA_VAL[6]}"		
+	IFS=',' read -r -a CGPORTS3_DET <<< "$CGPORTS3DET"	
+	CGP6="${CGPORTS3_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP6}/tcp --permanent	
+	CGP7="${CGPORTS3_DET[5]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP7}/tcp --permanent
+	
+	CGPORTS4DET="${CHITRAGUPTA_VAL[7]}"		
+	IFS=',' read -r -a CGPORTS4_DET <<< "$CGPORTS4DET"	
+	CGP8="${CGPORTS4_DET[3]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP8}/tcp --permanent	
+	CGP9="${CGPORTS4_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${CGP9}/tcp --permanent	
+
+	CGPORTS5DET="${CHITRAGUPTA_VAL[8]}"		
+	IFS=',' read -r -a CGPORTS5_DET <<< "$CGPORTS5DET"	
+	CGP35="${CGPORTS5_DET[2]}"
+	CGP34="${CGPORTS5_DET[1]}"
+	CGP36="${CGPORTS5_DET[12]}"	
+	sudo firewall-cmd --zone=public --add-port=${CGP35}/tcp --permanent
+								
+	#sudo firewall-cmd --reload
+	
+	IFS=',' read -r -a MINIO_DET <<< $MIN_IO_DET
+	
+	echo $MIN_IO_DET
+	
+	MIN1IO="${MINIO_DET[3]}"
+	sudo firewall-cmd --zone=public --add-port=${MIN1IO}/tcp --permanent
+	MIN2IO="${MINIO_DET[4]}"
+	sudo firewall-cmd --zone=public --add-port=${MIN2IO}/tcp --permanent
+	FBR1="${MINIO_DET[9]}"
+	sudo firewall-cmd --zone=public --add-port=${FBR1}/tcp --permanent
+		
+	sudo firewall-cmd --reload
+	
+	if [ "$CDNPRX" == "PASSIVE" ]; then
+		IFS=',' read -r -a HAPRT <<< "$ALT_INDR_HA_PRT"
+		PortainerWPort="${HAPRT[0]}"
+		AdminPort="${HAPRT[1]}"
+		GLOBALVARAHAPORT="${HAPRT[2]}"
+		websshPort1="${HAPRT[3]}"	
+		MIN1IO="${HAPRT[4]}"
+		MIN2IO="${HAPRT[5]}"
+		FBR1="${HAPRT[6]}"
+		CGP1="${HAPRT[7]}"
+		CGP2="${HAPRT[8]}"
+		CGP3="${HAPRT[9]}"
+		CGP4="${HAPRT[10]}"
+		CGP5="${HAPRT[11]}"
+		CGP6="${HAPRT[12]}"
+		CGP7="${HAPRT[13]}"
+		CGP8="${HAPRT[14]}"
+		CGP9="${HAPRT[15]}"
+		CGP35="${HAPRT[16]}"
+		EFKPort3="${HAPRT[17]}"
+		EFKPort4="${HAPRT[18]}"																				
+	fi
+
+	sudo firewall-cmd --zone=public --add-port=${PortainerWPort}/tcp --permanent 
+	sudo firewall-cmd --zone=public --add-port=${AdminPort}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${GLOBALVARAHAPORT}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${websshPort1}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${MIN1IO}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${MIN2IO}/tcp --permanent 
+	sudo firewall-cmd --zone=public --add-port=${FBR1}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP1}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP2}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent 
+	sudo firewall-cmd --zone=public --add-port=${CGP5}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP6}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP7}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP8}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${CGP9}/tcp --permanent 
+	sudo firewall-cmd --zone=public --add-port=${CGP35}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${EFKPort3}/tcp --permanent
+	sudo firewall-cmd --zone=public --add-port=${EFKPort4}/tcp --permanent
+	sudo firewall-cmd --reload			
 fi
 
 # Generate the HAProxy configuration
@@ -160,24 +262,12 @@ listen '"$STACKPRETTYNAME"'_Admin_Front
     stats refresh 10s
     stats auth admin:'"$ADMIN_PASSWORD"'' | sudo tee -a $THECFGPATH > /dev/null
 
-    docker config create VARAHA$STACKNAME.cfg "$THECFGPATH"
+    THECNFGNM="VARAHA""_$CDNPRX""$STACKNAME.cfg"
+    docker config create $THECNFGNM "$THECFGPATH"
     cat $THECFGPATH
 }
 
-SetUpMinIO() {
-	IFS=',' read -r -a MINIO_DET <<< $MIN_IO_DET
-	
-	echo $MIN_IO_DET
-	
-	MIN1IO="${MINIO_DET[3]}"
-	sudo firewall-cmd --zone=public --add-port=${MIN1IO}/tcp --permanent
-	MIN2IO="${MINIO_DET[4]}"
-	sudo firewall-cmd --zone=public --add-port=${MIN2IO}/tcp --permanent
-	FBR1="${MINIO_DET[9]}"
-	sudo firewall-cmd --zone=public --add-port=${FBR1}/tcp --permanent
-		
-	sudo firewall-cmd --reload
-	
+SetUpMinIO() {	
 	echo "
 #resolvers docker
 #    nameserver dns1 127.0.0.11:53
@@ -223,49 +313,6 @@ backend ""$STACKPRETTYNAME""_MinIOConsole_Back
 }
 
 SetUpCHITRAGUPTA() {
-	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA_DET
-	
-	echo $CHITRAGUPTA_DET
-	
-	CGPORTSDET="${CHITRAGUPTA_VAL[1]}"		
-	IFS=',' read -r -a CGPORTS_DET <<< "$CGPORTSDET"
-	CGP1="${CGPORTS_DET[4]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP1}/tcp --permanent
-	CGP2="${CGPORTS_DET[5]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP2}/tcp --permanent
-	CGP3="${CGPORTS_DET[6]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP3}/tcp --permanent
-	CGP5="${CGPORTS_DET[7]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP5}/tcp --permanent	
-	
-	CGPORTS2DET="${CHITRAGUPTA_VAL[5]}"		
-	IFS=',' read -r -a CGPORTS2_DET <<< "$CGPORTS2DET"	
-	CGP4="${CGPORTS2_DET[5]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP4}/tcp --permanent	
-	
-	CGPORTS3DET="${CHITRAGUPTA_VAL[6]}"		
-	IFS=',' read -r -a CGPORTS3_DET <<< "$CGPORTS3DET"	
-	CGP6="${CGPORTS3_DET[4]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP6}/tcp --permanent	
-	CGP7="${CGPORTS3_DET[5]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP7}/tcp --permanent
-	
-	CGPORTS4DET="${CHITRAGUPTA_VAL[7]}"		
-	IFS=',' read -r -a CGPORTS4_DET <<< "$CGPORTS4DET"	
-	CGP8="${CGPORTS4_DET[3]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP8}/tcp --permanent	
-	CGP9="${CGPORTS4_DET[4]}"
-	sudo firewall-cmd --zone=public --add-port=${CGP9}/tcp --permanent	
-
-	CGPORTS5DET="${CHITRAGUPTA_VAL[8]}"		
-	IFS=',' read -r -a CGPORTS5_DET <<< "$CGPORTS5DET"	
-	CGP35="${CGPORTS5_DET[2]}"
-	CGP34="${CGPORTS5_DET[1]}"
-	CGP36="${CGPORTS5_DET[12]}"	
-	sudo firewall-cmd --zone=public --add-port=${CGP35}/tcp --permanent
-								
-	sudo firewall-cmd --reload
-
 	echo "
 frontend ""$STACKPRETTYNAME""_Elastic_Front
     bind *:$EFKPort3 ssl crt /certs/share-varaha.pem
@@ -285,7 +332,8 @@ frontend ""$STACKPRETTYNAME""_Kibana_Front
 backend ""$STACKPRETTYNAME""_Kibana_Back
     mode http
     server chitragupta_kibana kibana:5601 check" | sudo tee -a $THECFGPATH > /dev/null
-    
+
+if [ "$CDNPRX" == "ACTIVE" ]; then    
 	echo "
 frontend ""$STACKPRETTYNAME""_Nextcloud_Front
     bind *:$CGP35 ssl crt /certs/varaha.pem
@@ -295,6 +343,7 @@ frontend ""$STACKPRETTYNAME""_Nextcloud_Front
 backend ""$STACKPRETTYNAME""_Nextcloud_Back
     mode http
     server chitragupta_pvtcld $CGP36:$CGP34 check" | sudo tee -a $THECFGPATH > /dev/null
+fi
     	    
 	echo "
 frontend ""$STACKPRETTYNAME""_Guacamole_Front
@@ -406,7 +455,7 @@ services:
   haproxy:
     image: '"$THEVER1ROUTER"':'"$THEVERROUTER"'
     configs:
-      - source: '"VARAHA$STACKNAME"'.cfg
+      - source: '"VARAHA"_$CDNPRX"$STACKNAME"'.cfg
         target: /usr/local/etc/haproxy/haproxy.cfg    
     ports:
       - "'"$PortainerWPort"':'"$PortainerWPort"'"
@@ -432,7 +481,7 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.labels.'"$STACKNAME"'INDRAreplica == true
+          - node.labels.'"$STACKNAME"'INDRA_'"$CDNPRX"'replica == true
       resources:
         limits:
           cpus: '"'$C1ORE'"'
@@ -467,7 +516,7 @@ networks:
     external: true 
     
 configs:
-  '"VARAHA$STACKNAME"'.cfg:
+  '"VARAHA"_$CDNPRX"$STACKNAME"'.cfg:
     external: true' | sudo tee $THEDCYPATH > /dev/null
     
     cat $THEDCYPATH
@@ -487,8 +536,8 @@ main() {
 	    #create_support_files	    	    
 	    generate_cfg
 	    create_docker_compose_file
-	    echo "docker stack deploy --compose-file $THEDCYPATH $STACKNAME""_VARAHA"
-	    docker stack deploy --compose-file $THEDCYPATH $STACKNAME"_VARAHA"
+	    echo "docker stack deploy --compose-file $THEDCYPATH $STACKNAME""_""$CDNPRX""_VARAHA"
+	    docker stack deploy --compose-file $THEDCYPATH $STACKNAME"_""$CDNPRX""_VARAHA"
 	    sudo rm -f $THECFGPATH  
 	    sudo rm -f $THEDCYPATH 
 	fi          

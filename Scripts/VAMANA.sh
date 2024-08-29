@@ -149,6 +149,27 @@ EFKPort2=$(GetNewPortRange) && PORTSLIST+=("$EFKPort2")
 EFKPort3=$(GetNewPort) && PORTSLIST+=("$EFKPort3")
 EFKPort4=$(GetNewPort) && PORTSLIST+=("$EFKPort4")
 
+ALT_INDR_HA_PRT=""
+AltIndrhaprt1=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1"
+AltIndrhaprt2=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt2") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt2"
+AltIndrhaprt3=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt3") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt3"
+AltIndrhaprt4=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt4") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt4"
+AltIndrhaprt5=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt5") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt5"
+AltIndrhaprt6=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt6") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt6"
+AltIndrhaprt7=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt7") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt7"
+AltIndrhaprt8=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt8") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt8"
+AltIndrhaprt9=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt9") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt9"
+AltIndrhaprt10=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt10") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt10"
+AltIndrhaprt11=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt11") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt11"
+AltIndrhaprt12=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt12") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt12"
+AltIndrhaprt13=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt13") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt13"
+AltIndrhaprt14=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt14") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt14"
+AltIndrhaprt15=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt15") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt15"
+AltIndrhaprt16=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt16") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt16"
+AltIndrhaprt17=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17"
+AltIndrhaprt18=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18"
+AltIndrhaprt19=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19"
+
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
 MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
@@ -235,6 +256,9 @@ create_instance_details() {
             if [ $manager_count -lt 3 ]; then
                 updated_lines[$i]="BRAHMA"
                 manager_count=$((manager_count + 1))
+            elif [ $router_count -lt 2 ]; then
+                updated_lines[$i]="INDRA"
+                router_count=$((router_count + 1))                
             else
                 updated_lines[$i]="VISHVAKARMA"
                 worker_count=$((worker_count + 1))
@@ -420,7 +444,7 @@ parse_instance_details() {
 		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
 		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 		    CHITRAGUPTA="$IP"
-            THE_PVT_CLD="$IP"
+		    THE_PVT_CLD="$IP"
 		    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""$IP,$PORT,$PEM,$U1SER"		                
             else
 		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
@@ -1137,14 +1161,22 @@ create_swarm_labels() {
 		    echo "Node $IP is not part of a Swarm"
 		fi
 	done
+	
+	INDRHA="N"
 	for IP in "${INDRA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
 		if [ -n "$NODE_ID" ]; then
-		    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRAreplica=true $NODE_ID"
+		    if [ "$INDRHA" == "N" ]; then
+		    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_ACTIVEreplica=true $NODE_ID"
+		    	INDRHA="Y"
+		    else
+		    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_PASSIVEreplica=true $NODE_ID"
+		    fi
 		else
 		    echo "Node $IP is not part of a Swarm"
 		fi
 	done
+	
 	for IP in "${VISHVAKARMA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
 		if [ -n "$NODE_ID" ]; then
@@ -1163,22 +1195,32 @@ create_swarm_labels() {
 
 # Function to create cluster level cdn & proxy
 create_cluster_cdn_proxy() {
+    CDNPRX="$1"
+    
+    THEINDRIP=""
+    if [ "$CDNPRX" == "ACTIVE" ]; then
+    	THEINDRIP="${INDRA_IPS[0]}"
+    fi
+    if [ "$CDNPRX" == "PASSIVE" ]; then
+    	THEINDRIP="${INDRA_IPS[1]}"
+    fi
+        
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Scripts/VARAHA.sh $BASE/tmp/$DOCKERTEMPLATE
 
     MGRIPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
     THECFGPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     THEDCYPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)    
-    IWP="${INDRA_IPS[0]}"
+    IWP="$THEINDRIP"
     THE1RAM=${APP_MEM[$IWP]}
     R2AM=$( [[ $THE1RAM == *,* ]] && echo "${THE1RAM#*,}" || echo "$THE1RAM" )
     THE1CORE=${APP_CORE[$IWP]}
     C2ORE=$( [[ $THE1CORE == *,* ]] && echo "${THE1CORE#*,}" || echo "$THE1CORE" ) 
 
-    THEREQINDRA="${INDRA_IPS[0]}"
+    THEREQINDRA="$THEINDRIP"
     SYNCWITHIFCONFIG="N"
     if [ "$NATIVE" -lt 2 ]; then
-    	THEREQINDRA="${JIVA_IPS[${INDRA_IPS[0]}]}"
+    	THEREQINDRA="${JIVA_IPS[$THEINDRIP]}"
     	SYNCWITHIFCONFIG="Y"
     fi
    
@@ -1193,7 +1235,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[${INDRA_IPS[0]}]}\" \"$EFKPort3\" \"$EFKPort4\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -1644,7 +1686,10 @@ echo "" && echo "Install Prometheus, Grafana, Node Exporter & cAdvisor..."
 echo "$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1"
 nohup $BASE/tmp/$DOCKERCGTEMPLATE > $BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out 2>&1 &
 
-create_cluster_cdn_proxy
+create_cluster_cdn_proxy "ACTIVE"
+if [ ${#INDRA_IPS[@]} -eq 2 ]; then
+    create_cluster_cdn_proxy "PASSIVE"
+fi
 
 DOCKERPTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 sudo cp $BASE/Resources/DockerPortainer.yml $BASE/tmp/$DOCKERPTEMPLATE
@@ -1734,60 +1779,69 @@ echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 if [[ "$ISAUTOMATED" == "Y" ]]; then
 	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
+	
+	if [ ${#INDRA_IPS[@]} -eq 2 ]; then
+		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt4" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt5" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt10" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt14" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt15" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt16" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt17" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt18" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
+	fi
+fi
+
+THEHAINDRHOST="INDRA_HA"
+if [ ${#INDRA_IPS[@]} -eq 2 ]; then
+    THEHAINDRHOST="${HOST_NAMES[${INDRA_IPS[1]}]}"
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
 echo "[
   {
-    \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3\"
+    \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3 | https://$THEHAINDRHOST:$AltIndrhaprt1\"
   },
   {
-    \"MinIO\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4\"
+    \"MinIO\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4 | https://$THEHAINDRHOST:$AltIndrhaprt6\"
   },
   {
-    \"Cloud Commander\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2\"
+    \"Cloud Commander\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2 | https://$THEHAINDRHOST:$AltIndrhaprt7\"
   },
   {
     \"Nextcloud\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2\"
   },
   {
-    \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1\"
+    \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1 | https://$THEHAINDRHOST:$AltIndrhaprt12\"
   },
   {
-    \"Grafana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1\"
+    \"Grafana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1 | https://$THEHAINDRHOST:$AltIndrhaprt2\"
   },
   {
-    \"Guacamole\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/\"
+    \"Guacamole\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/ | https://$THEHAINDRHOST:$AltIndrhaprt8/guacamole/\"
   },
   {
-    \"phpMyAdmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6\"
+    \"phpMyAdmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6 | https://$THEHAINDRHOST:$AltIndrhaprt9\"
   },
   {
-    \"phpLDAPadmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4\"
+    \"phpLDAPadmin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4 | https://$THEHAINDRHOST:$AltIndrhaprt13\"
   },
   {
-    \"Static Hosting\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2\"
+    \"Static Hosting\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2 | https://$THEHAINDRHOST:$AltIndrhaprt3\"
   },
   {
-    \"HAProxy Admin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4\"
+    \"HAProxy Admin\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4 | https://$THEHAINDRHOST:$AltIndrhaprt2\"
   },
   {
-    \"Elastic Search\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort3\"
+    \"Elastic Search\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort3 | https://$THEHAINDRHOST:$AltIndrhaprt18\"
   },
   {
-    \"Kibana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4\"
+    \"Kibana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4 | https://$THEHAINDRHOST:$AltIndrhaprt19\"
   },
   {
-    \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7\"
+    \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7 | $THEHAINDRHOST:$AltIndrhaprt14\"
   },
   {
-    \"OpenLDAP\": \"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5\"
+    \"OpenLDAP\": \"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5 | ldaps://$THEHAINDRHOST:$AltIndrhaprt15\"
   },
   {
-    \"Kerberos KDC\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3\"
+    \"Kerberos KDC\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3 | $THEHAINDRHOST:$AltIndrhaprt16\"
   },
   {
-    \"Kerberos Admin\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4\"
+    \"Kerberos Admin\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4 | $THEHAINDRHOST:$AltIndrhaprt17\"
   }
 ]" >> "$FNN2PATH"
 
