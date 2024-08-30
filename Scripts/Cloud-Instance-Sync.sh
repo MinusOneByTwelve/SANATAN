@@ -410,7 +410,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "FromMatsya": "Y",
   "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
   "AdminKey": "'"$ADMIN_PASSWORD"'",       
-  "PrepOnly": "'"$PREP_ONLY"'"      
+  "PrepOnly": "'"$PREP_ONLY"'",       
+  "ChitraGupta": "NA"      
 }'			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
@@ -420,7 +421,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "FromMatsya": "Y",
   "WebSSHKey": "'"$WEBSSH_PASSWORD"'",       
   "AdminKey": "'"$ADMIN_PASSWORD"'",       
-  "PrepOnly": "'"$PREP_ONLY"'"      
+  "PrepOnly": "'"$PREP_ONLY"'",       
+  "ChitraGupta": "NA"      
 }' > $BASE/Output/Logs/$UNQRUNID-Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		

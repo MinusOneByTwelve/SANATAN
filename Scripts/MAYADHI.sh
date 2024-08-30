@@ -201,6 +201,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	FromMatsya=$(jq -r '.FromMatsya' <<< "$THEJSON")
 	REQUNQ=$(jq -r '.Identity' <<< "$THEJSON")
 	PREP_ONLY=$(jq -r '.PrepOnly' <<< "$THEJSON")
+	ChitraGupta=$(jq -r '.ChitraGupta' <<< "$THEJSON")
 		
 	if [ "$FromMatsya" == "Y" ] ; then
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
@@ -235,7 +236,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	sudo rm -f $BASE/Output/Logs/$REQUNQ-Cloud-Instance-Sync-B-VAMANA-Initiate.out
 	
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then

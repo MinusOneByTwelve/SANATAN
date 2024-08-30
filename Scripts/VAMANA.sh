@@ -204,9 +204,15 @@ declare -A CLUSTER_TYPE
 declare -A JIVA_IPS
 declare -A ROLE_TYPE
 NATIVE="1"
-CHITRAGUPTA=""
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	CHITRAGUPTA=""
+else
+	CHITRAGUPTA="${THE_ARGS[11]}"
+fi
 THE_PVT_CLD=""
 CHITRAGUPTA_DET=""
+CHITRAGUPTA1_DET=""
+CGDTD="N"
 MIN_IO_DET=""
 
 # Function to prepare swarm dynamically
@@ -411,6 +417,7 @@ parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
     COUNTxER=0
     COUNTvER=0
+    NACGD1="N"
     while IFS=',' read -r SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE; do
         PEM_FILES["$IP"]="$PEM"
         PORTS["$IP"]="$PORT"
@@ -431,7 +438,8 @@ parse_instance_details() {
         
         SAMPOORNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
                        
-        echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                     
+        #echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+        echo 'sudo sed -i -e "/\<'"${IP}"'\>/s/^/#/" /etc/hosts' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                    
         if [ "$ROLE" == "BRAHMA" ]; then
             BRAHMA_IPS+=("$IP")
             HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
@@ -439,18 +447,51 @@ parse_instance_details() {
             echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
         elif [ "$ROLE" == "VISHVAKARMA" ]; then
             VISHVAKARMA_IPS+=("$IP")
-            if (( $COUNTvER == 0 )) ; then
-		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
-		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
-		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
-		    CHITRAGUPTA="$IP"
-		    THE_PVT_CLD="$IP"
-		    CHITRAGUPTA_DET="$CHITRAGUPTA_DET""$IP,$PORT,$PEM,$U1SER"		                
+            THELETTER="v"
+            
+            if [[ "$ISAUTOMATED" == "Y" ]]; then
+            	if (( $COUNTvER == 0 )) ; then
+            		THELETTER="c"
+            		CHITRAGUPTA="$IP"
+            		CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
+            	fi
+            	if (( $COUNTvER == 1 )) ; then
+            		THELETTER="c"
+            		CHITRAGUPTA="$CHITRAGUPTA"",""$IP"
+            	fi 
             else
-		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
-		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
-		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		#IS_CG="N"		
+		#if [[ "$CHITRAGUPTA" == *"$IP"* ]]; then
+		#    IS_CG="Y"
+		#fi
+		IS_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")            
+            	if [[ "$NACGD1" == "N" ]]; then
+            		if [[ "$IS_CG" == "Y" ]]; then
+            			CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
+            			NACGD1="Y"	
+            		fi 
+            	fi
+            	if [[ "$IS_CG" == "Y" ]]; then
+            		THELETTER="c"
+            	fi        	
             fi
+            
+	    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
+	    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
+	    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    	    	    	    	    	    	   	               
+            #if (( $COUNTvER == 0 )) ; then
+		#    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
+		#    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"
+		#    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-c"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		  #  CHITRAGUPTA="$IP"
+		    #THE_PVT_CLD="$IP"
+		  #  CHITRAGUPTA_DET="$CHITRAGUPTA_DET""$IP,$PORT,$PEM,$U1SER"		                
+           # else
+		#    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+		#    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"
+		 #   echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-v"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+            #fi
             COUNTvER=$((COUNTvER + 1))
         elif [ "$ROLE" == "INDRA" ]; then
             INDRA_IPS+=("$IP")
@@ -501,7 +542,10 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
     fi 
     if [[ "$ISAUTOMATED" == "Y" ]]; then
     	sudo rm -f $INSTANCE_DETAILS_FILE 
-    fi               
+    fi  
+    
+    THE_PVT_CLD=$(echo "$CHITRAGUPTA" | cut -d',' -f1)
+    echo "The THE_PVT_CLD IP is: $THE_PVT_CLD"                 
 }
 
 # Function to run commands on remote hosts
@@ -789,9 +833,19 @@ install_docker() {
 	sed -i -e s~"BDDCURRHOST"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$DOCKERTEMPLATE
     fi       
 
-    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
-    	echo "IP $IP : CHITRAGUPTA $CHITRAGUPTA"   	
-    	CHITRAGUPTA_DET="$CHITRAGUPTA_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}■$ADMIN_PASSWORD,$PVTCLDPortIO1,$PVTCLDPortIO2,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["PVTCLD"]}:${CLUSTERAPPSMAPPING["PVTCLD"]},${CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]},$DFS_CLUSTER_DIR/NextcloudShared,$DFS_DATA_DIR/NEXTCLOUD/CONTENT,$STACK_PRETTY_NAME,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh,$DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf,${INDRA_IPS[0]},${HOST_NAMES[$IP]},$DFS_DATA_DIR/Misc$STACKNAME/config.php,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh"
+    #IS2_CG="N"		
+    #if [[ "$CHITRAGUPTA" == *"$IP"* ]]; then
+    #    IS2_CG="Y"
+    #fi
+    IS2_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")
+    if [[ "$IS2_CG" == "Y" ]]; then
+    #if [[ "$IP" == "$CHITRAGUPTA" ]]; then
+    	echo "IP $IP : CHITRAGUPTA => $CHITRAGUPTA"
+    	   	
+	    if [[ "$CGDTD" == "N" ]]; then    			
+            CHITRAGUPTA_DET="$CHITRAGUPTA1_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}■$ADMIN_PASSWORD,$PVTCLDPortIO1,$PVTCLDPortIO2,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["PVTCLD"]}:${CLUSTERAPPSMAPPING["PVTCLD"]},${CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]},$DFS_CLUSTER_DIR/NextcloudShared,$DFS_DATA_DIR/NEXTCLOUD/CONTENT,$STACK_PRETTY_NAME,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh,$DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf,${INDRA_IPS[0]},${HOST_NAMES[$IP]},$DFS_DATA_DIR/Misc$STACKNAME/config.php,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh"
+  		    CGDTD="Y"
+  	    fi
   	
         CGSQLTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
         sudo cp $BASE/Resources/ChitraGupta.sql $BASE/tmp/$CGSQLTEMPLATE
@@ -819,7 +873,8 @@ install_docker() {
         PVT1_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
         sudo cp $BASE/Resources/PvtCldConfigTemplate $BASE/tmp/$PVT1_CLDTEMPLATE
         sed -i -e s~"INDRA"~"${HOST_NAMES[${INDRA_IPS[0]}]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
-        sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE        
+        #sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
+        sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$THE_PVT_CLD]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE        
         sed -i -e s~"THE_PORT"~"$PVTCLDPortIO2"~g $BASE/tmp/$PVT1_CLDTEMPLATE
 
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT1_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/config.php"
@@ -837,7 +892,7 @@ install_docker() {
         sudo rm -f $BASE/tmp/$PVT1_CLDTEMPLATE  
         sudo rm -f $BASE/tmp/$P2VT2_CLDTEMPLATE	
         sudo rm -f $BASE/tmp/$P3VT3_CLDTEMPLATE        
-        sudo rm -f $THEGUACASQL
+        #sudo rm -f $THEGUACASQL
         
         echo "Dcamehere4"
     	sed -i -e s~"GGEPO"~"$CHITRAGUPTA_DET"~g $BASE/tmp/$DOCKERTEMPLATE
@@ -1179,8 +1234,14 @@ create_swarm_labels() {
 	
 	for IP in "${VISHVAKARMA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
-		if [ -n "$NODE_ID" ]; then
-		    if [[ "$IP" == "$CHITRAGUPTA" ]]; then
+		if [ -n "$NODE_ID" ]; then		
+		    #IS1_CG="N"		
+		    #if [[ "$CHITRAGUPTA" == *"$IP"* ]]; then
+		    #    IS1_CG="Y"
+		    #fi
+		    IS1_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")
+		    if [[ "$IS1_CG" == "Y" ]]; then		    				
+		    #if [[ "$IP" == "$CHITRAGUPTA" ]]; then
 			    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
 		    fi
 		    if [[ "$IP" == "$THE_PVT_CLD" ]]; then
@@ -1328,6 +1389,7 @@ done
 sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
+sudo rm -f $THEGUACASQL
 
 create_cert_for_all() {
     sudo mkdir -p $BASE/Output/Vision/V$THEVISIONID/CERTS
@@ -1781,7 +1843,7 @@ if [[ "$ISAUTOMATED" == "Y" ]]; then
 	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
 	
 	if [ ${#INDRA_IPS[@]} -eq 2 ]; then
-		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt4" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt5" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt10" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt14" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt15" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt16" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt17" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt18" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
+		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
 	fi
 fi
 
@@ -1808,7 +1870,7 @@ echo "[
     \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1 | https://$THEHAINDRHOST:$AltIndrhaprt12\"
   },
   {
-    \"Grafana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1 | https://$THEHAINDRHOST:$AltIndrhaprt2\"
+    \"Grafana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1 | https://$THEHAINDRHOST:$AltIndrhaprt11\"
   },
   {
     \"Guacamole\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/ | https://$THEHAINDRHOST:$AltIndrhaprt8/guacamole/\"
