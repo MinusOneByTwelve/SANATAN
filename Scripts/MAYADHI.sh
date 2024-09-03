@@ -202,6 +202,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	REQUNQ=$(jq -r '.Identity' <<< "$THEJSON")
 	PREP_ONLY=$(jq -r '.PrepOnly' <<< "$THEJSON")
 	ChitraGupta=$(jq -r '.ChitraGupta' <<< "$THEJSON")
+	AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
 		
 	if [ "$FromMatsya" == "Y" ] ; then
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
@@ -236,7 +237,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	sudo rm -f $BASE/Output/Logs/$REQUNQ-Cloud-Instance-Sync-B-VAMANA-Initiate.out
 	
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
@@ -478,12 +479,14 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	if [ "$ToVamana" == "Y" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N"	
+		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts"	
 	fi
 	if [ "$ToVamana" == "X" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y"	
+		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts"	
 	fi
 		
 	RNDMJX1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -574,8 +577,10 @@ if [ "$TASKIDENTIFIER" == "e2e" ] ; then
 	done < <(echo "$filtered_json2" | jq -c '.[]')
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
+	#echo "sudo mv $BASE/tmp/$AIFCTR $BASE/Output/Logs/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	
 	nohup $BASE/tmp/$AIFCTR > $BASE/tmp/$RNDMJ1-JOBLOG1.out 2>&1 &
 	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "A" "$THESTACKFILESYNC" "$THESTACKFOLDERSYNC" "$THEVISIONKEY" "$THESTACKREALFILE" "$THESTACKE2EFILE" "$RNDMJ1" "$ALLWORKFOLDER1SYNC" "$RNDE2E1XM" "E2E" "$THEVISIONID" > $BASE/tmp/$RNDMJ1-JOBLOG2.out 2>&1 &					
@@ -814,7 +819,8 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	
 	#for item in "${TERRAVFILETRACKING[@]}"; do
@@ -1061,7 +1067,8 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	
 	#for item in "${TERRAVFILETRACKING[@]}"; do
@@ -1340,7 +1347,8 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
+	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	
 	#for item in "${TERRAVFILETRACKING[@]}"; do

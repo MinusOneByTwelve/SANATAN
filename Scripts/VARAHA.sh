@@ -342,7 +342,7 @@ frontend ""$STACKPRETTYNAME""_Nextcloud_Front
 
 backend ""$STACKPRETTYNAME""_Nextcloud_Back
     mode http
-    server chitragupta_pvtcld $CGP36:$CGP34 check" | sudo tee -a $THECFGPATH > /dev/null
+    server chitragupta_pvtcld $CGP36:$CGP34" | sudo tee -a $THECFGPATH > /dev/null
 fi
     	    
 	echo "

@@ -97,6 +97,7 @@ THENOHUPFILE="${THE_ARGS[7]}"
 WEBSSH_PASSWORD="${THE_ARGS[8]}"
 REQUNQ="${THE_ARGS[9]}"
 PREP_ONLY="${THE_ARGS[10]}"
+AutoPorts="${THE_ARGS[12]}"
 
 if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -104,71 +105,140 @@ if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 fi
 
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
-
-PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort")
-PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort")
-VarahaPort1=$(GetNewPortRange) && PORTSLIST+=("$VarahaPort1")
-VarahaPort2=$(GetNewPort) && PORTSLIST+=("$VarahaPort2")
-VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3")
-VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4")
-BDDPort1=$(GetNewPort) && PORTSLIST+=("$BDDPort1")
-BDDPort2=$(GetNewPort) && PORTSLIST+=("$BDDPort2")
-WEBSSHPort1=$(GetNewPort) && PORTSLIST+=("$WEBSSHPort1")
-ChitraGuptaPort1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort1")
-ChitraGuptaPort2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort2")
-ChitraGuptaPort3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort3")
-ChitraGuptaPort4=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4")
-ChitraGuptaPort5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5")
-ChitraGuptaPort6=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6")
-ChitraGuptaPort7=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7")
-ChitraGuptaPort8=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort8")
-ChitraGuptaPortU1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortU1")
-ChitraGuptaPortV1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1")
-ChitraGuptaPortW1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1")
-ChitraGuptaPortY1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1")
-ChitraGuptaPortZ1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1")
-ChitraGuptaPortLDP1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP1")
-ChitraGuptaPortLDP2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP2")
-ChitraGuptaPortLDP3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP3")
-ChitraGuptaPortLDP4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP4")
-ChitraGuptaPortLDP5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP5")
-ChitraGuptaPortKERB1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB1")
-ChitraGuptaPortKERB2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB2")
-ChitraGuptaPortKERB3=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB3")
-ChitraGuptaPortKERB4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB4")
-MINPortIO1=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO1")
-MINPortIO2=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO2")
-MINPortIO3=$(GetNewPort) && PORTSLIST+=("$MINPortIO3")
-MINPortIO4=$(GetNewPort) && PORTSLIST+=("$MINPortIO4")
-FLBRPortIO1=$(GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1")
-FLBRPortIO2=$(GetNewPort) && PORTSLIST+=("$FLBRPortIO2")
-PVTCLDPortIO1=$(GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1")
-PVTCLDPortIO2=$(GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2")
-EFKPort1=$(GetNewPortRange) && PORTSLIST+=("$EFKPort1")
-EFKPort2=$(GetNewPortRange) && PORTSLIST+=("$EFKPort2")
-EFKPort3=$(GetNewPort) && PORTSLIST+=("$EFKPort3")
-EFKPort4=$(GetNewPort) && PORTSLIST+=("$EFKPort4")
-
 ALT_INDR_HA_PRT=""
-AltIndrhaprt1=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1"
-AltIndrhaprt2=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt2") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt2"
-AltIndrhaprt3=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt3") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt3"
-AltIndrhaprt4=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt4") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt4"
-AltIndrhaprt5=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt5") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt5"
-AltIndrhaprt6=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt6") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt6"
-AltIndrhaprt7=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt7") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt7"
-AltIndrhaprt8=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt8") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt8"
-AltIndrhaprt9=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt9") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt9"
-AltIndrhaprt10=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt10") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt10"
-AltIndrhaprt11=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt11") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt11"
-AltIndrhaprt12=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt12") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt12"
-AltIndrhaprt13=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt13") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt13"
-AltIndrhaprt14=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt14") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt14"
-AltIndrhaprt15=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt15") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt15"
-AltIndrhaprt16=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt16") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt16"
-AltIndrhaprt17=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17"
-AltIndrhaprt18=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18"
-AltIndrhaprt19=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19"
+IFS=',' read -r -a I_P_R <<< $INTERNAL_PORT_RANGE
+IFS=',' read -r -a E_P_R <<< $EXTERNAL_PORT_RANGE
+IFS=',' read -r -a A_P_R <<< $ALTERNATE_PORT_RANGE
+
+# INTERNAL PORTS
+VarahaPort1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[1]}" || GetNewPortRange) && PORTSLIST+=("$VarahaPort1") #1
+ChitraGuptaPort1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[2]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort1") #2
+ChitraGuptaPort2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[3]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort2") #3
+ChitraGuptaPort3=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[4]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort3") #4
+ChitraGuptaPort4=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[5]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4") #5
+ChitraGuptaPort8=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[6]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort8") #6
+ChitraGuptaPortU1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[7]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortU1") #7
+ChitraGuptaPortV1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[8]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1") #8
+ChitraGuptaPortW1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[9]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1") #9
+ChitraGuptaPortLDP1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[10]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP1") #10
+ChitraGuptaPortLDP2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[11]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP2") #11
+ChitraGuptaPortLDP3=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[12]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP3") #12
+ChitraGuptaPortKERB1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[13]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB1") #13
+ChitraGuptaPortKERB2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[14]}" || GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB2") #14
+MINPortIO1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[15]}" || GetNewPortRange) && PORTSLIST+=("$MINPortIO1") #15
+MINPortIO2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[16]}" || GetNewPortRange) && PORTSLIST+=("$MINPortIO2") #16
+FLBRPortIO1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[17]}" || GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1") #17
+PVTCLDPortIO1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[18]}" || GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1") #18
+EFKPort1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[19]}" || GetNewPortRange) && PORTSLIST+=("$EFKPort1") #19
+EFKPort2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[20]}" || GetNewPortRange) && PORTSLIST+=("$EFKPort2") #20
+#VarahaPort1=$(GetNewPortRange) && PORTSLIST+=("$VarahaPort1") #1
+#ChitraGuptaPort1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort1") #2
+#ChitraGuptaPort2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort2") #3
+#ChitraGuptaPort3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort3") #4
+#ChitraGuptaPort4=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4") #5
+#ChitraGuptaPort8=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort8") #6
+#ChitraGuptaPortU1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortU1") #7
+#ChitraGuptaPortV1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1") #8
+#ChitraGuptaPortW1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1") #9
+#ChitraGuptaPortLDP1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP1") #10
+#ChitraGuptaPortLDP2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP2") #11
+#ChitraGuptaPortLDP3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP3") #12
+#ChitraGuptaPortKERB1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB1") #13
+#ChitraGuptaPortKERB2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB2") #14
+#MINPortIO1=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO1") #15
+#MINPortIO2=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO2") #16
+#FLBRPortIO1=$(GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1") #17
+#PVTCLDPortIO1=$(GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1") #18
+#EFKPort1=$(GetNewPortRange) && PORTSLIST+=("$EFKPort1") #19
+#EFKPort2=$(GetNewPortRange) && PORTSLIST+=("$EFKPort2") #20
+
+# EXTERNAL PORTS
+PortainerAPort=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[1]}" || GetNewPort) && PORTSLIST+=("$PortainerAPort") #21 #1
+PortainerSPort=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[2]}" || GetNewPort) && PORTSLIST+=("$PortainerSPort") #22 #2
+VarahaPort2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[3]}" || GetNewPort) && PORTSLIST+=("$VarahaPort2") #23 #3
+VarahaPort3=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[4]}" || GetNewPort) && PORTSLIST+=("$VarahaPort3") #24 #4
+VarahaPort4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[5]}" || GetNewPort) && PORTSLIST+=("$VarahaPort4") #25 #5
+BDDPort1=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[6]}" || GetNewPort) && PORTSLIST+=("$BDDPort1") #26 #6
+BDDPort2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[7]}" || GetNewPort) && PORTSLIST+=("$BDDPort2") #27 #7
+WEBSSHPort1=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[8]}" || GetNewPort) && PORTSLIST+=("$WEBSSHPort1") #28 #8
+ChitraGuptaPort5=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[9]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5") #29 #9
+ChitraGuptaPort6=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[10]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6") #30 #10
+ChitraGuptaPort7=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[11]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7") #31 #11
+ChitraGuptaPortY1=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[12]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1") #32 #12
+ChitraGuptaPortZ1=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[13]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1") #33 #13
+ChitraGuptaPortLDP4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[14]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP4") #34 #14
+ChitraGuptaPortLDP5=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[15]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP5") #35 #15
+ChitraGuptaPortKERB3=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[16]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB3") #36 #16
+ChitraGuptaPortKERB4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[17]}" || GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB4") #37 #17
+MINPortIO3=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[18]}" || GetNewPort) && PORTSLIST+=("$MINPortIO3") #38 #18
+MINPortIO4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[19]}" || GetNewPort) && PORTSLIST+=("$MINPortIO4") #39 #19
+FLBRPortIO2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[20]}" || GetNewPort) && PORTSLIST+=("$FLBRPortIO2") #40 #20
+PVTCLDPortIO2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[21]}" || GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2") #41 #21
+EFKPort3=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[22]}" || GetNewPort) && PORTSLIST+=("$EFKPort3") #42 #22
+EFKPort4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[23]}" || GetNewPort) && PORTSLIST+=("$EFKPort4") #43 #23
+#PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort") #21 #1
+#PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort") #22 #2
+#VarahaPort2=$(GetNewPort) && PORTSLIST+=("$VarahaPort2") #23 #3
+#VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3") #24 #4
+#VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4") #25 #5
+#BDDPort1=$(GetNewPort) && PORTSLIST+=("$BDDPort1") #26 #6
+#BDDPort2=$(GetNewPort) && PORTSLIST+=("$BDDPort2") #27 #7
+#WEBSSHPort1=$(GetNewPort) && PORTSLIST+=("$WEBSSHPort1") #28 #8
+#ChitraGuptaPort5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5") #29 #9
+#ChitraGuptaPort6=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6") #30 #10
+#ChitraGuptaPort7=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7") #31 #11
+#ChitraGuptaPortY1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1") #32 #12
+#ChitraGuptaPortZ1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1") #33 #13
+#ChitraGuptaPortLDP4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP4") #34 #14
+#ChitraGuptaPortLDP5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP5") #35 #15
+#ChitraGuptaPortKERB3=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB3") #36 #16
+#ChitraGuptaPortKERB4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB4") #37 #17
+#MINPortIO3=$(GetNewPort) && PORTSLIST+=("$MINPortIO3") #38 #18
+#MINPortIO4=$(GetNewPort) && PORTSLIST+=("$MINPortIO4") #39 #19
+#FLBRPortIO2=$(GetNewPort) && PORTSLIST+=("$FLBRPortIO2") #40 #20
+#PVTCLDPortIO2=$(GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2") #41 #21
+#EFKPort3=$(GetNewPort) && PORTSLIST+=("$EFKPort3") #42 #22
+#EFKPort4=$(GetNewPort) && PORTSLIST+=("$EFKPort4") #43 #23
+
+# HA EXTERNAL PORTS
+AltIndrhaprt1=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[1]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1" #44 #24 #1
+AltIndrhaprt2=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[2]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt2") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt2" #45 #25 #2
+AltIndrhaprt3=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[3]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt3") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt3" #46 #26 #3
+AltIndrhaprt4=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[4]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt4") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt4" #47 #27 #4
+AltIndrhaprt5=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[5]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt5") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt5" #48 #28 #5
+AltIndrhaprt6=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[6]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt6") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt6" #49 #29 #6
+AltIndrhaprt7=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[7]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt7") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt7" #50 #30 #7
+AltIndrhaprt8=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[8]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt8") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt8" #51 #31 #8
+AltIndrhaprt9=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[9]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt9") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt9" #52 #32 #9
+AltIndrhaprt10=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[10]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt10") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt10" #53 #33 #10
+AltIndrhaprt11=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[11]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt11") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt11" #54 #34 #11
+AltIndrhaprt12=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[12]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt12") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt12" #55 #35 #12
+AltIndrhaprt13=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[13]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt13") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt13" #56 #36 #13
+AltIndrhaprt14=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[14]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt14") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt14" #57 #37 #14
+AltIndrhaprt15=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[15]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt15") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt15" #58 #38 #15
+AltIndrhaprt16=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[16]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt16") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt16" #59 #39 #16
+AltIndrhaprt17=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[17]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17" #60 #40 #17
+AltIndrhaprt18=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[18]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18" #61 #41 #18
+AltIndrhaprt19=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[19]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19" #62 #42 #19
+#AltIndrhaprt1=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1" #44 #24 #1
+#AltIndrhaprt2=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt2") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt2" #45 #25 #2
+#AltIndrhaprt3=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt3") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt3" #46 #26 #3
+#AltIndrhaprt4=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt4") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt4" #47 #27 #4
+#AltIndrhaprt5=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt5") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt5" #48 #28 #5
+#AltIndrhaprt6=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt6") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt6" #49 #29 #6
+#AltIndrhaprt7=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt7") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt7" #50 #30 #7
+#AltIndrhaprt8=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt8") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt8" #51 #31 #8
+#AltIndrhaprt9=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt9") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt9" #52 #32 #9
+#AltIndrhaprt10=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt10") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt10" #53 #33 #10
+#AltIndrhaprt11=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt11") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt11" #54 #34 #11
+#AltIndrhaprt12=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt12") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt12" #55 #35 #12
+#AltIndrhaprt13=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt13") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt13" #56 #36 #13
+#AltIndrhaprt14=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt14") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt14" #57 #37 #14
+#AltIndrhaprt15=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt15") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt15" #58 #38 #15
+#AltIndrhaprt16=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt16") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt16" #59 #39 #16
+#AltIndrhaprt17=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17" #60 #40 #17
+#AltIndrhaprt18=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18" #61 #41 #18
+#AltIndrhaprt19=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19" #62 #42 #19
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
@@ -794,7 +864,11 @@ install_docker() {
     sed -i -e s~"WSP5"~"${CLUSTERAPPSMAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"WSP6"~"${CLUSTER_APPS_MAPPING["WEBSSH"]}"~g $BASE/tmp/$DOCKERTEMPLATE 
     sed -i -e s~"THEREVPWD"~"$ADMIN_PASSWORD"~g $BASE/tmp/$DOCKERTEMPLATE
-    
+    sed -i -e s~"ATPRT"~"$AutoPorts"~g $BASE/tmp/$DOCKERTEMPLATE    
+    sed -i -e s~"ATPR1R"~"$THEIPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"ATPR2R"~"$THEEPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"ATPR3R"~"$THEAPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
+                
     BUCKETCLIENT="${CLUSTER_APPS_MAPPING["BUCKETCLIENT"]}.${CLUSTERAPPSMAPPING["BUCKETCLIENT"]}"
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/$BUCKETCLIENT" "$THE1REQUSER@$IP:/home/$THE1REQUSER/mc"
     MIOTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -841,9 +915,14 @@ install_docker() {
     if [[ "$IS2_CG" == "Y" ]]; then
     #if [[ "$IP" == "$CHITRAGUPTA" ]]; then
     	echo "IP $IP : CHITRAGUPTA => $CHITRAGUPTA"
+
+    thenameofthepvtcld="${HOST_NAMES[$IP]}"
+    if [ "$NATIVE" -lt 2 ]; then
+    	thenameofthepvtcld="$IP"
+    fi
     	   	
 	    if [[ "$CGDTD" == "N" ]]; then    			
-            CHITRAGUPTA_DET="$CHITRAGUPTA1_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}■$ADMIN_PASSWORD,$PVTCLDPortIO1,$PVTCLDPortIO2,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["PVTCLD"]}:${CLUSTERAPPSMAPPING["PVTCLD"]},${CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]},$DFS_CLUSTER_DIR/NextcloudShared,$DFS_DATA_DIR/NEXTCLOUD/CONTENT,$STACK_PRETTY_NAME,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh,$DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf,${INDRA_IPS[0]},${HOST_NAMES[$IP]},$DFS_DATA_DIR/Misc$STACKNAME/config.php,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh"
+            CHITRAGUPTA_DET="$CHITRAGUPTA1_DET""■$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7,$ChitraGuptaPortZ1■guacamole_$STACK_PRETTY_NAME,guacamole_$STACK_PRETTY_NAME,$ADMIN_PASSWORD,admin_$STACK_PRETTY_NAME,$WEBSSH_PASSWORD,${CLUSTER_APPS_MAPPING["CHITRAGUPTA1"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA1"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA2"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA2"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA2"]}■${CLUSTER_APPS_MAPPING["CHITRAGUPTA3"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA3"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA3"]},$REVERSED_PASSWORD■${CLUSTER_APPS_MAPPING["CHITRAGUPTA4"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA4"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA4"]},$REVERSED_PASSWORD■$ADMIN_PASSWORD,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1,${CLUSTER_APPS_MAPPING["CHITRAGUPTA5"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA5"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA5"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA6"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA6"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA6"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA7"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA7"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA7"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA8"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA8"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA8"]}■$ADMIN_PASSWORD,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortLDP4,$ChitraGuptaPortLDP5,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA9"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA9"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA9"]},${CLUSTER_APPS_MAPPING["CHITRAGUPTA10"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA10"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA10"]}■$ADMIN_PASSWORD,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$ChitraGuptaPortKERB3,$ChitraGuptaPortKERB4,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["CHITRAGUPTA11"]}:${CLUSTERAPPSMAPPING["CHITRAGUPTA11"]},${CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA11"]}■$ADMIN_PASSWORD,$PVTCLDPortIO1,$PVTCLDPortIO2,$STACKPRETTYNAME,${CLUSTER_APPS_MAPPING["PVTCLD"]}:${CLUSTERAPPSMAPPING["PVTCLD"]},${CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]},$DFS_CLUSTER_DIR/NextcloudShared,$DFS_DATA_DIR/NEXTCLOUD/CONTENT,$STACK_PRETTY_NAME,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare.sh,$DFS_DATA_DIR/Misc$STACKNAME/custom-apache-config.conf,${INDRA_IPS[0]},$thenameofthepvtcld,$DFS_DATA_DIR/Misc$STACKNAME/config.php,$DFS_DATA_DIR/CHITRAGUPTA$STACKNAME/pvtcld/EnablePvtCldShare2.sh"
   		    CGDTD="Y"
   	    fi
   	
@@ -872,11 +951,15 @@ install_docker() {
 
         PVT1_CLDTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
         sudo cp $BASE/Resources/PvtCldConfigTemplate $BASE/tmp/$PVT1_CLDTEMPLATE
-        sed -i -e s~"INDRA"~"${HOST_NAMES[${INDRA_IPS[0]}]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
-        #sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$IP]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
-        sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$THE_PVT_CLD]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE        
+	if [ "$NATIVE" -lt 2 ]; then
+		sed -i -e s~"INDRA"~"${INDRA_IPS[0]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
+		sed -i -e s~"CHITRAGUPTA"~"$THE_PVT_CLD"~g $BASE/tmp/$PVT1_CLDTEMPLATE	 
+	else       
+		sed -i -e s~"INDRA"~"${HOST_NAMES[${INDRA_IPS[0]}]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE
+		sed -i -e s~"CHITRAGUPTA"~"${HOST_NAMES[$THE_PVT_CLD]}"~g $BASE/tmp/$PVT1_CLDTEMPLATE        
+	fi
         sed -i -e s~"THE_PORT"~"$PVTCLDPortIO2"~g $BASE/tmp/$PVT1_CLDTEMPLATE
-
+        	
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT1_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/config.php"
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/EnablePvtCldShare.sh"
         scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$P2VT2_CLDTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/EnablePvtCldShare2.sh"
@@ -1573,7 +1656,8 @@ if [ "$NATIVE" -lt 2 ]; then
 	for ip in "${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
 	    internal_ip=$(fetch_internal_ip $ip)
 	    JIVA_IPS["$ip"]="$internal_ip"
-	    echo 'sudo -H -u root bash -c "sed -i -e s~'"$internal_ip"'~#'"$internal_ip"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null  
+	    #echo 'sudo -H -u root bash -c "sed -i -e s~'"$internal_ip"'~#'"$internal_ip"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null 
+	    echo 'sudo sed -i -e "/\<'"${internal_ip}"'\>/s/^/#/" /etc/hosts' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null  
 	    echo 'sudo -H -u root bash -c "echo \"'"$internal_ip"' '"${HOST_ALT_NAMES[$ip]}"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTE2SCRIPT > /dev/null	    
 	done
 	for ip in "${!JIVA_IPS[@]}"; do
@@ -1836,11 +1920,19 @@ for ip in "${ALLL_IPS[@]}"; do
     fi
 done
 
+echo "FULL Ports List ${PORTSLIST[@]}"
+
 echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
+
+thenamefornc="${HOST_NAMES[${INDRA_IPS[0]}]}"
+if [ "$NATIVE" -lt 2 ]; then
+	thenamefornc="${INDRA_IPS[0]}"
+fi
+
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://$thenamefornc:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
 	
 	if [ ${#INDRA_IPS[@]} -eq 2 ]; then
 		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
@@ -1848,8 +1940,10 @@ if [[ "$ISAUTOMATED" == "Y" ]]; then
 fi
 
 THEHAINDRHOST="INDRA_HA"
+thenamefor2nc="INDRA_HA"
 if [ ${#INDRA_IPS[@]} -eq 2 ]; then
     THEHAINDRHOST="${HOST_NAMES[${INDRA_IPS[1]}]}"
+    thenamefor2nc="${HOST_NAMES[${INDRA_IPS[1]}]}"
 fi
 
 FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
@@ -1858,13 +1952,16 @@ echo "[
     \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3 | https://$THEHAINDRHOST:$AltIndrhaprt1\"
   },
   {
-    \"MinIO\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4 | https://$THEHAINDRHOST:$AltIndrhaprt6\"
+    \"MinIO Console\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4 | https://$THEHAINDRHOST:$AltIndrhaprt6\"
+  },
+  {
+    \"MinIO\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO3 | https://$THEHAINDRHOST:$AltIndrhaprt5\"
   },
   {
     \"Cloud Commander\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2 | https://$THEHAINDRHOST:$AltIndrhaprt7\"
   },
   {
-    \"Nextcloud\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$PVTCLDPortIO2\"
+    \"Nextcloud\": \"https://$thenamefornc:$PVTCLDPortIO2 | https://$thenamefor2nc:$AltIndrhaprt17\"
   },
   {
     \"Prometheus\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1 | https://$THEHAINDRHOST:$AltIndrhaprt12\"
@@ -1894,16 +1991,16 @@ echo "[
     \"Kibana\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4 | https://$THEHAINDRHOST:$AltIndrhaprt19\"
   },
   {
-    \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7 | $THEHAINDRHOST:$AltIndrhaprt14\"
+    \"MySQL\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7 | $THEHAINDRHOST:$AltIndrhaprt10\"
   },
   {
-    \"OpenLDAP\": \"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5 | ldaps://$THEHAINDRHOST:$AltIndrhaprt15\"
+    \"OpenLDAP\": \"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5 | ldaps://$THEHAINDRHOST:$AltIndrhaprt14\"
   },
   {
-    \"Kerberos KDC\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3 | $THEHAINDRHOST:$AltIndrhaprt16\"
+    \"Kerberos KDC\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3 | $THEHAINDRHOST:$AltIndrhaprt15\"
   },
   {
-    \"Kerberos Admin\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4 | $THEHAINDRHOST:$AltIndrhaprt17\"
+    \"Kerberos Admin\": \"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4 | $THEHAINDRHOST:$AltIndrhaprt16\"
   }
 ]" >> "$FNN2PATH"
 
