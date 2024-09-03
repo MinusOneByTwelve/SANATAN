@@ -40,7 +40,9 @@ resource "azurerm_public_ip" "AZURESCOPEVALpublic_ip" {
   name                = "AZURESCOPEVALpublicip-${count.index + 1}"
   location            = data.azurerm_resource_group.THE1VAL1HASHrg.location
   resource_group_name = data.azurerm_resource_group.THE1VAL1HASHrg.name
-  allocation_method   = "Dynamic"
+  #allocation_method   = "Dynamic"
+  allocation_method   = "Static"  # Ensure this line is set to Static
+  sku                 = "Standard"  # Ensure SKU is set to Standard
 }
 
 resource "azurerm_network_interface" "AZURESCOPEVALnic" {

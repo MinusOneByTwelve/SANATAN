@@ -40,6 +40,10 @@ THEVERWROUTER="WSP5"
 THEVERW1ROUTER="WSP6"
 CHITRAGUPTA="GGEPO"
 REVERSED_PASSWORD="THEREVPWD"
+AutoPorts="ATPRT"
+THE1IPRRANGE="ATPR1R"
+THE1EPRRANGE="ATPR2R"
+THE1APRRANGE="ATPR3R"
 	
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
@@ -72,6 +76,36 @@ else
 	sudo touch /opt/CHITRAGUPTA
 	sudo chmod 777 /opt/CHITRAGUPTA
 fi
+
+kill_processes_on_ports() {
+    local AutoPorts="$1"
+    
+    if [ "$AutoPorts" == "N" ]; then
+        # Define the port ranges
+        local PORT_RANGES=("$THE1IPRRANGE" "$THE1EPRRANGE" "$THE1APRRANGE")
+        
+        # Iterate over each port range
+        for RANGE in "${PORT_RANGES[@]}"; do
+            # Split the range into start and end ports
+            IFS='-' read -r START_PORT END_PORT <<< "$RANGE"
+            
+            # Loop through each port in the range
+            for ((PORT=START_PORT; PORT<=END_PORT; PORT++)); do
+                # Check if there's a process running on the port
+                PID=$(sudo lsof -ti :$PORT)
+                
+                if [ -n "$PID" ]; then
+                    echo "Killing process $PID running on port $PORT"
+                    sudo kill -9 $PID
+                fi
+            done
+        done
+    else
+        echo "AutoPorts is not set to 'N'. No action taken."
+    fi
+}
+
+kill_processes_on_ports "$AutoPorts"
 
 SetUpCHITRAGUPTA() {
 	IFS='■' read -r -a CHITRAGUPTA_VAL <<< $CHITRAGUPTA
@@ -1108,7 +1142,7 @@ if [ "$TheReqRL" == "I" ] ; then
 fi
 
 if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
-	sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois
+	sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois tmux cron mysql-client s3fs
 fi
 
 sudo systemctl stop glusterd
