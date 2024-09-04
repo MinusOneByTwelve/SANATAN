@@ -416,6 +416,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "ChitraGupta": "NA",       
   "AutoPorts": "'"$AutoPorts"'"      
 }'			
+
+			sleep 60
+			notify-send -t 5000 "Progress" "Starting VAMANA..."
+			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
   "VisionKey": "'"$VISION_KEY"'",

@@ -86,6 +86,9 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	EFKPort4="${33}"
 	CDNPRX="${34}"	
 	ALT_INDR_HA_PRT="${35}"
+	THECLUSTERISMULTICLOUD="${36}"
+	THECGSERVERS="${37}"
+	THEIPTO="${38}"
 	
 	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
 	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
@@ -188,7 +191,43 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	sudo firewall-cmd --zone=public --add-port=${CGP35}/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=${EFKPort3}/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=${EFKPort4}/tcp --permanent
-	sudo firewall-cmd --reload			
+	sudo firewall-cmd --reload
+	
+	thebackendtarget1="cloudcmd:8000"
+	thebackendtarget2="minio:9000"
+	thebackendtarget3="minio:9001"
+	thebackendtarget4="elasticsearch:9200"
+	thebackendtarget5="kibana:5601"
+	thebackendtarget6="$CGP36:$CGP34"
+	thebackendtarget7="guacamole:8080"
+	thebackendtarget8="phpmyadmin:80"
+	thebackendtarget9="mysql:3306"
+	thebackendtarget10="prometheus:9090"
+	thebackendtarget11="grafana:3000"
+	thebackendtarget12="phpldapadmin:443"
+	thebackendtarget13="openldap:389"
+	thebackendtarget14="kerberos:88"
+	thebackendtarget15="kerberos:749"
+	
+	if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+		IFS=',' read -r -a THEIP_TO <<< "$THEIPTO"
+		
+		thebackendtarget1="$THEROUTER:${THEIP_TO[16]}"
+		thebackendtarget2="$THEROUTER:${THEIP_TO[14]}"
+		thebackendtarget3="$THEROUTER:${THEIP_TO[15]}"
+		thebackendtarget4="$THEROUTER:${THEIP_TO[18]}"
+		thebackendtarget5="$THEROUTER:${THEIP_TO[19]}"
+		thebackendtarget6="$THEROUTER:${THEIP_TO[17]}"
+		thebackendtarget7="$THEROUTER:${THEIP_TO[2]}"
+		thebackendtarget8="$THEROUTER:${THEIP_TO[4]}"
+		thebackendtarget9="$THEROUTER:${THEIP_TO[1]}"
+		thebackendtarget10="$THEROUTER:${THEIP_TO[5]}"
+		thebackendtarget11="$THEROUTER:${THEIP_TO[7]}"
+		thebackendtarget12="$THEROUTER:${THEIP_TO[11]}"
+		thebackendtarget13="$THEROUTER:${THEIP_TO[9]}"
+		thebackendtarget14="$THEROUTER:${THEIP_TO[12]}"
+		thebackendtarget15="$THEROUTER:${THEIP_TO[13]}"
+	fi												
 fi
 
 # Generate the HAProxy configuration
@@ -288,7 +327,7 @@ frontend ""$STACKPRETTYNAME""_CloudCommander_Front
 
 backend ""$STACKPRETTYNAME""_CloudCommander_Back
     mode http
-    server ganesha_cloudcommander cloudcmd:8000 check
+    server ganesha_cloudcommander ""$thebackendtarget1"" check
     	
 frontend ""$STACKPRETTYNAME""_MinIO_Front
     bind *:$MIN1IO ssl crt /certs/self-varaha.pem
@@ -299,17 +338,17 @@ backend ""$STACKPRETTYNAME""_MinIO_Back
 #    balance roundrobin
 #    server-template minio 1-_N_ minio:9000 check resolvers docker
     mode http
-    server ganesha_minio minio:9000 check
-        
+    server ganesha_minio ""$thebackendtarget2"" check	
+            
 frontend ""$STACKPRETTYNAME""_MinIOConsole_Front
     bind *:$MIN2IO ssl crt /certs/varaha.pem
-    default_backend ""$STACKPRETTYNAME""_MinIOConsole_Back    
+    default_backend ""$STACKPRETTYNAME""_MinIOConsole_Back
     
 backend ""$STACKPRETTYNAME""_MinIOConsole_Back
 #    balance roundrobin
 #    server-template minio_console 1-_N_ minio:9001 check resolvers docker
     mode http
-    server ganesha_minioconsole minio:9001 check" | sudo tee -a $THECFGPATH > /dev/null			
+    server ganesha_minioconsole ""$thebackendtarget3"" check" | sudo tee -a $THECFGPATH > /dev/null	   		
 }
 
 SetUpCHITRAGUPTA() {
@@ -321,7 +360,7 @@ frontend ""$STACKPRETTYNAME""_Elastic_Front
 
 backend ""$STACKPRETTYNAME""_Elastic_Back
     mode http
-    server chitragupta_elastic elasticsearch:9200 check" | sudo tee -a $THECFGPATH > /dev/null 
+    server chitragupta_elastic ""$thebackendtarget4"" check" | sudo tee -a $THECFGPATH > /dev/null 
 
 	echo "
 frontend ""$STACKPRETTYNAME""_Kibana_Front
@@ -331,7 +370,7 @@ frontend ""$STACKPRETTYNAME""_Kibana_Front
 
 backend ""$STACKPRETTYNAME""_Kibana_Back
     mode http
-    server chitragupta_kibana kibana:5601 check" | sudo tee -a $THECFGPATH > /dev/null
+    server chitragupta_kibana ""$thebackendtarget5"" check" | sudo tee -a $THECFGPATH > /dev/null
 
 if [ "$CDNPRX" == "ACTIVE" ]; then    
 	echo "
@@ -342,7 +381,7 @@ frontend ""$STACKPRETTYNAME""_Nextcloud_Front
 
 backend ""$STACKPRETTYNAME""_Nextcloud_Back
     mode http
-    server chitragupta_pvtcld $CGP36:$CGP34" | sudo tee -a $THECFGPATH > /dev/null
+    server chitragupta_pvtcld ""$thebackendtarget6""" | sudo tee -a $THECFGPATH > /dev/null
 fi
     	    
 	echo "
@@ -353,7 +392,7 @@ frontend ""$STACKPRETTYNAME""_Guacamole_Front
 
 backend ""$STACKPRETTYNAME""_Guacamole_Back
     mode http
-    server chitragupta_guacamole guacamole:8080 check" | sudo tee -a $THECFGPATH > /dev/null
+    server chitragupta_guacamole ""$thebackendtarget7"" check" | sudo tee -a $THECFGPATH > /dev/null
 
 	echo "
 frontend ""$STACKPRETTYNAME""_phpMyAdmin_Front
@@ -363,7 +402,7 @@ frontend ""$STACKPRETTYNAME""_phpMyAdmin_Front
 
 backend ""$STACKPRETTYNAME""_phpMyAdmin_Back
     mode http
-    server chitragupta_phpmyadmin phpmyadmin:80 check" | sudo tee -a $THECFGPATH > /dev/null
+    server chitragupta_phpmyadmin ""$thebackendtarget8"" check" | sudo tee -a $THECFGPATH > /dev/null
     
 	echo "
 frontend ""$STACKPRETTYNAME""_MySQL_Front
@@ -373,7 +412,7 @@ frontend ""$STACKPRETTYNAME""_MySQL_Front
 
 backend ""$STACKPRETTYNAME""_MySQL_Back
     mode http
-    server chitragupta_mysql mysql:3306 check" | sudo tee -a $THECFGPATH > /dev/null 
+    server chitragupta_mysql ""$thebackendtarget9"" check" | sudo tee -a $THECFGPATH > /dev/null 
 
 	echo "
 frontend ""$STACKPRETTYNAME""_Prometheus_Front
@@ -386,7 +425,7 @@ frontend ""$STACKPRETTYNAME""_Prometheus_Front
 
 backend ""$STACKPRETTYNAME""_Prometheus_Back
     mode http
-    server chitragupta_prometheus prometheus:9090 check
+    server chitragupta_prometheus ""$thebackendtarget10"" check
     http-request set-header X-Forwarded-Proto https if { ssl_fc }
     http-request set-header X-Forwarded-Port %[dst_port]
 
@@ -401,7 +440,7 @@ frontend ""$STACKPRETTYNAME""_Grafana_Front
 
 backend ""$STACKPRETTYNAME""_Grafana_Back
     mode http
-    server chitragupta_grafana grafana:3000 check" | sudo tee -a $THECFGPATH > /dev/null 
+    server chitragupta_grafana ""$thebackendtarget11"" check" | sudo tee -a $THECFGPATH > /dev/null 
     
 	echo "
 frontend ""$STACKPRETTYNAME""_phpLDAPadmin_Front
@@ -411,7 +450,7 @@ frontend ""$STACKPRETTYNAME""_phpLDAPadmin_Front
 
 backend ""$STACKPRETTYNAME""_phpLDAPadmin_Back
     mode http
-    server chitragupta_phpldapadmin phpldapadmin:443 ssl verify none" | sudo tee -a $THECFGPATH > /dev/null   
+    server chitragupta_phpldapadmin ""$thebackendtarget12"" ssl verify none" | sudo tee -a $THECFGPATH > /dev/null   
     
 	echo "
 frontend ""$STACKPRETTYNAME""_OpenLDAP_Front
@@ -422,7 +461,7 @@ frontend ""$STACKPRETTYNAME""_OpenLDAP_Front
 backend ""$STACKPRETTYNAME""_OpenLDAP_Back
     mode tcp
     option tcp-check
-    server chitragupta_openldap openldap:389 check" | sudo tee -a $THECFGPATH > /dev/null 
+    server chitragupta_openldap ""$thebackendtarget13"" check" | sudo tee -a $THECFGPATH > /dev/null 
     
 	echo "
 frontend ""$STACKPRETTYNAME""_KerberosKDC_Front
@@ -433,7 +472,7 @@ frontend ""$STACKPRETTYNAME""_KerberosKDC_Front
 backend ""$STACKPRETTYNAME""_KerberosKDC_Back
     mode tcp
     option tcp-check
-    server chitragupta_Kerberoskdc kerberos:88 check" | sudo tee -a $THECFGPATH > /dev/null 
+    server chitragupta_Kerberoskdc ""$thebackendtarget14"" check" | sudo tee -a $THECFGPATH > /dev/null 
     
 	echo "
 frontend ""$STACKPRETTYNAME""_KerberosAdmin_Front
@@ -444,7 +483,7 @@ frontend ""$STACKPRETTYNAME""_KerberosAdmin_Front
 backend ""$STACKPRETTYNAME""_KerberosAdmin_Back
     mode tcp
     option tcp-check
-    server chitragupta_Kerberosadmin kerberos:749 check" | sudo tee -a $THECFGPATH > /dev/null                          			
+    server chitragupta_Kerberosadmin ""$thebackendtarget15"" check" | sudo tee -a $THECFGPATH > /dev/null                          			
 }
 
 # Create the Docker Compose file

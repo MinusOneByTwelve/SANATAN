@@ -51,6 +51,14 @@ fi
 source $BASE/Resources/StackVersioningAndMisc
 
 PORTSLIST=()
+THEGRPR1="$THE1GRPR1"
+THEGRPR2="$THE2GRPR2"
+
+THECLUSTERISONLYE2E="N"
+THECLUSTERISMULTICLOUD="N"
+THEIPTO=""
+THEINDRA1=""
+THEINDRA2=""
 
 function GetNewPort {
     local FreshPort=$($BASE/Scripts/GetRandomPort.sh)
@@ -61,7 +69,7 @@ function GetNewPort {
 }
 
 function GetNewPortRange {
-    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh 10000 12000)
+    local FreshPortRange=$($BASE/Scripts/GetRandomPortRange.sh $THEGRPR1 $THEGRPR2)
     if printf '%s\0' "${PORTSLIST[@]}" | grep -Fxqz -- $FreshPortRange; then
     	GetNewPortRange
     fi
@@ -106,7 +114,17 @@ fi
 
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 ALT_INDR_HA_PRT=""
-IFS=',' read -r -a I_P_R <<< $INTERNAL_PORT_RANGE
+
+function SetAllPorts {
+if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+	#IFS=',' read -r -a I_P_R <<< $CLOUD_INTERNAL_PORT_RANGE
+	#THEGRPR1="$THE3GRPR3"
+	#THEGRPR2="$THE4GRPR4"
+	IFS=',' read -r -a I_P_R <<< $INTERNAL_PORT_RANGE
+	echo "THECLUSTERISMULTICLOUD"	
+else
+	IFS=',' read -r -a I_P_R <<< $INTERNAL_PORT_RANGE
+fi
 IFS=',' read -r -a E_P_R <<< $EXTERNAL_PORT_RANGE
 IFS=',' read -r -a A_P_R <<< $ALTERNATE_PORT_RANGE
 
@@ -131,26 +149,10 @@ FLBRPortIO1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[17]}" || GetNewPortRange) 
 PVTCLDPortIO1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[18]}" || GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1") #18
 EFKPort1=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[19]}" || GetNewPortRange) && PORTSLIST+=("$EFKPort1") #19
 EFKPort2=$([ "$AutoPorts" = "N" ] && echo "${I_P_R[20]}" || GetNewPortRange) && PORTSLIST+=("$EFKPort2") #20
-#VarahaPort1=$(GetNewPortRange) && PORTSLIST+=("$VarahaPort1") #1
-#ChitraGuptaPort1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort1") #2
-#ChitraGuptaPort2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort2") #3
-#ChitraGuptaPort3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort3") #4
-#ChitraGuptaPort4=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort4") #5
-#ChitraGuptaPort8=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPort8") #6
-#ChitraGuptaPortU1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortU1") #7
-#ChitraGuptaPortV1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortV1") #8
-#ChitraGuptaPortW1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortW1") #9
-#ChitraGuptaPortLDP1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP1") #10
-#ChitraGuptaPortLDP2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP2") #11
-#ChitraGuptaPortLDP3=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortLDP3") #12
-#ChitraGuptaPortKERB1=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB1") #13
-#ChitraGuptaPortKERB2=$(GetNewPortRange) && PORTSLIST+=("$ChitraGuptaPortKERB2") #14
-#MINPortIO1=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO1") #15
-#MINPortIO2=$(GetNewPortRange) && PORTSLIST+=("$MINPortIO2") #16
-#FLBRPortIO1=$(GetNewPortRange) && PORTSLIST+=("$FLBRPortIO1") #17
-#PVTCLDPortIO1=$(GetNewPortRange) && PORTSLIST+=("$PVTCLDPortIO1") #18
-#EFKPort1=$(GetNewPortRange) && PORTSLIST+=("$EFKPort1") #19
-#EFKPort2=$(GetNewPortRange) && PORTSLIST+=("$EFKPort2") #20
+if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+	THEIPTO="$VarahaPort1,$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$MINPortIO1,$MINPortIO2,$FLBRPortIO1,$PVTCLDPortIO1,$EFKPort1,$EFKPort2"
+    echo "1) VarahaPort1:$VarahaPort1,2) ChitraGuptaPort1:$ChitraGuptaPort1,3) ChitraGuptaPort2:$ChitraGuptaPort2,4) ChitraGuptaPort3:$ChitraGuptaPort3,5) ChitraGuptaPort4:$ChitraGuptaPort4,6) ChitraGuptaPort8:$ChitraGuptaPort8,7) ChitraGuptaPortU1:$ChitraGuptaPortU1,8) ChitraGuptaPortV1:$ChitraGuptaPortV1,9) ChitraGuptaPortW1:$ChitraGuptaPortW1,10) ChitraGuptaPortLDP1:$ChitraGuptaPortLDP1,11) ChitraGuptaPortLDP2:$ChitraGuptaPortLDP2,12) ChitraGuptaPortLDP3:$ChitraGuptaPortLDP3,13) ChitraGuptaPortKERB1:$ChitraGuptaPortKERB1,14) ChitraGuptaPortKERB2:$ChitraGuptaPortKERB2,15) MINPortIO1:$MINPortIO1,16) MINPortIO2:$MINPortIO2,17) FLBRPortIO1:$FLBRPortIO1,18) PVTCLDPortIO1:$PVTCLDPortIO1,19) EFKPort1:$EFKPort1,20) EFKPort2:$EFKPort2"
+fi
 
 # EXTERNAL PORTS
 PortainerAPort=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[1]}" || GetNewPort) && PORTSLIST+=("$PortainerAPort") #21 #1
@@ -176,29 +178,6 @@ FLBRPortIO2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[20]}" || GetNewPort) && PO
 PVTCLDPortIO2=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[21]}" || GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2") #41 #21
 EFKPort3=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[22]}" || GetNewPort) && PORTSLIST+=("$EFKPort3") #42 #22
 EFKPort4=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[23]}" || GetNewPort) && PORTSLIST+=("$EFKPort4") #43 #23
-#PortainerAPort=$(GetNewPort) && PORTSLIST+=("$PortainerAPort") #21 #1
-#PortainerSPort=$(GetNewPort) && PORTSLIST+=("$PortainerSPort") #22 #2
-#VarahaPort2=$(GetNewPort) && PORTSLIST+=("$VarahaPort2") #23 #3
-#VarahaPort3=$(GetNewPort) && PORTSLIST+=("$VarahaPort3") #24 #4
-#VarahaPort4=$(GetNewPort) && PORTSLIST+=("$VarahaPort4") #25 #5
-#BDDPort1=$(GetNewPort) && PORTSLIST+=("$BDDPort1") #26 #6
-#BDDPort2=$(GetNewPort) && PORTSLIST+=("$BDDPort2") #27 #7
-#WEBSSHPort1=$(GetNewPort) && PORTSLIST+=("$WEBSSHPort1") #28 #8
-#ChitraGuptaPort5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort5") #29 #9
-#ChitraGuptaPort6=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort6") #30 #10
-#ChitraGuptaPort7=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPort7") #31 #11
-#ChitraGuptaPortY1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortY1") #32 #12
-#ChitraGuptaPortZ1=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortZ1") #33 #13
-#ChitraGuptaPortLDP4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP4") #34 #14
-#ChitraGuptaPortLDP5=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortLDP5") #35 #15
-#ChitraGuptaPortKERB3=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB3") #36 #16
-#ChitraGuptaPortKERB4=$(GetNewPort) && PORTSLIST+=("$ChitraGuptaPortKERB4") #37 #17
-#MINPortIO3=$(GetNewPort) && PORTSLIST+=("$MINPortIO3") #38 #18
-#MINPortIO4=$(GetNewPort) && PORTSLIST+=("$MINPortIO4") #39 #19
-#FLBRPortIO2=$(GetNewPort) && PORTSLIST+=("$FLBRPortIO2") #40 #20
-#PVTCLDPortIO2=$(GetNewPort) && PORTSLIST+=("$PVTCLDPortIO2") #41 #21
-#EFKPort3=$(GetNewPort) && PORTSLIST+=("$EFKPort3") #42 #22
-#EFKPort4=$(GetNewPort) && PORTSLIST+=("$EFKPort4") #43 #23
 
 # HA EXTERNAL PORTS
 AltIndrhaprt1=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[1]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1" #44 #24 #1
@@ -220,25 +199,9 @@ AltIndrhaprt16=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[16]}" || GetNewPort) &&
 AltIndrhaprt17=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[17]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17" #60 #40 #17
 AltIndrhaprt18=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[18]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18" #61 #41 #18
 AltIndrhaprt19=$([ "$AutoPorts" = "N" ] && echo "${A_P_R[19]}" || GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19" #62 #42 #19
-#AltIndrhaprt1=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt1") && ALT_INDR_HA_PRT="$AltIndrhaprt1" #44 #24 #1
-#AltIndrhaprt2=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt2") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt2" #45 #25 #2
-#AltIndrhaprt3=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt3") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt3" #46 #26 #3
-#AltIndrhaprt4=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt4") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt4" #47 #27 #4
-#AltIndrhaprt5=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt5") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt5" #48 #28 #5
-#AltIndrhaprt6=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt6") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt6" #49 #29 #6
-#AltIndrhaprt7=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt7") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt7" #50 #30 #7
-#AltIndrhaprt8=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt8") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt8" #51 #31 #8
-#AltIndrhaprt9=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt9") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt9" #52 #32 #9
-#AltIndrhaprt10=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt10") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt10" #53 #33 #10
-#AltIndrhaprt11=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt11") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt11" #54 #34 #11
-#AltIndrhaprt12=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt12") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt12" #55 #35 #12
-#AltIndrhaprt13=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt13") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt13" #56 #36 #13
-#AltIndrhaprt14=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt14") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt14" #57 #37 #14
-#AltIndrhaprt15=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt15") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt15" #58 #38 #15
-#AltIndrhaprt16=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt16") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt16" #59 #39 #16
-#AltIndrhaprt17=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt17") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt17" #60 #40 #17
-#AltIndrhaprt18=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt18") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt18" #61 #41 #18
-#AltIndrhaprt19=$(GetNewPort) && PORTSLIST+=("$AltIndrhaprt19") && ALT_INDR_HA_PRT="$ALT_INDR_HA_PRT"",""$AltIndrhaprt19" #62 #42 #19
+
+echo "All Ports SET."
+}
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
 UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
@@ -606,6 +569,24 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
             break
         fi
     done 
+
+    if [ "$NATIVE" -lt 2 ]; then
+	totaloverall=0
+	totale2e=0
+	
+	for ip in "${!CLUSTER_TYPE[@]}"; do
+		totaloverall=$((totaloverall + 1))
+		if [[ "${CLUSTER_TYPE[$ip]}" == "E2E" ]]; then
+		    totale2e=$((totale2e + 1))
+		fi
+	done
+	
+	if [ "$totaloverall" -eq "$totale2e" ]; then
+		THECLUSTERISONLYE2E="Y"
+	else
+		THECLUSTERISMULTICLOUD="Y"
+	fi		
+    fi
     
     if [[ "$ISAUTOMATED" == "N" ]]; then
     	sudo rm -f $INSTANCE_DETAILS_FILE 
@@ -615,7 +596,13 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
     fi  
     
     THE_PVT_CLD=$(echo "$CHITRAGUPTA" | cut -d',' -f1)
-    echo "The THE_PVT_CLD IP is: $THE_PVT_CLD"                 
+    echo "The THE_PVT_CLD IP is: $THE_PVT_CLD" 
+    
+    THEINDRA1="${INDRA_IPS[0]}"
+    THEINDRA2="NA" 
+    if [ ${#INDRA_IPS[@]} -eq 2 ]; then
+    	THEINDRA2="${INDRA_IPS[1]}"
+    fi                   
 }
 
 # Function to run commands on remote hosts
@@ -868,7 +855,12 @@ install_docker() {
     sed -i -e s~"ATPR1R"~"$THEIPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"ATPR2R"~"$THEEPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"ATPR3R"~"$THEAPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
-                
+    sed -i -e s~"ATPR4R"~"$THE2IPRRANGE"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"TCIMC"~"$THECLUSTERISMULTICLOUD"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THEIP1TO"~"$THEIPTO"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THE1INDRA1"~"$THEINDRA1"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THE2INDRA2"~"$THEINDRA2"~g $BASE/tmp/$DOCKERTEMPLATE
+                                
     BUCKETCLIENT="${CLUSTER_APPS_MAPPING["BUCKETCLIENT"]}.${CLUSTERAPPSMAPPING["BUCKETCLIENT"]}"
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/$BUCKETCLIENT" "$THE1REQUSER@$IP:/home/$THE1REQUSER/mc"
     MIOTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -1379,7 +1371,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -1418,6 +1410,9 @@ get_vpc() {
 
 # Parse instance details
 parse_instance_details
+
+# Set All Ports
+SetAllPorts
 
 # Generate SSL certificates on the first manager node
 generate_ssl_certificates ${BRAHMA_IPS[0]}
