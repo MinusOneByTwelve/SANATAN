@@ -44,7 +44,12 @@ AutoPorts="ATPRT"
 THE1IPRRANGE="ATPR1R"
 THE1EPRRANGE="ATPR2R"
 THE1APRRANGE="ATPR3R"
-	
+THE2IPRRANGE="ATPR4R"
+THECLUSTERISMULTICLOUD="TCIMC"
+THEIPTO="THEIP1TO"	
+THEINDRA1="THE1INDRA1"
+THEINDRA2="THE2INDRA2"
+
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
 sudo hostnamectl set-hostname $THEHOST --transient
@@ -77,12 +82,31 @@ else
 	sudo chmod 777 /opt/CHITRAGUPTA
 fi
 
+open_ports_for_haproxy_on_multi_cloud() {
+	IFS=',' read -r -a port_array <<< "$THEIPTO"
+
+	for port in "${port_array[@]}"; do
+	    	#echo "$port"
+		sudo firewall-cmd --zone=public --permanent --add-rich-rule='rule family="ipv4" source address="'"$THEINDRA1"'" port port="'"$port"'" protocol="tcp" accept'
+		if [ "$THEINDRA2" == "NA" ]; then
+			ABC="XYZ"
+		else
+			sudo firewall-cmd --zone=public --permanent --add-rich-rule='rule family="ipv4" source address="'"$THEINDRA2"'" port port="'"$port"'" protocol="tcp" accept'
+		fi
+		#sudo firewall-cmd --zone=public --permanent --add-rich-rule='rule family="ipv4" port port="'"$port"'" protocol="tcp" reject'	    
+	done
+
+	sudo firewall-cmd --reload
+	
+	echo "Open Ports For HAProxy On Multi Cloud Done."
+}
+
 kill_processes_on_ports() {
     local AutoPorts="$1"
     
     if [ "$AutoPorts" == "N" ]; then
         # Define the port ranges
-        local PORT_RANGES=("$THE1IPRRANGE" "$THE1EPRRANGE" "$THE1APRRANGE")
+        local PORT_RANGES=("$THE1IPRRANGE" "$THE1EPRRANGE" "$THE1APRRANGE" "$THE2IPRRANGE")
         
         # Iterate over each port range
         for RANGE in "${PORT_RANGES[@]}"; do
@@ -1257,18 +1281,82 @@ else
 	sudo firewall-cmd --zone=public --add-port=16746-19478/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=2049/tcp --permanent
 	sudo firewall-cmd --zone=public --add-port=53/tcp --permanent
-		        
+
 	sudo firewall-cmd --reload
+	
+	if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+		#open_ports_for_haproxy_on_multi_cloud
+		echo "open_ports_for_haproxy_on_multi_cloud"
+	fi		        
 fi
 
 if [ ! -f /opt/CLD ]; then
-    echo 'Firewall On'
+    echo 'Firewall On For OnPREM'
 else
     if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
         echo 'No Firewall'
     else
-        sudo systemctl stop firewalld
-        sudo systemctl disable firewalld
+    	if [[ "$THEOSCHOICE" == "AWS_UBU" ]]; then
+    		#echo 'Firewall On For AWS'
+    		echo 'Firewall Off For AWS'
+        	#sudo systemctl stop firewalld
+        	#sudo systemctl disable firewalld 
+		echo "Disabling firewalld, iptables, and nftables..."
+
+		# Stop and disable firewalld
+		echo "Stopping and disabling firewalld..."
+		sudo systemctl stop firewalld
+		sudo systemctl disable firewalld
+		sudo systemctl mask firewalld
+
+		# Flush iptables rules
+		echo "Flushing iptables rules..."
+		sudo iptables -F
+		sudo iptables -X
+		sudo iptables -t nat -F
+		sudo iptables -t nat -X
+		sudo iptables -t mangle -F
+		sudo iptables -t mangle -X
+		sudo iptables -t raw -F
+		sudo iptables -t raw -X
+		sudo iptables -t security -F
+		sudo iptables -t security -X
+
+		# Check if iptables service exists and stop it
+		if systemctl list-units --full -all | grep -q iptables; then
+		    echo "Stopping and disabling iptables service..."
+		    sudo systemctl stop iptables
+		    sudo systemctl disable iptables
+		fi
+
+		# Stop and disable nftables
+		echo "Stopping and disabling nftables..."
+		sudo systemctl stop nftables
+		sudo systemctl disable nftables
+		sudo systemctl mask nftables
+
+		# Flush nftables rules
+		echo "Flushing nftables rules..."
+		sudo nft flush ruleset
+
+		echo "All firewall services disabled and rules flushed."
+
+		# Verify the changes
+		echo "Verification:"
+		echo "firewalld status:"
+		sudo systemctl status firewalld --no-pager
+		echo "nftables status:"
+		sudo systemctl status nftables --no-pager
+		echo "iptables rules:"
+		sudo iptables -L
+		echo "iptables nat table:"
+		sudo iptables -t nat -L
+		echo "iptables mangle table:"
+		sudo iptables -t mangle -L        	        	   		
+    	else
+        	sudo systemctl stop firewalld
+        	sudo systemctl disable firewalld
+        fi
     fi
 fi
 
