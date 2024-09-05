@@ -497,6 +497,8 @@ if [ "$TASKIDENTIFIER" == "e2e" ] ; then
 	THEJSON=$2
 
 	THESTACKE2EFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	UNQWRUNID=$(jq -r '.Identity' <<< "$THEJSON")
+	UNQWRUNID="$UNQWRUNID""-E2E-TERRAFORM"
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
@@ -577,6 +579,7 @@ if [ "$TASKIDENTIFIER" == "e2e" ] ; then
 	done < <(echo "$filtered_json2" | jq -c '.[]')
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	RNDMJ1="$UNQWRUNID""-""$RNDMJ1"
 	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null	
@@ -590,6 +593,8 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	THEJSON=$2
 
 	THESTACKGCPFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	UNQXRUNID=$(jq -r '.Identity' <<< "$THEJSON")
+	UNQXRUNID="$UNQXRUNID""-GCP-TERRAFORM"
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
@@ -819,6 +824,7 @@ if [ "$TASKIDENTIFIER" == "gcp" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	RNDMJ1="$UNQXRUNID""-""$RNDMJ1"
 	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
@@ -838,6 +844,8 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	THEJSON=$2
 
 	THESTACKAZUREFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	UNQYRUNID=$(jq -r '.Identity' <<< "$THEJSON")
+	UNQYRUNID="$UNQYRUNID""-AZURE-TERRAFORM"
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
@@ -1067,6 +1075,7 @@ if [ "$TASKIDENTIFIER" == "azure" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	RNDMJ1="$UNQYRUNID""-""$RNDMJ1"
 	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
@@ -1086,6 +1095,8 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	THEJSON=$2
 
 	THESTACKAWSFILE=$(jq -r '.ScopeFile' <<< "$THEJSON")
+	UNQZRUNID=$(jq -r '.Identity' <<< "$THEJSON")
+	UNQZRUNID="$UNQZRUNID""-AWS-TERRAFORM"
 	THEVISIONKEY=$(jq -r '.VisionKey' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")	
 	THESTACKREALFILE=$(jq -r '.RealFile' <<< "$THEJSON")
@@ -1347,6 +1358,7 @@ if [ "$TASKIDENTIFIER" == "aws" ] ; then
 	fi
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	RNDMJ1="$UNQZRUNID""-""$RNDMJ1"
 	#echo "sudo rm -rf $BASE/tmp/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo mv $BASE/tmp/$RNDMJ1-JOBLOG1.out $BASE/Output/Logs/$RNDMJ1-JOBLOG1.out" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null
 	echo "sudo rm -f $BASE/tmp/$AIFCTR" | sudo tee -a $BASE/tmp/$AIFCTR > /dev/null

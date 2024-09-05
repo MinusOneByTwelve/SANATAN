@@ -115,6 +115,24 @@ fi
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 ALT_INDR_HA_PRT=""
 
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
+fi
+	
+SEARCH_DIR="$BASE/tmp/"
+PATTERN="${REQUNQ}*CIE.out"
+while true; do
+    if ls ${SEARCH_DIR}${PATTERN} 1> /dev/null 2>&1; then
+        echo "Terraform Completion in Progress..."
+        ls -l ${SEARCH_DIR}${PATTERN}
+        sleep 5
+    else
+        echo "Terraform Completed. Proceeding..."
+        sleep 5
+        break
+    fi
+done
+
 function SetAllPorts {
 if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
 	#IFS=',' read -r -a I_P_R <<< $CLOUD_INTERNAL_PORT_RANGE
@@ -351,12 +369,12 @@ create_instance_details() {
         if [[ "$thereqmode" == "Y" ]]; then
             if [[ "${updated_lines[$i]}" == "BRAHMA" ]]; then
                 columns[9]="BRAHMA"
-                columns[10]="1280"
-                columns[11]="1"
+                columns[10]="2048"
+                columns[11]="2"
             elif [[ "${updated_lines[$i]}" == "INDRA" ]]; then
                 columns[9]="INDRA"
-                columns[10]="1024"
-                columns[11]="1"
+                columns[10]="2048"
+                columns[11]="2"
             else
                 columns[9]="VISHVAKARMA"
                 columns[10]="512"
@@ -375,7 +393,7 @@ create_instance_details() {
 }
 
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
+	#terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
 	# CREATE FILE FOR STACKMAKER
 	header=$(head -n 1 $INSTANCE_DETAILS_FILE)
 	csv_data=$(tail -n +2 $INSTANCE_DETAILS_FILE)
@@ -1083,6 +1101,20 @@ install_docker() {
 
 # Function to create an encrypted overlay network
 create_encrypted_overlay_network() {
+if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+    if [[ "$ELIGIBLEFORKRISHNA" == "N" ]]; then
+    	run_remote ${BRAHMA_IPS[0]} "PRISUB=\$(head -n 1 /opt/PRISUB) && docker network create --driver overlay --attachable --opt encrypted --subnet \$PRISUB $STACKNAME-encrypted-overlay"
+    fi
+    if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	run_remote ${BRAHMA_IPS[0]} "
+        docker network create \
+          --driver overlay \
+          --attachable \
+          --opt encrypted \
+          $STACKNAME-encrypted-overlay
+    "    
+    fi
+else
     run_remote ${BRAHMA_IPS[0]} "
         docker network create \
           --driver overlay \
@@ -1090,6 +1122,7 @@ create_encrypted_overlay_network() {
           --opt encrypted \
           $STACKNAME-encrypted-overlay
     "
+fi
 }
 
 THEFINALVOLUMENAME="$STACKNAME"
@@ -1344,7 +1377,7 @@ create_cluster_cdn_proxy() {
     DOCKERTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Scripts/VARAHA.sh $BASE/tmp/$DOCKERTEMPLATE
 
-    MGRIPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
+    #MGRIPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
     THECFGPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     THEDCYPATH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)    
     IWP="$THEINDRIP"
@@ -1371,7 +1404,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGRIPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGR1IPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -1595,7 +1628,7 @@ while true; do
     fi
     echo "-----------------------" 
     COUNTER=$((COUNTER + 1))
-    if (( $COUNTER == 40 )) ; then
+    if (( $COUNTER == 120 )) ; then
         echo "something is wrong..."
         PROCSOS="Y"
         break    	
@@ -1672,8 +1705,28 @@ if [ "$NATIVE" -lt 2 ]; then
 	sudo rm -f $BASE/tmp/$EXECUTE2SCRIPT	  
 fi
 
+MGR1IPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
+THESWARMFIRSTMANAGER="${BRAHMA_IPS[0]}"
+if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+    if [[ "$ELIGIBLEFORKRISHNA" == "N" ]]; then
+    	THESWARMFIRSTMANAGER=$(fetch_internal_ip ${BRAHMA_IPS[0]})
+    	#MGR1IPS=""
+	#for ip in "${BRAHMA_IPS[@]}"; do
+	#    result=$(fetch_internal_ip "$ip")
+	#    if [ -z "$MGR1IPS" ]; then
+	#	MGR1IPS="$result"
+	#    else
+	#	MGR1IPS="$MGR1IPS,$result"
+	#    fi
+	#done    	
+    fi
+    if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	THESWARMFIRSTMANAGER=$(fetch_internal_ip ${BRAHMA_IPS[0]})
+    fi
+fi
+
 # Initialize Docker Swarm with custom ports and autolock on the first manager node
-run_remote ${BRAHMA_IPS[0]} "docker swarm init --advertise-addr ${BRAHMA_IPS[0]} --autolock"
+run_remote ${BRAHMA_IPS[0]} "docker swarm init --advertise-addr $THESWARMFIRSTMANAGER --autolock"
 
 sudo rm -f $UNLOCKFILEPATH
 sudo rm -f $MJTFILEPATH
@@ -1686,7 +1739,6 @@ echo $SWARM_UNLOCK_KEY > $BASE/tmp/$ULFP1_FILE
 $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$ULFP1_FILE├$UNLOCKFILEPATH├$ADMIN_PASSWORD├$ULFP_FILE"
 sudo chmod 777 $UNLOCKFILEPATH
 sudo rm -f $BASE/tmp/$ULFP1_FILE
-MGR1IPS=$(IFS=','; echo "${BRAHMA_IPS[*]}")
 
 # Get the join token for manager and worker nodes
 BRAHMA_JOIN_TOKEN=$(run_remote ${BRAHMA_IPS[0]} "docker swarm join-token manager -q")
@@ -1707,7 +1759,16 @@ sudo rm -f $BASE/tmp/$WJTFP1_FILE
 echo "$DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 # Join remaining manager nodes to the Swarm
 for IP in "${BRAHMA_IPS[@]:1}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$BRAHMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $BRAHMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
+    THEIPOFTHISMGR="$IP"
+    if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+        if [[ "$ELIGIBLEFORKRISHNA" == "N" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi
+        if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi        
+    fi    
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$BRAHMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $BRAHMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 done
 
 for IP in "${BRAHMA_IPS[0]}"; do
@@ -1716,12 +1777,30 @@ done
 
 # Join worker nodes to the Swarm
 for IP in "${VISHVAKARMA_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+    THEIPOFTHISMGR="$IP"
+    if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+        if [[ "$ELIGIBLEFORKRISHNA" == "N" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi
+        if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi
+    fi
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 # Join router nodes to the Swarm
 for IP in "${INDRA_IPS[@]}"; do
-    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $IP ${BRAHMA_IPS[0]}:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
+    THEIPOFTHISMGR="$IP"
+    if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
+        if [[ "$ELIGIBLEFORKRISHNA" == "N" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi
+        if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
+    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+        fi
+    fi
+    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
 create_encrypted_overlay_network
@@ -1930,7 +2009,7 @@ if [[ "$ISAUTOMATED" == "Y" ]]; then
 	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://$thenamefornc:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
 	
 	if [ ${#INDRA_IPS[@]} -eq 2 ]; then
-		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
+		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
 	fi
 fi
 

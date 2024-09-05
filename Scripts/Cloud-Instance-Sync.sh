@@ -150,7 +150,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 							tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')						
 							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 							
-							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "GCP_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "gcp$tv39" > $BASE/tmp/$tv38-CIE.out 2>&1 & 
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "GCP_UBU├$thenohupfile" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "gcp$tv39" > $BASE/tmp/$thenohupfile-$tv38-CIE.out 2>&1 & 
 						fi
 					fi
 
@@ -198,7 +198,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 							scp -i "$tv32" -o StrictHostKeyChecking=no -P $tv31 "$BASE/tmp/$RANDOMAFSMT" "$tv30@$tv6:/home/$tv30/EDN"
 							sudo rm -f $BASE/tmp/$RANDOMAFSMT
 							
-							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AZURE_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv39" > $BASE/tmp/$tv38-CIE.out 2>&1 & 
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AZURE_UBU├$thenohupfile" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv39" > $BASE/tmp/$thenohupfile-$tv38-CIE.out 2>&1 & 
 						fi
 					fi
 					
@@ -225,7 +225,7 @@ if [ "$THEMODEOFEXECUTION" == "A" ]; then
 							tv39=$(echo -n "$trr_md5" | md5sum | awk '{print $1}')						
 							tv38=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 							
-							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" "aws$tv39" > $BASE/tmp/$tv38-CIE.out 2>&1 & 
+							nohup $BASE/Scripts/Cloud-Instance-Exec.sh "AWS_UBU├$thenohupfile" "A" "$tv32" "$tv30" "$tv6" "$tv31" "$tv38" "$tv36" "$tv37" "aws$tv39" > $BASE/tmp/$thenohupfile-$tv38-CIE.out 2>&1 & 
 						fi
 					fi
 					
@@ -417,8 +417,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "AutoPorts": "'"$AutoPorts"'"      
 }'			
 
-			sleep 60
-			notify-send -t 5000 "Progress" "Starting VAMANA..."
+			#sleep 60
+			#notify-send -t 5000 "Progress" "Starting VAMANA..."
 			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
