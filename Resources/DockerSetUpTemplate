@@ -894,11 +894,17 @@ else
 		sudo mount -t nfs4 -o nfsvers=4.1 "$EFS_DNS_NAME":/ "$MOUNT_POINT"	
 		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
 	fi
 
 	if [[ "$THEOSCHOICE" == "GCP_UBU" ]]; then
 		INTERNALIP=$(ip addr show ens4 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
 		
 		LCLVAL=$(head -n 1 /opt/LCL)
 		GBLVAL=$(head -n 1 /opt/GBL)
@@ -934,6 +940,9 @@ else
 	if [[ "$THEOSCHOICE" == "AZURE_UBU" ]]; then
 		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
 		
 		SOFTVAL="Y"
 		FILEVAL="Y"
@@ -959,11 +968,17 @@ else
 	if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
 		INTERNALIP=$(ip addr show eth1 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
 	fi
 
 	if [[ "$THEOSCHOICE" == "CSMP_UBU" ]]; then
 		INTERNALIP=$(ip route get 8.8.8.8 | awk 'NR==1 {print $7}')
 		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
 	fi
 	
 	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
