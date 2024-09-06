@@ -146,7 +146,9 @@ else
 			ISSAMEASHOST="${USERLISTVALS[26]}"
 			THEPARENTAUTHDETAILS="${USERLISTVALS[27]}"
 			THEREALVISIONKEY="${USERLISTVALS[28]}"
-			UNQRQ1="${USERLISTVALS[29]}"				
+			UNQRQ1="${USERLISTVALS[29]}"
+			THEVISIONFOLDER="${USERLISTVALS[30]}"
+			hyphenated_ip="${USERLISTVALS[31]}"				
 		fi
 	fi					
 fi
@@ -178,7 +180,12 @@ sudo mkdir -p $BASE/Scripts
 sudo mkdir -p $BASE/Secrets
 sudo mkdir -p $BASE/Resources
 sudo mkdir -p $BASE/Output
-sudo mkdir -p $BASE/Output/Terraform
+
+if [[ ! -d "$BASE/Output/Terraform" ]]; then
+	sudo mkdir -p $BASE/Output/Terraform
+	sudo chmod -R 777 $BASE/Output/Terraform
+fi
+
 if [[ ! -d "$BASE/Output/Pem" ]]; then
 	sudo mkdir -p $BASE/Output/Pem
 	sudo chmod -R 777 $BASE/Output/Pem
@@ -187,6 +194,16 @@ fi
 if [[ ! -d "$BASE/Output/Scope" ]]; then
 	sudo mkdir -p $BASE/Output/Scope
 	sudo chmod -R 777 $BASE/Output/Scope
+fi
+
+if [[ ! -d "$BASE/Output/Logs" ]]; then
+	sudo mkdir -p $BASE/Output/Logs
+	sudo chmod -R 777 $BASE/Output/Logs
+fi
+
+if [[ ! -d "$BASE/Output/Vision" ]]; then
+	sudo mkdir -p $BASE/Output/Vision
+	sudo chmod -R 777 $BASE/Output/Vision
 fi
 
 source $BASE/Resources/StackVersioningAndMisc
@@ -2107,6 +2124,7 @@ echo \"\"
 			sudo rm -rf /home/$CURRENTUSER/.bash_history
 						
 			sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
+			sudo mv $BASE/Output/Pem/op-$CLUSTERNAME.peme $BASE/Output/Pem/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-encrypted.pem
 		fi
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/$THEACTUALNAMEOFTHECOORDINATOR
 		sudo rm -rf $BASE/Output/$CLUSTERNAME-CDR
@@ -2115,7 +2133,15 @@ echo \"\"
 		echo ""	
 		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
 		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
-		sudo mv $BASE/tmp/$CLUSTERNAME-JOBLOG3.out $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-JOBLOG3.out		
+		sudo mv $BASE/tmp/$CLUSTERNAME-JOBLOG3.out $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out
+		echo "$LISTOFRANDOMIPS" | sudo tee $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out > /dev/null
+		sudo chmod 777 $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out
+		sudo chmod 777 $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out
+		
+		if [ "$ISSAMEASHOST" == "YES" ] ; then
+			sudo mv $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out $THEVISIONFOLDER/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out
+			sudo mv $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out $THEVISIONFOLDER/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out		
+		fi		
 	else
 		sudo rm -rf $BASE/op-$CLUSTERNAME-kill-opvvb.sh
 	fi	

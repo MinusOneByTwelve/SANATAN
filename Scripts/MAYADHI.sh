@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 clear
 
@@ -435,7 +435,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "onprem : $THEWORKFILE"
 			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
-			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' > $BASE/tmp/$UNQRUNID-MAYADHI.out 2>&1 &
 		fi
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
@@ -1383,7 +1383,49 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 	ALLWORKFOLDER1SYNC=$(jq -r '.AllWorkFolder' <<< "$THEJSON")	
 	RNDOPRMXM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
 	UNQRQ1=$(jq -r '.Identity' <<< "$THEJSON")
+	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")
+	
+	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+	fi
+	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
 		
+	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
+	
+	FILE="$THEVISIONFOLDER/WingardiumLeviosaAccio.sh"
+	if [ -f "$FILE" ]; then
+	    echo "$FILE Exists..."
+	    cat $FILE
+	else
+	    echo "$FILE does not exist. Creating it..."	    
+	    WINLEA='#!/bin/bash'"
+
+echo ''
+echo '-------------------'
+echo 'Wingardium Leviosa"'!'"'
+echo 'Accio"'!'"'
+echo '-------------------'
+echo ''
+
+THEUSERCHOICE=\"\$1\"
+VISIONKEY=\"\$2\"
+
+echo \$THEUSERCHOICE
+echo ''
+
+"
+	    echo "$WINLEA" | sudo tee $FILE > /dev/null
+	    sudo chmod 777 $FILE	    
+	    echo "$FILE created."
+	    $FILE "INIT DONE"
+	fi	
+	
+	sudo rm -f $THEVISIONFOLDER/$UNQRQ1-Logs
+	sudo touch $THEVISIONFOLDER/$UNQRQ1-Logs
+	sudo chmod 777 $THEVISIONFOLDER/$UNQRQ1-Logs
+			
 	#THESTACKFILE="$2"
 	#THEVISIONKEY="$3"
 	declare -A PICRFLOCATIONMAPPING
@@ -1485,7 +1527,10 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 		ppem=$(jq -r '.PPEM' <<< "$first_line")	   
 		scopeid=$(jq -r '.ScopeId' <<< "$first_line") 
 		scopeid="$scopeid-$curdttm"
+		hyphenated_ip="${parent//./-}"
 		THEPARENTAUTHDETAILS="$pusername,$pport,$ppassword,$ppem"
+		
+		echo "$parent,$pusername,$pport,$ppassword,$ppem,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-JOBLOG3.out,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-IP.out,$BASE/Output/Pem/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-encrypted.pem,$BASE/Output/Pem/op-Scope$scopeid.pem" | sudo tee -a $THEVISIONFOLDER/$UNQRQ1-Logs > /dev/null
 		
 		if (( COUNTER == 0 )) ; then
 			sudo mkdir $BASE/tmp/"Scope$scopeid-WIP"
@@ -1589,11 +1634,12 @@ GETMEUNIQUEOUTPUTIPS=\$(GETMEUNIQUEIPSFAST \"\$TOTALNOOFIPSREQ\" \"$nic\")
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
 echo \"=========== READY TO RUN ===========\"
-nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS├$THEVISIONKEY├$UNQRQ1\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
+nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$TOTALNOOFIPSREQ├$THESETUPMODE├c├2048,1,50|$only3from_filtered_json2_otherinfo├c├$nic├$gateway├$netmask├\$IPSTART├c├$BASE/Output/Scope$scopeid-CDR,$the4thfrom_filtered_json2_otherinfo├n├\$ROOTPWD├\$MATSYAPWD├\$VAGRANTPWD├├\$RANDOMSSHPORT├\$FINALOUTPUTREQ├\$FINALPROCESSOUTPUT├\$GETMEUNIQUEOUTPUTIPS├IDCDR,$__filtered_json2_identity├NO├ISSAMEASHOST├$THEPARENTAUTHDETAILS├$THEVISIONKEY├$UNQRQ1├$THEVISIONFOLDER├$hyphenated_ip\" > $BASE/tmp/Scope$scopeid-JOBLOG3.out 2>&1 &
 ")
 		CONSIDERTHISMACHINE="YES"
 		if [ -z "$only3from_filtered_json2_otherinfo" ] || [ -z "$the4thfrom_filtered_json2_otherinfo" ]; then
 		    CONSIDERTHISMACHINE="NO"
+		    echo "I CAME HERE46$parent "
 		fi
 		
 		if [ "$CONSIDERTHISMACHINE" == "YES" ] ; then
@@ -1603,8 +1649,10 @@ nohup $BASE/Scripts/Vagrant-VirtualBox.sh \"C\" \"$BASE├\$CLUSTER├c├0├\$
 			    	ISTHISSAMEMACHINE="YES"
 			    	THEMACHINEFROMWHEREITALLSTARTED="$parent"
 			    	THECODETORUNFORONPREMISEDEPLOY=$(echo "$THECODETORUNFORONPREMISEDEPLOY" | sed "s|ISSAMEASHOST|YES|")
+			    	echo "I CAME HERE47$parent "
 			else
-				THECODETORUNFORONPREMISEDEPLOY=$(echo "$THECODETORUNFORONPREMISEDEPLOY" | sed "s|ISSAMEASHOST|NO|")			
+				THECODETORUNFORONPREMISEDEPLOY=$(echo "$THECODETORUNFORONPREMISEDEPLOY" | sed "s|ISSAMEASHOST|NO|")
+				echo "I CAME HERE48 $parent"			
 			fi
 											
 			__PICRFSCRIPTMAPPING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -1631,31 +1679,31 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/Scope$scopeid-JOBLOG2.out 2>&1 &
 #    echo \"ERROR\" > THEACTUALSCRIPTFILECRONRESPATH
 #fi
 ")
-			#echo "I CAME HERE0"
+			echo "I CAME HERE0 $parent"
 			__PICRFSCRIPTCROND=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			_PICRFSCRIPTCROND="$BASE/tmp/$__PICRFSCRIPTCROND"			
 
 			__PICRFSCRIPTCRONRESD=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-			#echo "I CAME HERE1"			
+			echo "I CAME HERE1 $parent"			
 			if [ "$ISTHISSAMEMACHINE" == "NO" ] ; then
-				#echo "I CAME HERE2 $parent"
+				echo "I CAME HERE2 $parent"
 				ISREMOTEMACHINEPINGING="NO"
-				#echo "I CAME HERE3"
+				echo "I CAME HERE3 $parent"
 				#ping -c 3 $parent > /dev/null
-				#echo "I CAME HERE4"
+				echo "I CAME HERE4 $parent"
 				#if [ $? -eq 0 ]; then
 				#	ISREMOTEMACHINEPINGING="YES"
-				#	echo "I CAME HERE5"
+					echo "I CAME HERE5 $parent"
 				#fi
 				if ping -c 3 "$parent" > /dev/null; then
 				    ISREMOTEMACHINEPINGING="YES"
-				    #echo "I CAME HERE5"
+				    echo "I CAME HERE5.5 $parent"
 				else
 				    ISREMOTEMACHINEPINGING="NO"
 				    sudo rm -f $BASE/tmp/$__PICRFSCRIPTMAPPING
-				    #echo "I CAME HERE6"
+				    echo "I CAME HERE6 $parent"
 				fi				
-				#echo "I CAME HERE7"
+				echo "I CAME HERE7 $parent"
 				#echo "ISREMOTEMACHINEPINGING : $ISREMOTEMACHINEPINGING  $parent"
 				#exit
 				if [ "$ISREMOTEMACHINEPINGING" == "YES" ] ; then
@@ -1838,7 +1886,7 @@ while true; do
     if [ ${#PICRFCRONRESFILEOUTPUT[@]} -eq 0 ]; then
         echo "All tasks completed. Exiting..."
         #sudo rm -rf /tmp/JOBLOG4.out
-        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" "'"$THESTACKREALFILE"'" "'"$ALLWORKFOLDER1SYNC"'" "'"$RNDOPRMXM"'" 2>&1 &
+        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" "'"$THESTACKREALFILE"'" "'"$ALLWORKFOLDER1SYNC"'" "'"$RNDOPRMXM"'" "'"$UNQRQ1"'" "'"$THEVISIONFOLDER"'" 2>&1 &
         break
     fi
 

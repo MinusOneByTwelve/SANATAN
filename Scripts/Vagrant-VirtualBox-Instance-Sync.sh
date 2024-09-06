@@ -173,7 +173,9 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	THESTACKREALFILE=$7
 	ALLWORKFOLDER1SYNC=$8
 	RNDOPRMXM=$9
-	
+	UNQRQ1="${10}"
+	THEVISIONFOLDER="${11}"
+		
 	source $BASE/Resources/StackVersioningAndMisc
 	# Function to check if file exists
 	file_exists() {
@@ -233,7 +235,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		pattern=$(echo "$WIP_FOLDER" | awk -F'/' '{print $NF}' | sed 's/-WIP//')
 		sudo rm -f $BASE/Output/Pem/op-$pattern.pub
 				
-		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" "$THESTACKREALFILE" "$ALLWORKFOLDER1SYNC" "$RNDOPRMXM" "$therealfile" 2>&1 &
+		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" "$THESTACKREALFILE" "$ALLWORKFOLDER1SYNC" "$RNDOPRMXM" "$therealfile" "$UNQRQ1" "$THEVISIONFOLDER" "$visionkey" 2>&1 &
 		break
 	    fi
 
@@ -261,6 +263,10 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	AL1LWORKFOLDER1SYNC=$6
 	RND1OPRMXM=$7
 	THEREPLACEMENT=$8
+	UNQ1RQ1=$9
+	THEVISION1FOLDER="${10}"
+	V1ISION1KEY="${11}"
+			
 	LogNotification "$CLUSTERNAME Progress" "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT"
 	#echo "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT :::: $thefile2todelete :::: $thefoldertocheck :::: $thefiletodelete" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
         while IFS= read -r line; do
@@ -294,6 +300,44 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 		fi		        				    	
 	done < "$THEREPLACEMENT"	
 	
+	CURSTAMP=$(date +"%d%m%Y%H%M%S")
+	THETASKFOLDER="$THEVISION1FOLDER/$UNQ1RQ1-$CURSTAMP-MATSYA"
+	sudo mkdir $THETASKFOLDER
+	#sudo cp $thefiletodelete $THETASKFOLDER
+	#sudo cp $thefile2todelete $THETASKFOLDER
+	sudo cp $THE1STACKREALFILE $THETASKFOLDER
+	#sudo cp $THEREPLACEMENT $THETASKFOLDER
+	
+	FILE="$THETASKFOLDER/EXECUTE.sh"
+	if [ -f "$FILE" ]; then
+	    echo "$FILE Exists..."
+	    cat $FILE
+	else
+	    echo "$FILE does not exist. Creating it..."	    
+	    WINLEA='#!/bin/bash'"
+
+THEUSERCHOICE=\"\$1\"
+VISIONKEY=\"\$2\"
+
+echo \$THEUSERCHOICE
+echo ''
+
+"
+	    echo "$WINLEA" | sudo tee $FILE > /dev/null
+	    sudo chmod 777 $FILE	    
+	    echo "$FILE created."
+	    cat $FILE
+	    echo "
+$FILE \"\$THEUSERCHOICE\" \"\$VISIONKEY\"
+" | sudo tee -a $THEVISION1FOLDER/WingardiumLeviosaAccio.sh > /dev/null
+	fi	
+					
+	sudo chmod -R 777 $THETASKFOLDER
+	sudo chmod -R 777 $THEVISION1FOLDER
+	
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "E" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER" "$UNQ1RQ1" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out 2>&1 &	
+	
 	DELETESTUFFSCRIPT=$(echo '#!/bin/bash'"
 		
 sudo rm -f \"$thefiletodelete\"
@@ -303,5 +347,66 @@ sudo rm -rf \"$thefile2todelete\"
 	echo "$DELETESTUFFSCRIPT" | sudo tee $AL1LWORKFOLDER1SYNC/$RND1OPRMXM > /dev/null
 	sudo chmod 777 $AL1LWORKFOLDER1SYNC/$RND1OPRMXM	
 	sudo rm -rf /home/$CURRENTUSER/nohup.out	
+fi
+
+if [ "$THEMODEOFEXECUTION" == "E" ]; then
+	input_file="$2"
+	input_folder="$3"
+	input_unique="$4"
+	input_log_unique="$5"
+	
+	local_directory="$BASE/Output/Logs"
+	local_2_directory="$input_folder"
+	
+	while IFS= read -r linesreal; do
+	    IFS=',' read -ra fiel1ds <<< "$linesreal"
+	    ip="${fiel1ds[0]}"
+	    user="${fiel1ds[1]}"	    
+	    port="${fiel1ds[2]}"
+	    password="${fiel1ds[3]}"
+	    pem="${fiel1ds[4]}"
+	    joblog_file="${fiel1ds[5]}"
+	    ip_out_file="${fiel1ds[6]}"
+	    enc_pem="${fiel1ds[7]}"
+	    dec_pem="${fiel1ds[8]}"
+	    	    	    	    	    	    
+	    joblog_filename=$(basename "$joblog_file")
+	    ip_out_filename=$(basename "$ip_out_file")
+
+	    if [[ -f "$local_2_directory/$joblog_filename" ]]; then
+		echo "$joblog_filename already exists, skipping download."
+		sudo mv $local_2_directory/$joblog_filename $local_directory
+	    else
+		echo "Downloading $joblog_filename..."
+		if [[ "$pem" == "NA" ]]; then
+		    echo "Using password-based authentication."
+		    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
+		    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
+		else
+		    echo "Using PEM file-based authentication."
+		    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
+		    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
+		fi
+                sudo mv $local_2_directory/$joblog_filename $local_directory
+	    fi
+
+	    if [[ -f "$local_2_directory/$ip_out_filename" ]]; then
+		echo "$ip_out_filename already exists, skipping download."
+	    else
+		echo "Downloading $ip_out_filename..."
+		if [[ "$pem" == "NA" ]]; then
+		    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
+		    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
+		else
+		    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
+		    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
+		fi
+	    fi
+	done < "$input_file"
+	
+	echo "All files processed successfully!"
+	
+	sudo mv $input_log_unique $local_directory
+	sudo mv $BASE/tmp/$input_unique-MAYADHI.out $local_directory
 fi
 
