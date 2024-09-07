@@ -2134,7 +2134,7 @@ echo \"\"
 		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG1.out
 		sudo rm -f $BASE/tmp/$CLUSTERNAME-JOBLOG2.out
 		sudo mv $BASE/tmp/$CLUSTERNAME-JOBLOG3.out $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out
-		echo "$LISTOFRANDOMIPS" | sudo tee $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out > /dev/null
+		echo "$RANDOMSSHPORT■$LISTOFRANDOMIPS■$LISTOFRANDOMIDENTITIES" | sudo tee $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out > /dev/null
 		sudo chmod 777 $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-JOBLOG3.out
 		sudo chmod 777 $BASE/Output/Logs/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-IP.out
 		

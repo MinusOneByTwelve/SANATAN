@@ -1526,11 +1526,12 @@ echo ''
 		ppassword=$(jq -r '.PPassword' <<< "$first_line")
 		ppem=$(jq -r '.PPEM' <<< "$first_line")	   
 		scopeid=$(jq -r '.ScopeId' <<< "$first_line") 
+		scopeXid="$scopeid"
 		scopeid="$scopeid-$curdttm"
 		hyphenated_ip="${parent//./-}"
 		THEPARENTAUTHDETAILS="$pusername,$pport,$ppassword,$ppem"
 		
-		echo "$parent,$pusername,$pport,$ppassword,$ppem,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-JOBLOG3.out,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-IP.out,$BASE/Output/Pem/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-encrypted.pem,$BASE/Output/Pem/op-Scope$scopeid.pem" | sudo tee -a $THEVISIONFOLDER/$UNQRQ1-Logs > /dev/null
+		echo "$parent,$pusername,$pport,$ppassword,$ppem,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-JOBLOG3.out,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-IP.out,$BASE/Output/Pem/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-encrypted.pem,$BASE/Output/Pem/op-Scope$scopeid.pem,$scopeXid" | sudo tee -a $THEVISIONFOLDER/$UNQRQ1-Logs > /dev/null
 		
 		if (( COUNTER == 0 )) ; then
 			sudo mkdir $BASE/tmp/"Scope$scopeid-WIP"
@@ -1595,7 +1596,8 @@ ROOTPWD=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 MATSYAPWD=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 VAGRANTPWD=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 UBUPWD=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-RANDOMSSHPORT=\$(shuf -i 45000-46000 -n 1)
+#RANDOMSSHPORT=\$(shuf -i 45000-46000 -n 1)
+RANDOMSSHPORT=\$($BASE/Scripts/GetRandomPortRange.sh 45000 46000)
 FINALOUTPUTREQ=\"YES\"
 FINALPROCESSOUTPUT=\"$_PICRFLOCATIONMAPPING\"
 CLUSTER=\"Scope$scopeid\"
@@ -1714,7 +1716,7 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/Scope$scopeid-JOBLOG2.out 2>&1 &
 					
 					MAINFILECOPYRESULT="NO"
 					if [ "$ppem" == "NA" ] ; then
-						sshpass -p "$ppassword" ssh -p "$pport" -o StrictHostKeyChecking=no "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at"
+						sshpass -p "$ppassword" ssh -p "$pport" -o StrictHostKeyChecking=no "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at iproute2 net-tools"
 						
 						sshpass -p "$ppassword" scp -o StrictHostKeyChecking=no -P $pport "$BASE/tmp/$__PICRFSCRIPTMAPPING" "$pusername@$parent:/home/$pusername/Downloads"
 						sshpass -p "$ppassword" scp -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pem" "$pusername@$parent:/home/$pusername/Downloads"
@@ -1728,7 +1730,7 @@ nohup THEACTUALSCRIPTFILEPATH > $BASE/tmp/Scope$scopeid-JOBLOG2.out 2>&1 &
 						    PICRFSCRIPTCOPY[$parent]="NO"
 						fi					
 					else
-						ssh -p "$pport" -o StrictHostKeyChecking=no -i "$ppem" "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at"
+						ssh -p "$pport" -o StrictHostKeyChecking=no -i "$ppem" "$pusername@$parent" "sudo apt-get -y install ant curl git ipcalc ipset iptables jq mc nano nmap openssl parallel pv socat ssh sshpass ufw wget lsof putty pv rsync putty-tools cron at iproute2 net-tools"
 						
 						scp -i "$ppem" -o StrictHostKeyChecking=no -P $pport "$BASE/tmp/$__PICRFSCRIPTMAPPING" "$pusername@$parent:/home/$pusername/Downloads"
 						scp -i "$ppem" -o StrictHostKeyChecking=no -P $pport "$BASE/Output/Pem/op-Scope$scopeid.pem" "$pusername@$parent:/home/$pusername/Downloads"

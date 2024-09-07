@@ -305,10 +305,11 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	sudo mkdir $THETASKFOLDER
 	#sudo cp $thefiletodelete $THETASKFOLDER
 	#sudo cp $thefile2todelete $THETASKFOLDER
-	sudo cp $THE1STACKREALFILE $THETASKFOLDER
+	sudo cp $THE1STACKREALFILE $THETASKFOLDER/INSTANCES_BASE.csv
 	#sudo cp $THEREPLACEMENT $THETASKFOLDER
 	
-	FILE="$THETASKFOLDER/EXECUTE.sh"
+	FILE="$THETASKFOLDER/EXECUTE"
+	FIL2E="$THETASKFOLDER/INSTANCES"	
 	if [ -f "$FILE" ]; then
 	    echo "$FILE Exists..."
 	    cat $FILE
@@ -324,7 +325,14 @@ echo ''
 
 "
 	    echo "$WINLEA" | sudo tee $FILE > /dev/null
-	    sudo chmod 777 $FILE	    
+	    touch $FIL2E
+	    sudo chmod 777 $FILE
+	    sudo chmod 777 $FIL2E
+	    
+	    FIL3E="$THEVISION1FOLDER/$UNQ1RQ1-Logs-Real"
+	    touch $FIL3E
+	    sudo chmod 777 $FIL3E
+	    	    	    
 	    echo "$FILE created."
 	    cat $FILE
 	    echo "
@@ -336,7 +344,10 @@ $FILE \"\$THEUSERCHOICE\" \"\$VISIONKEY\"
 	sudo chmod -R 777 $THEVISION1FOLDER
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "E" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER" "$UNQ1RQ1" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out 2>&1 &	
+	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "E" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER" "$UNQ1RQ1" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out" "$FIL2E" "$V1ISION1KEY" "$THE1STACKREALFILE" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out 2>&1 &	
+
+	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "Z" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER/$UNQ1RQ1-Logs-Real" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISZ.out" "$THETASKFOLDER/INSTANCES_BASE.csv" "$BASE/Output/Logs" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISZ.out 2>&1 &
 	
 	DELETESTUFFSCRIPT=$(echo '#!/bin/bash'"
 		
@@ -349,64 +360,293 @@ sudo rm -rf \"$thefile2todelete\"
 	sudo rm -rf /home/$CURRENTUSER/nohup.out	
 fi
 
+get_line_count() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+	wc -l < "$file" | tr -d ' '
+    else
+	echo "0"
+    fi
+}
+	
 if [ "$THEMODEOFEXECUTION" == "E" ]; then
 	input_file="$2"
 	input_folder="$3"
 	input_unique="$4"
 	input_log_unique="$5"
-	
+	F1IL2E="$6"
+    	T1V1_KEY="$7"	
+    	THEORIGINALINSTFILE="$8"
+    	    	
 	local_directory="$BASE/Output/Logs"
 	local_2_directory="$input_folder"
 	
 	while IFS= read -r linesreal; do
+	
 	    IFS=',' read -ra fiel1ds <<< "$linesreal"
-	    ip="${fiel1ds[0]}"
-	    user="${fiel1ds[1]}"	    
-	    port="${fiel1ds[2]}"
-	    password="${fiel1ds[3]}"
-	    pem="${fiel1ds[4]}"
-	    joblog_file="${fiel1ds[5]}"
-	    ip_out_file="${fiel1ds[6]}"
-	    enc_pem="${fiel1ds[7]}"
-	    dec_pem="${fiel1ds[8]}"
-	    	    	    	    	    	    
-	    joblog_filename=$(basename "$joblog_file")
-	    ip_out_filename=$(basename "$ip_out_file")
-
-	    if [[ -f "$local_2_directory/$joblog_filename" ]]; then
-		echo "$joblog_filename already exists, skipping download."
-		sudo mv $local_2_directory/$joblog_filename $local_directory
-	    else
-		echo "Downloading $joblog_filename..."
-		if [[ "$pem" == "NA" ]]; then
-		    echo "Using password-based authentication."
-		    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
-		    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
-		else
-		    echo "Using PEM file-based authentication."
-		    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
-		    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
-		fi
-                sudo mv $local_2_directory/$joblog_filename $local_directory
-	    fi
-
-	    if [[ -f "$local_2_directory/$ip_out_filename" ]]; then
-		echo "$ip_out_filename already exists, skipping download."
-	    else
-		echo "Downloading $ip_out_filename..."
-		if [[ "$pem" == "NA" ]]; then
-		    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
-		    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
-		else
-		    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
-		    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
-		fi
-	    fi
+	    FuncVal1="${fiel1ds[0]}"
+	    FuncVal2="${fiel1ds[1]}"	    
+	    FuncVal3="${fiel1ds[2]}"
+	    FuncVal4="${fiel1ds[3]}"
+	    FuncVal5="${fiel1ds[4]}"
+	    FuncVal6="${fiel1ds[5]}"
+	    FuncVal7="${fiel1ds[6]}"
+	    FuncVal8="${fiel1ds[7]}"
+	    FuncVal9="${fiel1ds[8]}"
+	    FuncVal10="${fiel1ds[9]}"
+	    	    
+	    R1NDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    hyphenated_ip="${FuncVal1//./-}"	    	    	    	    	    
+	    nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "F" "$input_folder" "$BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out" "$FuncVal1" "$FuncVal2" "$FuncVal3" "$FuncVal4" "$FuncVal5" "$FuncVal6" "$FuncVal7" "$FuncVal8" "$FuncVal9" "$FuncVal10" "$F1IL2E" "$T1V1_KEY" "$input_unique" "$THEORIGINALINSTFILE" > $BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out 2>&1 &
+	    echo "Processing For $FuncVal1..."
+	    
 	done < "$input_file"
 	
 	echo "All files processed successfully!"
 	
 	sudo mv $input_log_unique $local_directory
 	sudo mv $BASE/tmp/$input_unique-MAYADHI.out $local_directory
+fi
+
+if [ "$THEMODEOFEXECUTION" == "F" ]; then
+    inputX_folder="$2"
+    FunctionLogFile="$3"
+
+    ip="$4"
+    user="$5"	    
+    port="$6"
+    password="$7"
+    pem="$8"
+    joblog_file="$9"
+    ip_out_file="${10}"
+    enc_pem="${11}"
+    dec_pem="${12}"
+    the1scope1id="${13}"
+    F1I1L2E="${14}"
+    T1V1KEY="${15}"
+    input1_1unique="${16}"
+    THEORIGINAL1INSTFILE="${17}"
+            
+    local_directory="$BASE/Output/Logs"
+    local_2_directory="$inputX_folder"
+	
+    joblog_filename=$(basename "$joblog_file")
+    ip_out_filename=$(basename "$ip_out_file")
+
+    if [[ -f "$local_2_directory/$joblog_filename" ]]; then
+	echo "$joblog_filename already exists, skipping download."
+	sudo mv $local_2_directory/$joblog_filename $local_directory
+    else
+	echo "Downloading $joblog_filename..."
+	if [[ "$pem" == "NA" ]]; then
+	    echo "Using password-based authentication."
+	    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
+	    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
+	else
+	    echo "Using PEM file-based authentication."
+	    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$joblog_file" "$local_2_directory/"
+	    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $joblog_file"
+	fi
+        sudo mv $local_2_directory/$joblog_filename $local_directory
+    fi
+
+    if [[ -f "$local_2_directory/$ip_out_filename" ]]; then
+	echo "$ip_out_filename already exists, skipping download."
+    else
+	echo "Downloading $ip_out_filename..."
+	if [[ "$pem" == "NA" ]]; then
+	    SSHPASS=$password sshpass -e scp -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
+	    SSHPASS=$password sshpass -e ssh -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
+	else
+	    scp -i "$pem" -o StrictHostKeyChecking=no -P $port "$user@$ip:$ip_out_file" "$local_2_directory/"
+	    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
+	fi
+    fi
+    
+    if [[ -f "$local_2_directory/$ip_out_filename" ]]; then
+    	THEDATAVAL=$(head -n 1 $local_2_directory/$ip_out_filename)
+    	IFS='■' read -ra THEDATA_VAL <<< "$THEDATAVAL"
+    	THEDATA_VAL_PORT="${THEDATA_VAL[0]}"
+    	THEDATA_VAL_IPS="${THEDATA_VAL[1]}"
+    	THEDATA_VAL_IDEN="${THEDATA_VAL[2]}"    	
+	IFS=',' read -r -a THE_DATA_VAL_IPS <<< "$THEDATA_VAL_IPS"
+	IFS=',' read -r -a THE_DATA_VAL_IDEN <<< "$THEDATA_VAL_IDEN"	
+	INSTANCESBASE="$F1I1L2E""_BASE.csv"
+	INSTANCESFAIL="$F1I1L2E""_FAIL"
+		
+	for ((i=1; i<${#THE_DATA_VAL_IPS[@]}; i++)); do
+		THECURRENTIP="${THE_DATA_VAL_IPS[$i]}"
+		THECURRENT_IDEN="${THE_DATA_VAL_IDEN[$i]}"
+		THECURRENTIDEN="${THECURRENT_IDEN#ID}"
+		
+		echo "Processing For THECURRENTIP $THECURRENTIP... THECURRENTIDEN $THECURRENTIDEN... SCOPE $the1scope1id..."
+		
+		MATCH=$(awk -F',' -v ip="$THECURRENTIP" '$7 == ip' "$INSTANCESBASE")
+		if [[ -n "$MATCH" ]]; then
+			echo "$MATCH" >> "$F1I1L2E"
+			echo "Found and appended: $THECURRENTIP => $MATCH"
+		else
+			if ping -c 5 "$THECURRENTIP" > /dev/null; then
+			    echo "IP $THECURRENTIP Pinging..."
+			    if [[ -f "$dec_pem" ]]; then
+				ls -l $dec_pem
+				sudo chown $CURRENTUSER:$CURRENTUSER $dec_pem
+				sudo chmod 600 $dec_pem
+				ls -l $dec_pem
+				TIMEOUT_DURATION=10							    
+			    	#CHECKIFWORKING=$(ssh -p "$THEDATA_VAL_PORT" -o StrictHostKeyChecking=no -i "$dec_pem" "vagrant@$THECURRENTIP" "echo 'WORKING'")
+				CHECKIFWORKING=$(timeout $TIMEOUT_DURATION ssh -p "$THEDATA_VAL_PORT" -o StrictHostKeyChecking=no -i "$dec_pem" "vagrant@$THECURRENTIP" "echo 'WORKING'" 2>/dev/null)
+				#CHECKIFWORKING=$(timeout 10 SSHPASS="130513" sshpass -e ssh -o StrictHostKeyChecking=no -p 22 "prathamos@$192.168.0.100" "echo 'WORKING'" 2>/dev/null)
+				#CHECKIFWORKING=$(sshpass -p "130513" ssh -o ConnectTimeout=15 -p 22 -o "StrictHostKeyChecking=no" prathamos@192.168.0.100 "echo 'WORKING'" 2>/dev/null)				
+				if [ $? -eq 124 ]; then
+					echo "IP $THECURRENTIP Not Available 1..."
+					if [[ -f "$INSTANCESFAIL" ]]; then
+						sudo chmod 777 $INSTANCESFAIL
+						echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+					else
+						sudo touch $INSTANCESFAIL
+						sudo chmod 777 $INSTANCESFAIL
+						echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+					fi					
+				else
+					if [ "$CHECKIFWORKING" == "WORKING" ]; then
+						MATC1H=$(awk -F',' -v ScopeId="$the1scope1id" -v Identity="$THECURRENTIDEN" '$1 == ScopeId && $2 == Identity' "$INSTANCESBASE")
+						if [[ -n "$MATC1H" ]]; then
+							echo "IP $THECURRENTIP Available 0..."
+							hyphenated1_ip="${THECURRENTIP//./-}"
+							source $BASE/Resources/StackVersioningAndMisc
+							IFS=',' read -ra splitrealrow <<< "$MATC1H"
+							thecolumn_1="${splitrealrow[0]}"
+							thecolumn_2="${splitrealrow[1]}"
+							thecolumn_3="${splitrealrow[2]}"
+							thecolumn_4="${splitrealrow[3]}"
+							thecolumn_5="${splitrealrow[4]}"
+							thecolumn_6="${splitrealrow[5]}"
+							thecolumn_7="$THECURRENTIP"
+							thecolumn_8="${splitrealrow[7]}"
+							thecolumn_9="${splitrealrow[8]}"
+							thecolumn_10="${splitrealrow[9]}"
+							thecolumn_11="${splitrealrow[10]}"							
+							thecolumn_12="$user"							
+							thecolumn_13="$port"
+							thecolumn_14="$password"
+							thecolumn_15="$pem"
+							thecolumn_16="${splitrealrow[15]}"
+							thecolumn_17="$hyphenated1_ip"							
+							thecolumn_18="${splitrealrow[17]}"
+							thecolumn_19="${splitrealrow[18]}"
+							thecolumn_20="1"
+							thecolumn_21="1"
+							thecolumn_22="1"							
+							thecolumn_23="vagrant"
+							thecolumn_24="$THEDATA_VAL_PORT"							
+							thecolumn_25=""							
+							thecolumn_26="$dec_pem"							
+							thecolumn_27="N"
+							thecolumn_28="N"
+							
+							thenewdecrow="$thecolumn_1,$thecolumn_2,$thecolumn_3,$thecolumn_4,$thecolumn_5,$thecolumn_6,$thecolumn_7,$thecolumn_8,$thecolumn_9,$thecolumn_10,$thecolumn_11,$thecolumn_12,$thecolumn_13,$thecolumn_14,$thecolumn_15,$thecolumn_16,$thecolumn_17,$thecolumn_18,$thecolumn_19,$thecolumn_20,$thecolumn_21,$thecolumn_22,$thecolumn_23,$thecolumn_24,$thecolumn_25,$thecolumn_26,$thecolumn_27,$thecolumn_28"
+							THEFILEFORNEW1VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							THEFILEFORNEW2VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+							echo "$thenewdecrow" | sudo tee $BASE/tmp/$THEFILEFORNEW2VAL > /dev/null
+							sudo chmod 777 $BASE/tmp/$THEFILEFORNEW2VAL
+							sudo touch $BASE/tmp/$THEFILEFORNEW1VAL
+							sudo chmod 777 $BASE/tmp/$THEFILEFORNEW1VAL 	
+							CSVFILE_ENC_DYC "$BASE/tmp/$THEFILEFORNEW2VAL" "6,12,13,14,15,23,24,25,26" "27" "Y" "encrypt" "$T1V1KEY" "0" "27" "$BASE/tmp/$THEFILEFORNEW1VAL"
+							sudo rm -f $BASE/tmp/$THEFILEFORNEW2VAL
+							sudo mv $BASE/tmp/$THEFILEFORNEW1VAL $BASE/tmp/$THEFILEFORNEW2VAL
+							THEDATAXVAL=$(head -n 1 $BASE/tmp/$THEFILEFORNEW2VAL)
+							sudo rm -f $BASE/tmp/$THEFILEFORNEW2VAL
+							echo "$THEDATAXVAL" >> "$F1I1L2E"
+														
+							thelinenoinorgfile=$(awk -F, '$1 == "" && $2 == "" { next } NR > 1 && $1 == "'"$the1scope1id"'" && $2 == "'"$THECURRENTIDEN"'" { print NR }' $THEORIGINAL1INSTFILE)
+							sed -i "$thelinenoinorgfile""s#.*#$THEDATAXVAL#" "$THEORIGINAL1INSTFILE"
+						else
+							echo "IP $THECURRENTIP Not Available 2..."
+							if [[ -f "$INSTANCESFAIL" ]]; then
+								sudo chmod 777 $INSTANCESFAIL
+								echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+							else
+								sudo touch $INSTANCESFAIL
+								sudo chmod 777 $INSTANCESFAIL
+								echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+							fi						
+						fi						
+					else
+						echo "IP $THECURRENTIP Not Available 3..."
+						if [[ -f "$INSTANCESFAIL" ]]; then
+							sudo chmod 777 $INSTANCESFAIL
+							echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+						else
+							sudo touch $INSTANCESFAIL
+							sudo chmod 777 $INSTANCESFAIL
+							echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+						fi						
+					fi
+				fi
+			    else
+				echo "IP $THECURRENTIP Not Available 4..."
+				if [[ -f "$INSTANCESFAIL" ]]; then
+					sudo chmod 777 $INSTANCESFAIL
+					echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+				else
+					sudo touch $INSTANCESFAIL
+					sudo chmod 777 $INSTANCESFAIL
+					echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+				fi			    	
+			    fi
+			else
+			    echo "IP $THECURRENTIP Not Available 5..."
+			    if [[ -f "$INSTANCESFAIL" ]]; then
+			    	sudo chmod 777 $INSTANCESFAIL
+			    	echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+			    else
+			    	sudo touch $INSTANCESFAIL
+			    	sudo chmod 777 $INSTANCESFAIL
+			    	echo "$ip:$THECURRENTIP" >> "$INSTANCESFAIL"
+			    fi
+			fi									
+		fi		
+	done 
+	
+	sudo rm -f $local_2_directory/$ip_out_filename
+	theiurealfile="$local_2_directory/$input1_1unique-Logs-Real"
+	echo "$THEDATAVAL" >> "$theiurealfile"   	
+    fi    
+    
+    sudo mv $FunctionLogFile $local_directory	
+fi
+
+if [ "$THEMODEOFEXECUTION" == "Z" ]; then
+	TMOE_Z_2="$2"
+	TMOE_Z_3="$3"
+	TMOE_Z_4="$4"
+	TMOE_Z_5="$5"
+	TMOE_Z_6="$6"
+	
+	FILE1="$TMOE_Z_2"
+	FILE2="$TMOE_Z_3"
+
+	while true; do
+	    lines_file1=$(get_line_count "$FILE1")
+	    lines_file2=$(get_line_count "$FILE2")
+	    
+	    if [[ "$lines_file1" -eq "$lines_file2" ]]; then
+		echo "All Done For FILE1 $FILE1 :  FILE2 $FILE2"
+		sudo rm -f $TMOE_Z_2
+		sudo rm -f $TMOE_Z_3
+		sudo rm -f $TMOE_Z_5
+		sudo mv $TMOE_Z_4 $TMOE_Z_6
+		exit 0
+	    else
+	    	echo "Current Status Of FILE1 $FILE1 :  FILE2 $FILE2"
+	    	cat $FILE1
+	    	echo "-----"
+	    	cat $FILE2
+	    	echo "====="
+	    fi
+	    
+	    sleep 10
+	done							
 fi
 
