@@ -2124,7 +2124,7 @@ echo \"\"
 			sudo rm -rf /home/$CURRENTUSER/.bash_history
 						
 			sudo rm -rf $BASE/Output/Pem/op-$CLUSTERNAME.pem
-			sudo mv $BASE/Output/Pem/op-$CLUSTERNAME.peme $BASE/Output/Pem/$UNQRQ1-VVB-C-$CLUSTERNAME-$hyphenated_ip-encrypted.pem
+			sudo mv $BASE/Output/Pem/op-$CLUSTERNAME.peme $BASE/Output/Pem/$UNQRQ1-VVB-C-$CLUSTERNAME-encrypted.pem
 		fi
 		sudo rm -rf $BASE/VagVBox/$CLUSTERNAME/Configs/$THEACTUALNAMEOFTHECOORDINATOR
 		sudo rm -rf $BASE/Output/$CLUSTERNAME-CDR

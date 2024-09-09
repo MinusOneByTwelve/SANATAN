@@ -428,6 +428,19 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 	ALLWORKFOLDERSYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP"
 	ALLWORKFILESYNC="$BASE/tmp/$ALLWORKFOLDER/$ALL1WORK-WIP_"
 	#exit
+	
+	sudo mkdir -p $BASE/Output/Logs/MATSYA
+	sudo chmod -R 777 $BASE/Output/Logs/MATSYA
+	
+	SingleLAN=$(echo "$THEJSON" | jq -r 'if has("SingleLAN") then .SingleLAN else "N" end')	
+	
+	TheNameOfVision=$(echo "$THEJSON" | jq -r 'if has("VisionName") then .VisionName else .VisionId end')	
+	sudo mkdir -p $BASE/Output/Logs/MATSYA/$TheNameOfVision
+	sudo chmod -R 777 $BASE/Output/Logs/MATSYA/$TheNameOfVision
+	
+	sudo mkdir -p $BASE/Output/Logs/MATSYA/$TheNameOfVision/$UNQRUNID
+	sudo chmod -R 777 $BASE/Output/Logs/MATSYA/$TheNameOfVision/$UNQRUNID	
+		
 	for THEWORK_FILE in "${!DiffFILESInstanceTypes[@]}"; do
 		THEWORKFILE="${DiffFILESInstanceTypes["$THEWORK_FILE"]}"
 		
@@ -435,7 +448,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "onprem : $THEWORKFILE"
 			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
-			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'"}' > $BASE/tmp/$UNQRUNID-MAYADHI.out 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'", "SingleLAN": "'"$SingleLAN"'", "TheNameOfVision": "'"$TheNameOfVision"'"}' > $BASE/tmp/$UNQRUNID-MAYADHI.out 2>&1 &
 		fi
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
@@ -488,9 +501,15 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
 		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts"	
 	fi
+
+	CheckForOnPrem=$(echo "$THEJSON" | jq -r 'if has("CheckForOnPrem") then .CheckForOnPrem else "NA" end')	
+	TheFileToMonitor="NA"
+	if [ "$CheckForOnPrem" != "NA" ] ; then
+		TheFileToMonitor="$BASE/Output/Vision/V$THEVISIONID/ONPREMVVB/$UNQRUNID-Logs-DONE"
+	fi
 		
 	RNDMJX1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" "$UNQRUNID" "$RNDMJX1" > $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out 2>&1 &
+	nohup $BASE/Scripts/Cloud-Instance-Sync.sh "B" "$BASE/tmp/$ALLWORKFOLDER" "$ALLWORKFOLDERSYNC" "$ALLWORKFILESYNC" "$THESTACKFILE" "$THEVISIONKEY" "$SOFTSTACK" "$VAMANAVAL" "$UNQRUNID" "$RNDMJX1" "$TheFileToMonitor" "$BASE/Output/Logs/MATSYA/$TheNameOfVision/$UNQRUNID" > $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out 2>&1 &
 fi
 
 if [ "$TASKIDENTIFIER" == "e2e" ] ; then
@@ -1384,6 +1403,8 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 	RNDOPRMXM=$(jq -r '.AllWorkFile' <<< "$THEJSON")
 	UNQRQ1=$(jq -r '.Identity' <<< "$THEJSON")
 	THEVISIONID=$(jq -r '.VisionId' <<< "$THEJSON")
+	Single_LAN=$(jq -r '.SingleLAN' <<< "$THEJSON")
+	TheNameOf_Vision=$(jq -r '.TheNameOfVision' <<< "$THEJSON")
 	
 	if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
 		sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
@@ -1394,7 +1415,7 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 		
 	THEVISIONFOLDER="$BASE/Output/Vision/V$THEVISIONID/$TASKIDENTIFIER"
 	
-	FILE="$THEVISIONFOLDER/WingardiumLeviosaAccio.sh"
+	FILE="$THEVISIONFOLDER/PlayFlute"
 	if [ -f "$FILE" ]; then
 	    echo "$FILE Exists..."
 	    cat $FILE
@@ -1404,18 +1425,20 @@ if [ "$TASKIDENTIFIER" == "ONPREMVVB" ] ; then
 
 echo ''
 echo '-------------------'
-echo 'Wingardium Leviosa"'!'"'
-echo 'Accio"'!'"'
+echo 'https://www.youtube.com/watch?v=3K7L2P9p-mE'
+echo 'https://www.youtube.com/watch?v=_u47OceopAo'
+echo 'https://www.youtube.com/watch?v=yRrU0zCUVJg'
+echo '-------------------'
+echo '$TheNameOf_Vision'
 echo '-------------------'
 echo ''
 
 THEUSERCHOICE=\"\$1\"
 VISIONKEY=\"\$2\"
+FILTER_IPS=\"\$3\"
 
 echo \$THEUSERCHOICE
-echo ''
-
-"
+echo ''"
 	    echo "$WINLEA" | sudo tee $FILE > /dev/null
 	    sudo chmod 777 $FILE	    
 	    echo "$FILE created."
@@ -1512,11 +1535,25 @@ echo ''
 	sudo mv $BASE/tmp/$output2__file $THESTACKFILE
 	
 	grouped_json=$(echo "$filtered_json2" | jq 'group_by(.Parent) | map({"Parent":.[0].Parent, "Count": length})')
+	total_adjusted_count=$(echo "$grouped_json" | jq '[.[] | .Count + 1] | add')
+	global_ip_selection=""
+	global_ip_selection_req="N"
+	
+	if [ "$Single_LAN" == "N" ] ; then
+		echo "MultiLAN Model..."
+	else
+		global_ip_selection=$(GETMEUNIQUEIPSFAST "$total_adjusted_count" "$Single_LAN")
+		global_ip_selection_req="Y"
+		IFS=',' read -r -a ip1_array <<< "$global_ip_selection"
+		ip_index=0
+	fi
+	
 	curdttm=$(date +"%d%m%y%H%M%S")
 	COUNTER=0
 	for row in $(echo "$grouped_json" | jq -r '.[] | @base64'); do
 		parent=$(echo "$row" | base64 -d | jq -r '.Parent')
 		count=$(echo "$row" | base64 -d | jq -r '.Count')
+
 		first_line=$(echo "$filtered_json2" | jq --arg parent "$parent" 'map(select(.Parent == $parent)) | .[0]')
 		nic=$(jq -r '.NIC' <<< "$first_line")
 		gateway=$(jq -r '.Gateway' <<< "$first_line")
@@ -1530,8 +1567,31 @@ echo ''
 		scopeid="$scopeid-$curdttm"
 		hyphenated_ip="${parent//./-}"
 		THEPARENTAUTHDETAILS="$pusername,$pport,$ppassword,$ppem"
+
+		group_ips=""
+		if [ "$global_ip_selection_req" == "Y" ] ; then
+			num_ips_needed=$((count + 1))
+			if [ "$ip_index" -ge "${#ip1_array[@]}" ]; then
+				echo "Not Enough IPs Available For Allocation..."
+				exit 1
+			fi			
+			for ((i=0; i<num_ips_needed; i++)); do
+				if [ "$ip_index" -ge "${#ip1_array[@]}" ]; then
+					echo "Not Enough IPs Available For $parent..."
+					exit 1
+				fi
+				if [ -n "$group_ips" ]; then
+					group_ips+=","
+				fi
+				group_ips+="${ip1_array[ip_index]}"
+				ip_index=$((ip_index + 1))
+			done
+			echo "IPs For $parent: $group_ips"
+		else
+			group_ips="\$(GETMEUNIQUEIPSFAST \"\$TOTALNOOFIPSREQ\" \"$nic\")"						
+		fi
 		
-		echo "$parent,$pusername,$pport,$ppassword,$ppem,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-JOBLOG3.out,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-IP.out,$BASE/Output/Pem/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-encrypted.pem,$BASE/Output/Pem/op-Scope$scopeid.pem,$scopeXid" | sudo tee -a $THEVISIONFOLDER/$UNQRQ1-Logs > /dev/null
+		echo "$parent,$pusername,$pport,$ppassword,$ppem,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-JOBLOG3.out,$BASE/Output/Logs/$UNQRQ1-VVB-C-Scope$scopeid-$hyphenated_ip-IP.out,$BASE/Output/Pem/$UNQRQ1-VVB-C-Scope$scopeid-encrypted.pem,$BASE/Output/Pem/op-Scope$scopeid.pem,$scopeXid" | sudo tee -a $THEVISIONFOLDER/$UNQRQ1-Logs > /dev/null
 		
 		if (( COUNTER == 0 )) ; then
 			sudo mkdir $BASE/tmp/"Scope$scopeid-WIP"
@@ -1631,7 +1691,7 @@ fi
 #GETMEUNIQUEOUTPUTFILEIPS=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 #GETMEUNIQUEIPS \"\$TOTALNOOFIPSREQ\" \"$nic\" \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\"
 #GETMEUNIQUEOUTPUTIPS=\$(head -n 1 \"$BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS\")
-GETMEUNIQUEOUTPUTIPS=\$(GETMEUNIQUEIPSFAST \"\$TOTALNOOFIPSREQ\" \"$nic\")
+GETMEUNIQUEOUTPUTIPS=""$group_ips""
 #sudo rm -rf $BASE/tmp/\$GETMEUNIQUEOUTPUTFILEIPS
 sudo mkdir -p $BASE/Output/Scope$scopeid-CDR
 sudo chmod -R 777 $BASE/Output/Scope$scopeid-CDR
@@ -1888,7 +1948,7 @@ while true; do
     if [ ${#PICRFCRONRESFILEOUTPUT[@]} -eq 0 ]; then
         echo "All tasks completed. Exiting..."
         #sudo rm -rf /tmp/JOBLOG4.out
-        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" "'"$THESTACKREALFILE"'" "'"$ALLWORKFOLDER1SYNC"'" "'"$RNDOPRMXM"'" "'"$UNQRQ1"'" "'"$THEVISIONFOLDER"'" 2>&1 &
+        nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "B" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP_" "'"$BASE"'/tmp/Scope'"$scopeid"'-WIP" "'"$THEVISIONKEY"'" "$THEFILETOLOOKUP" "$THEFILE2TOLOOKUP" "'"$THESTACKREALFILE"'" "'"$ALLWORKFOLDER1SYNC"'" "'"$RNDOPRMXM"'" "'"$UNQRQ1"'" "'"$THEVISIONFOLDER"'" "'"$scopeid"'" 2>&1 &
         break
     fi
 

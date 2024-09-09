@@ -324,7 +324,9 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	VAMANA="$8"
 	UNQRUNID="$9"
 	RNDMJX1="${10}"
-		
+	TheFileToMonitor="${11}"
+	TheFinalLogFolder="${12}"
+			
 	source $BASE/Resources/StackVersioningAndMisc
 
 	file2_exists() {
@@ -385,6 +387,32 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			sudo rm $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv
 		fi
 		
+		TheFinalMessageFile="$BASE/Output/Logs/$UNQRUNID-MATSYA-SUCCESS"
+		
+		if [ "$TheFileToMonitor" == "NA" ] ; then
+			echo "No End Level Monitoring Required For $UNQRUNID..."
+		else
+			max_time=3600
+			interval=10
+			start_time=$(date +%s)
+			while true; do
+			    if [ -e "$TheFileToMonitor" ]; then
+				echo "$TheFileToMonitor Now Available..."
+				sudo rm -f $TheFileToMonitor
+				break
+			    fi
+			    current_time=$(date +%s)
+			    elapsed_time=$((current_time - start_time))
+			    if [ $elapsed_time -ge $max_time ]; then
+				echo "Error: Maximum Time Limit Reached... $TheFileToMonitor Not Found..."
+				TheFinalMessageFile="$BASE/Output/Logs/$UNQRUNID-MATSYA-FAILURE"
+				VAMANA="NA"
+				break
+			    fi
+			    sleep $interval
+			done		
+		fi
+		
 		sudo rm -rf $THEMAINJOBFOLDER						
 							
 		echo "All files processed. Exiting."
@@ -434,8 +462,14 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 }' > $BASE/Output/Logs/$UNQRUNID-Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		
-		#sudo mv $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out $BASE/Output/Logs/$UNQRUNID-$RNDMJX1-Cloud-Instance-Sync-B.out
-		sudo rm -f $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out
+		sudo touch $TheFinalMessageFile
+		sudo chmod 777 $TheFinalMessageFile
+		
+		sudo mv $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out $BASE/Output/Logs/$UNQRUNID-$RNDMJX1-Cloud-Instance-Sync-B.out
+		#sudo rm -f $BASE/tmp/$RNDMJX1-Cloud-Instance-Sync-B.out
+		
+		sudo mv $BASE/Output/Logs/$UNQRUNID-* $TheFinalLogFolder
+		rename 's/'"$UNQRUNID"'-//' $TheFinalLogFolder/$UNQRUNID-*
 				
 		break
 	    fi

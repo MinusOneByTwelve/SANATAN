@@ -175,7 +175,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	RNDOPRMXM=$9
 	UNQRQ1="${10}"
 	THEVISIONFOLDER="${11}"
-		
+	THESCOPE_ID="${12}"
+			
 	source $BASE/Resources/StackVersioningAndMisc
 	# Function to check if file exists
 	file_exists() {
@@ -235,7 +236,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		pattern=$(echo "$WIP_FOLDER" | awk -F'/' '{print $NF}' | sed 's/-WIP//')
 		sudo rm -f $BASE/Output/Pem/op-$pattern.pub
 				
-		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" "$THESTACKREALFILE" "$ALLWORKFOLDER1SYNC" "$RNDOPRMXM" "$therealfile" "$UNQRQ1" "$THEVISIONFOLDER" "$visionkey" 2>&1 &
+		nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "D" "$WIP_LIST" "$WIP_FOLDER" "$thereal2file" "$THESTACKREALFILE" "$ALLWORKFOLDER1SYNC" "$RNDOPRMXM" "$therealfile" "$UNQRQ1" "$THEVISIONFOLDER" "$visionkey" "$THESCOPE_ID" 2>&1 &
 		break
 	    fi
 
@@ -266,6 +267,7 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	UNQ1RQ1=$9
 	THEVISION1FOLDER="${10}"
 	V1ISION1KEY="${11}"
+	THE_SCOPE_ID="${12}"
 			
 	LogNotification "$CLUSTERNAME Progress" "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT"
 	#echo "came to Vagrant-VirtualBox-Instance-Sync D Function :::: $THE1STACKREALFILE :::: $AL1LWORKFOLDER1SYNC :::: $RND1OPRMXM :::: $THEREPLACEMENT :::: $thefile2todelete :::: $thefoldertocheck :::: $thefiletodelete" | sudo tee -a /home/prathamos/Downloads/log > /dev/null
@@ -307,6 +309,9 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	#sudo cp $thefile2todelete $THETASKFOLDER
 	sudo cp $THE1STACKREALFILE $THETASKFOLDER/INSTANCES_BASE.csv
 	#sudo cp $THEREPLACEMENT $THETASKFOLDER
+
+	sudo chmod -R 777 $THETASKFOLDER
+	sudo chmod -R 777 $THEVISION1FOLDER
 	
 	FILE="$THETASKFOLDER/EXECUTE"
 	FIL2E="$THETASKFOLDER/INSTANCES"	
@@ -318,36 +323,60 @@ if [ "$THEMODEOFEXECUTION" == "D" ]; then
 	    WINLEA='#!/bin/bash'"
 
 THEUSERCHOICE=\"\$1\"
-VISIONKEY=\"\$2\"
+THEFILEITSELF=\"\$2\"
+THEFILEnohupITSELF=\"\$3\"
+FIL_TER_IPS=\"\$4\"
 
 echo \$THEUSERCHOICE
 echo ''
 
+BASE=\"/opt/Matsya\"
+
+if [ \"\$THEUSERCHOICE\" == \"START\" ]; then
+REPLACE_1_TEXT
+fi
+
+if [ \"\$THEUSERCHOICE\" == \"STOP\" ]; then
+REPLACE_2_TEXT
+fi
+
+if [ \"\$THEUSERCHOICE\" == \"DESTROY\" ]; then
+REPLACE_3_TEXT
+fi
+
+sudo rm -f \$THEFILEITSELF
+sudo rm -f \$THEFILEnohupITSELF
 "
+
 	    echo "$WINLEA" | sudo tee $FILE > /dev/null
-	    touch $FIL2E
+	    sudo touch $FIL2E
 	    sudo chmod 777 $FILE
 	    sudo chmod 777 $FIL2E
 	    
 	    FIL3E="$THEVISION1FOLDER/$UNQ1RQ1-Logs-Real"
-	    touch $FIL3E
+	    sudo touch $FIL3E
 	    sudo chmod 777 $FIL3E
 	    	    	    
 	    echo "$FILE created."
 	    cat $FILE
 	    echo "
-$FILE \"\$THEUSERCHOICE\" \"\$VISIONKEY\"
-" | sudo tee -a $THEVISION1FOLDER/WingardiumLeviosaAccio.sh > /dev/null
+RND_M_4_ID=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+RND_M_5_ID=\$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+$BASE/Scripts/SecretsFile-Decrypter \"$FILE├1├1├$BASE/tmp/\$RND_M_4_ID├\$VISIONKEY\"
+sudo chmod 777 $BASE/tmp/\$RND_M_4_ID
+sed -i -e s~\"THE_VIS_KEY_TO_REPLACE\"~\"\$VISIONKEY\"~g $BASE/tmp/\$RND_M_4_ID
+nohup $BASE/tmp/\$RND_M_4_ID \"\$THEUSERCHOICE\" \"$BASE/tmp/\$RND_M_4_ID\" \"$BASE/tmp/$UNQ1RQ1-\$RND_M_5_ID-PlayFluteEXECUTE.out\" \"\$FILTER_IPS\" > $BASE/tmp/$UNQ1RQ1-\$RND_M_5_ID-PlayFluteEXECUTE.out 2>&1 &
+" | sudo tee -a $THEVISION1FOLDER/PlayFlute > /dev/null
 	fi	
 					
 	sudo chmod -R 777 $THETASKFOLDER
 	sudo chmod -R 777 $THEVISION1FOLDER
 	
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "E" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER" "$UNQ1RQ1" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out" "$FIL2E" "$V1ISION1KEY" "$THE1STACKREALFILE" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out 2>&1 &	
+	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "E" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER" "$UNQ1RQ1" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out" "$FIL2E" "$V1ISION1KEY" "$THE1STACKREALFILE" "$FILE" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISE.out 2>&1 &	
 
 	RNDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "Z" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER/$UNQ1RQ1-Logs-Real" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISZ.out" "$THETASKFOLDER/INSTANCES_BASE.csv" "$BASE/Output/Logs" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISZ.out 2>&1 &
+	nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "G" "$THEVISION1FOLDER/$UNQ1RQ1-Logs" "$THEVISION1FOLDER/$UNQ1RQ1-Logs-Real" "$BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISG.out" "$THETASKFOLDER/INSTANCES_BASE.csv" "$BASE/Output/Logs" "$THEVISION1FOLDER/$UNQ1RQ1-Logs-DONE" "$FILE" "$FIL2E" "$BASE/Output/Pem/$UNQ1RQ1-VVB-C-$THE_SCOPE_ID-encrypted.pem" "$THE_SCOPE_ID" "$V1ISION1KEY" "$UNQ1RQ1" > $BASE/tmp/$UNQ1RQ1-$RNDMJ1-VVISG.out 2>&1 &
 	
 	DELETESTUFFSCRIPT=$(echo '#!/bin/bash'"
 		
@@ -377,7 +406,8 @@ if [ "$THEMODEOFEXECUTION" == "E" ]; then
 	F1IL2E="$6"
     	T1V1_KEY="$7"	
     	THEORIGINALINSTFILE="$8"
-    	    	
+    	THE_EXECUTE_FILE="$9"
+    	    	    	
 	local_directory="$BASE/Output/Logs"
 	local_2_directory="$input_folder"
 	
@@ -397,7 +427,7 @@ if [ "$THEMODEOFEXECUTION" == "E" ]; then
 	    	    
 	    R1NDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	    hyphenated_ip="${FuncVal1//./-}"	    	    	    	    	    
-	    nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "F" "$input_folder" "$BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out" "$FuncVal1" "$FuncVal2" "$FuncVal3" "$FuncVal4" "$FuncVal5" "$FuncVal6" "$FuncVal7" "$FuncVal8" "$FuncVal9" "$FuncVal10" "$F1IL2E" "$T1V1_KEY" "$input_unique" "$THEORIGINALINSTFILE" > $BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out 2>&1 &
+	    nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "F" "$input_folder" "$BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out" "$FuncVal1" "$FuncVal2" "$FuncVal3" "$FuncVal4" "$FuncVal5" "$FuncVal6" "$FuncVal7" "$FuncVal8" "$FuncVal9" "$FuncVal10" "$F1IL2E" "$T1V1_KEY" "$input_unique" "$THEORIGINALINSTFILE" "$THE_EXECUTE_FILE" > $BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out 2>&1 &
 	    echo "Processing For $FuncVal1..."
 	    
 	done < "$input_file"
@@ -426,6 +456,7 @@ if [ "$THEMODEOFEXECUTION" == "F" ]; then
     T1V1KEY="${15}"
     input1_1unique="${16}"
     THEORIGINAL1INSTFILE="${17}"
+    THE_EXECUTE_1_FILE="${18}"
             
     local_directory="$BASE/Output/Logs"
     local_2_directory="$inputX_folder"
@@ -617,13 +648,21 @@ if [ "$THEMODEOFEXECUTION" == "F" ]; then
     sudo mv $FunctionLogFile $local_directory	
 fi
 
-if [ "$THEMODEOFEXECUTION" == "Z" ]; then
+if [ "$THEMODEOFEXECUTION" == "G" ]; then
 	TMOE_Z_2="$2"
 	TMOE_Z_3="$3"
 	TMOE_Z_4="$4"
 	TMOE_Z_5="$5"
 	TMOE_Z_6="$6"
-	
+	TheFileToMonitor="$7"
+    	THE_EXECUTE_2_FILE="$8"
+    	THE_INST_2_FILE="$9"
+    	THE_ENC_FILE_PATH="${10}"
+    	THE_SCOPE_1_ID="${11}"
+    	THE_SCOPE_1_ID="Scope""$THE_SCOPE_1_ID"
+    	V1_ISION1KEY="${12}"
+    	UNQ1_RQ1="${13}" 
+    	  	    		
 	FILE1="$TMOE_Z_2"
 	FILE2="$TMOE_Z_3"
 
@@ -633,10 +672,108 @@ if [ "$THEMODEOFEXECUTION" == "Z" ]; then
 	    
 	    if [[ "$lines_file1" -eq "$lines_file2" ]]; then
 		echo "All Done For FILE1 $FILE1 :  FILE2 $FILE2"
+		echo "Content Of $TMOE_Z_2..."
+		cat $TMOE_Z_2
 		sudo rm -f $TMOE_Z_2
+		echo "Content Of $TMOE_Z_3..."
+		cat $TMOE_Z_3
 		sudo rm -f $TMOE_Z_3
+		echo "Content Of $TMOE_Z_5..."
+		cat $TMOE_Z_5
 		sudo rm -f $TMOE_Z_5
 		sudo mv $TMOE_Z_4 $TMOE_Z_6
+		sudo touch $TheFileToMonitor
+		sudo chmod 777 $TheFileToMonitor
+		
+		source $BASE/Resources/StackVersioningAndMisc
+		
+        	EVERYSINGLE_DESTROY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/$EVERYSINGLE_DESTROY
+		sudo chmod 777 $BASE/tmp/$EVERYSINGLE_DESTROY	        	
+        	EVERYSINGLE_UP=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/$EVERYSINGLE_UP
+		sudo chmod 777 $BASE/tmp/$EVERYSINGLE_UP
+        	EVERYSINGLE_HALT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		sudo touch $BASE/tmp/$EVERYSINGLE_HALT
+		sudo chmod 777 $BASE/tmp/$EVERYSINGLE_HALT
+					
+	        while IFS= read -r line; do
+	        
+	        	IFS=',' read -ra fields <<< "$line"
+	        	TheReqIdty="${fields[1]}"
+	        	TheCreatedIP="${fields[6]}"
+	        	hyphenated21_ip="${TheCreatedIP//./-}"
+	        	Parent="${fields[7]}"		        	
+	        	PUserName="${fields[11]}"		        	
+	        	PPort="${fields[12]}"
+	        	PPassword="${fields[13]}"		        	
+	        	PPEM="${fields[14]}"
+	        	
+	        	PUserName=$(NARASIMHA "decrypt" "$PUserName" "$V1_ISION1KEY")
+	        	PPort=$(NARASIMHA "decrypt" "$PPort" "$V1_ISION1KEY")
+	        	PPassword=$(NARASIMHA "decrypt" "$PPassword" "$V1_ISION1KEY")	        	
+	        	
+			RND_M_ID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+				        			
+			EVERYSINGLEDESTROY='sshpass -p "'"$PPassword"'" ssh -p "'"$PPort"'" -o StrictHostKeyChecking=no "'"$PUserName"'@'"$Parent"'" '"'"'sudo rm -f '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out && nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "I" "op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'" "'"$BASE"'/Output/Pem/'"$UNQ1_RQ1"'-VVB-C-'"$THE_SCOPE_1_ID"'-encrypted.pem" "'"$BASE"'/Output/Pem/op-'"$THE_SCOPE_1_ID"'.pem" "'"$BASE"'/VagVBox/'"$THE_SCOPE_1_ID"'/Configs/op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'/Vagrantfile" "'"THE_VIS_KEY_TO_REPLACE"'" "'"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out" "DESTROY" > '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out 2>&1 &'"'"' < /dev/null > /dev/null 2>&1'
+				        	
+	        	EVERYSINGLEUP='sshpass -p "'"$PPassword"'" ssh -p "'"$PPort"'" -o StrictHostKeyChecking=no "'"$PUserName"'@'"$Parent"'" '"'"'sudo rm -f '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out && nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "I" "op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'" "'"$BASE"'/Output/Pem/'"$UNQ1_RQ1"'-VVB-C-'"$THE_SCOPE_1_ID"'-encrypted.pem" "'"$BASE"'/Output/Pem/op-'"$THE_SCOPE_1_ID"'.pem" "'"$BASE"'/VagVBox/'"$THE_SCOPE_1_ID"'/Configs/op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'/Vagrantfile" "'"THE_VIS_KEY_TO_REPLACE"'" "'"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out" "UP" > '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out 2>&1 &'"'"' < /dev/null > /dev/null 2>&1'
+	        	
+	        	EVERYSINGLEHALT='sshpass -p "'"$PPassword"'" ssh -p "'"$PPort"'" -o StrictHostKeyChecking=no "'"$PUserName"'@'"$Parent"'" '"'"'sudo rm -f '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out && nohup '"$BASE"'/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "H" "op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'" "'"$BASE"'/Output/Pem/'"$UNQ1_RQ1"'-VVB-C-'"$THE_SCOPE_1_ID"'-encrypted.pem" "'"$BASE"'/Output/Pem/op-'"$THE_SCOPE_1_ID"'.pem" "'"$BASE"'/VagVBox/'"$THE_SCOPE_1_ID"'/Configs/op-'"$THE_SCOPE_1_ID"'-'"$hyphenated21_ip"'-ID'"$TheReqIdty"'/Vagrantfile" "'"THE_VIS_KEY_TO_REPLACE"'" "'"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out" "HALT" > '"$BASE"'/tmp/'"$RND_M_ID"'-PlayFlute.out 2>&1 &'"'"' < /dev/null > /dev/null 2>&1'
+	        	
+	        	echo "if ping -c 3 "$Parent" > /dev/null; then" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"
+	        	echo "result=\$( [ -z \"\$FIL_TER_IPS\" ] && echo \"yes\" || ( echo \"\$FIL_TER_IPS\" | tr ',' '\n' | grep -w -q \"$TheCreatedIP\" && echo \"yes\" || echo \"no\" ) )" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"
+	        	echo "if [ \"\$result\" == \"yes\" ] ; then" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"
+	        	echo "$EVERYSINGLEDESTROY" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"	        	
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_DESTROY"
+	        	
+	        	echo "if ping -c 3 "$Parent" > /dev/null; then" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        	echo "result=\$( [ -z \"\$FIL_TER_IPS\" ] && echo \"yes\" || ( echo \"\$FIL_TER_IPS\" | tr ',' '\n' | grep -w -q \"$TheCreatedIP\" && echo \"yes\" || echo \"no\" ) )" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        	echo "if [ \"\$result\" == \"yes\" ] ; then" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        	echo "$EVERYSINGLEUP" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_UP"
+	        		        	
+	        	echo "if ping -c 3 "$Parent" > /dev/null; then" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        	echo "result=\$( [ -z \"\$FIL_TER_IPS\" ] && echo \"yes\" || ( echo \"\$FIL_TER_IPS\" | tr ',' '\n' | grep -w -q \"$TheCreatedIP\" && echo \"yes\" || echo \"no\" ) )" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        	echo "if [ \"\$result\" == \"yes\" ] ; then" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        	echo "$EVERYSINGLEHALT" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        	echo "fi" >> "$BASE/tmp/$EVERYSINGLE_HALT"
+	        		        	
+		done < "$THE_INST_2_FILE"
+		
+		temp_file=$(mktemp)
+		sed -e "/REPLACE_1_TEXT/ {r $BASE/tmp/$EVERYSINGLE_UP" -e "d}" "$THE_EXECUTE_2_FILE" > "$temp_file"
+		mv "$temp_file" "$THE_EXECUTE_2_FILE"
+		temp_file=$(mktemp)
+		sed -e "/REPLACE_2_TEXT/ {r $BASE/tmp/$EVERYSINGLE_HALT" -e "d}" "$THE_EXECUTE_2_FILE" > "$temp_file"
+		mv "$temp_file" "$THE_EXECUTE_2_FILE"
+		temp_file=$(mktemp)
+		sed -e "/REPLACE_3_TEXT/ {r $BASE/tmp/$EVERYSINGLE_DESTROY" -e "d}" "$THE_EXECUTE_2_FILE" > "$temp_file"
+		mv "$temp_file" "$THE_EXECUTE_2_FILE"		
+		
+		echo "Content Of $BASE/tmp/$EVERYSINGLE_UP..."
+		cat $BASE/tmp/$EVERYSINGLE_UP
+		sudo rm -f $BASE/tmp/$EVERYSINGLE_UP
+		echo "Content Of $BASE/tmp/$EVERYSINGLE_HALT..."
+		cat $BASE/tmp/$EVERYSINGLE_HALT
+		sudo rm -f $BASE/tmp/$EVERYSINGLE_HALT
+		echo "Content Of $BASE/tmp/$EVERYSINGLE_DESTROY..."
+		cat $BASE/tmp/$EVERYSINGLE_DESTROY
+		sudo rm -f $BASE/tmp/$EVERYSINGLE_DESTROY
+		
+		RND_M_1_ID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+		RND_M_2_ID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+		RND_M_3_ID=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+		$BASE/Scripts/SecretsFile-Encrypter "$THE_EXECUTE_2_FILE├$BASE/tmp/$RND_M_1_ID├$V1_ISION1KEY├$RND_M_2_ID"
+		sudo chmod 777 $BASE/tmp/$RND_M_1_ID
+		sudo mv $THE_EXECUTE_2_FILE $BASE/tmp/$RND_M_3_ID
+		sudo mv $BASE/tmp/$RND_M_1_ID $THE_EXECUTE_2_FILE
+		sudo rm -f $BASE/tmp/$RND_M_3_ID
+		sudo chmod 777 $THE_EXECUTE_2_FILE
+		
 		exit 0
 	    else
 	    	echo "Current Status Of FILE1 $FILE1 :  FILE2 $FILE2"
@@ -648,5 +785,55 @@ if [ "$THEMODEOFEXECUTION" == "Z" ]; then
 	    
 	    sleep 10
 	done							
+fi
+
+if [ "$THEMODEOFEXECUTION" == "H" ]; then
+	THEREQINST1="$2"
+	BLA="$3"
+	BLA="$4"
+	BLA="$5"
+	BLA="$6"	
+	RNDM1_RUN="$7"		
+	sudo vagrant global-status --prune | grep $THEREQINST1 | cut -f 1 -d ' ' | xargs -L 1 sudo vagrant halt	
+	sudo rm -f $RNDM1_RUN
+fi
+
+if [ "$THEMODEOFEXECUTION" == "I" ]; then
+	THEREQINST3="$2"
+	THEREQ_INST3_ENCPEM="$3"
+	THEREQ_INST3_DECPEM="$4"
+	THEREQ_INST3_VAGFILE="$5"
+	THEREQ_INST3_VKEY="$6"
+	RNDM3_RUN="$7"
+	THETHINGTODO="$8"
+		
+	THENEWFILEFORPEM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	if [[ -f "$THEREQ_INST3_DECPEM" ]]; then
+		sudo cp $THEREQ_INST3_DECPEM $BASE/tmp/$THENEWFILEFORPEM.pem
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/tmp/$THENEWFILEFORPEM.pem
+		sudo chmod 400 $BASE/tmp/$THENEWFILEFORPEM.pem
+	else
+		$BASE/Scripts/SecretsFile-Decrypter "$THEREQ_INST3_ENCPEM├1├1├$BASE/tmp/$THENEWFILEFORPEM.pem├$THEREQ_INST3_VKEY"
+		sudo chown $CURRENTUSER:$CURRENTUSER $BASE/tmp/$THENEWFILEFORPEM.pem
+		sudo chmod 400 $BASE/tmp/$THENEWFILEFORPEM.pem		
+	fi
+
+	thenewline='  config.ssh.private_key_path = "'"$BASE/tmp/$THENEWFILEFORPEM.pem"'"'
+	sudo chmod 777 $THEREQ_INST3_VAGFILE
+	sed -i "13s#.*#${thenewline}#" $THEREQ_INST3_VAGFILE
+	sudo chown root:root $THEREQ_INST3_VAGFILE
+	sudo chmod 777 $THEREQ_INST3_VAGFILE
+	
+	if [ "$THETHINGTODO" == "UP" ]; then			
+		sudo vagrant global-status --prune | grep $THEREQINST3 | cut -f 1 -d ' ' | xargs -L 1 sudo vagrant up
+	fi
+	if [ "$THETHINGTODO" == "DESTROY" ]; then			
+		sudo vagrant global-status --prune | grep $THEREQINST3 | cut -f 1 -d ' ' | xargs -L 1 sudo vagrant halt
+		sudo vagrant global-status --prune | grep $THEREQINST3 | cut -f 1 -d ' ' | xargs -L 1 sudo vagrant destroy -f
+	fi
+		
+	sudo rm -f $BASE/tmp/$THENEWFILEFORPEM.pem
+	
+	sudo rm -f $RNDM3_RUN	
 fi
 
