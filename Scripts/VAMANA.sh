@@ -998,6 +998,40 @@ install_docker() {
         
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
 
+    THE_RNDM_VAL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+    
+    PVT_GLUSTTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/PreGlusterRunTemplate $BASE/tmp/$PVT_GLUSTTEMPLATE
+    sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$PVT_GLUSTTEMPLATE
+
+    P2VT2_GLUSTTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/PreGlusterRunTemplateII $BASE/tmp/$P2VT2_GLUSTTEMPLATE
+    sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$P2VT2_GLUSTTEMPLATE
+    sed -i -e s~"THE_DIR"~"$DFS_DATA_DIR/Misc$STACKNAME"~g $BASE/tmp/$P2VT2_GLUSTTEMPLATE
+    sed -i -e s~"THE_RNDM_VAL"~"$THE_RNDM_VAL"~g $BASE/tmp/$P2VT2_GLUSTTEMPLATE
+    
+    PVT_DOCKTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/PreDockerRunTemplate $BASE/tmp/$PVT_DOCKTEMPLATE
+    sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$PVT_DOCKTEMPLATE
+    sed -i -e s~"DFS1_DATA1_DIR"~"$DFS_DATA_DIR"~g $BASE/tmp/$PVT_DOCKTEMPLATE
+
+    P2VT2_DOCKTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+    sudo cp $BASE/Resources/PreDockerRunTemplateII $BASE/tmp/$P2VT2_DOCKTEMPLATE
+    sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$P2VT2_DOCKTEMPLATE
+    sed -i -e s~"THE_DIR"~"$DFS_DATA_DIR/Misc$STACKNAME"~g $BASE/tmp/$P2VT2_DOCKTEMPLATE
+    sed -i -e s~"THE_RNDM_VAL"~"$THE_RNDM_VAL"~g $BASE/tmp/$P2VT2_DOCKTEMPLATE
+    
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT_DOCKTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/PreDockerRunActual.sh"
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$P2VT2_DOCKTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/PreDockerRun.sh"
+
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$PVT_GLUSTTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/PreGlusterRunActual.sh"
+    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$P2VT2_GLUSTTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/PreGlusterRun.sh"
+
+    sudo rm -f $BASE/tmp/$PVT_GLUSTTEMPLATE
+    sudo rm -f $BASE/tmp/$P2VT2_GLUSTTEMPLATE
+    sudo rm -f $BASE/tmp/$PVT_DOCKTEMPLATE
+    sudo rm -f $BASE/tmp/$P2VT2_DOCKTEMPLATE
+            
     EFKTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/DockerEFK.yml $BASE/tmp/$EFKTEMPLATE
 
@@ -1200,8 +1234,8 @@ create_glusterfs_volume_cluster() {
 		volume_create_cmd+="$HOST:$DFS_DATA2_DIR/$S1TA1CKN1AME "
         done
         volume_create_cmd+="force"        
-	echo "create_glusterfs_volume_cluster : $peer_probe_cmds"
-	echo "create_glusterfs_volume_cluster : $volume_create_cmd"        
+	echo "create_glusterfs_$S1TA1CKN1AME_volume_cluster : $peer_probe_cmds"
+	echo "create_glusterfs_$S1TA1CKN1AME_volume_cluster : $volume_create_cmd"        
         # Run the peer probing and volume creation commands
         run_remote ${BRAHMA_IPS[0]} "
             $peer_probe_cmds
@@ -1237,7 +1271,7 @@ create_glusterfs_volume_cluster() {
 
 	    ALL2_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 	    for IP in "${ALL2_IPS[@]}"; do
-		run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/$THEFINALVOLUMENAME $DFS1_CLUSTER1_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log"
+		run_remote $IP "sudo rm -f /opt/GV$S1TA1CKN1AME && sudo touch /opt/GV$S1TA1CKN1AME && echo \"$glusterfs_addresses■$THEFINALVOLUMENAME■$DFS1_CLUSTER1_DIR■/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log\" | sudo tee -a /opt/GV$S1TA1CKN1AME > /dev/null && sudo chmod 777 /opt/GV$S1TA1CKN1AME && hostname && sudo mount -t glusterfs $glusterfs_addresses:/$THEFINALVOLUMENAME $DFS1_CLUSTER1_DIR -o log-level=DEBUG,log-file=/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log"
 	    done    
     fi
 }
@@ -1276,8 +1310,8 @@ create_glusterfs_volume_portainer() {
 			volume_create_cmd+="$H1O1S11T:$DFS_DATA_DIR/Portainer$STACKNAME "
 		done
 		volume_create_cmd+="force" 
-		echo "create_glusterfs_volume_portainer : $peer_probe_cmds"
-		echo "create_glusterfs_volume_portainer : $volume_create_cmd" 
+		echo "create_glusterfsvolume_portainer : $peer_probe_cmds"
+		echo "create_glusterfsvolume_portainer : $volume_create_cmd" 
 		run_remote ${BRAHMA_IPS[0]} "
 		$peer_probe_cmds
 		$volume_create_cmd
@@ -1309,7 +1343,7 @@ create_glusterfs_volume_portainer() {
 		done
 		glusterfs_addresses=${glusterfs_addresses%,}
 		for IP in "${BRAHMA_IPS[@]}"; do
-		    run_remote $IP "hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$THEFINALVOLUME1NAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
+		    run_remote $IP "sudo rm -f /opt/PHAGDet && sudo touch /opt/PHAGDet && echo \"$glusterfs_addresses■Portainer$THEFINALVOLUME1NAME■$DFS_DATA_DIR/PortainerMnt$STACKNAME■/var/log/glusterfs/Portainer$STACKNAME-mount.log\" | sudo tee -a /opt/PHAGDet > /dev/null && sudo chmod 777 /opt/PHAGDet && hostname && sudo mount -t glusterfs $glusterfs_addresses:/Portainer$THEFINALVOLUME1NAME $DFS_DATA_DIR/PortainerMnt$STACKNAME -o log-level=DEBUG,log-file=/var/log/glusterfs/Portainer$STACKNAME-mount.log"
 		done
 	fi
 }
@@ -1821,6 +1855,10 @@ create_glusterfs_volume_cluster "nextgcloud" "$DFS_DATA_DIR/NEXTCLOUD"
 
 if [ ${#BRAHMA_IPS[@]} -lt 2 ]; then
 	echo "No need for Portainer HA"
+	ALL32_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
+	for IP in "${ALL32_IPS[@]}"; do
+		run_remote $IP "sudo rm -f /opt/PHANA && sudo touch /opt/PHANA && sudo chmod 777 /opt/PHANA"
+	done 	
 else
 	create_glusterfs_volume_portainer
 fi
