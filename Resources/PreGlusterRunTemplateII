@@ -1,0 +1,39 @@
+#!/bin/bash
+
+STACKNAME="THECUR_STACK"
+THEDIR="THE_DIR"
+
+CURSTAMP=$(date +"%d%m%Y%H%M%S")
+RNDM="THE_RNDM_VAL"
+
+check_files() {
+    if [[ -f "$SUCCESSFILE" ]]; then
+        echo "SUCCESSFILE has been created: $SUCCESSFILE"
+        return 0
+    elif [[ -f "$ERRORFILE" ]]; then
+        echo "ERRORFILE has been created: $ERRORFILE"
+        return 1
+    else
+        return 2
+    fi
+}
+
+if [ ! -f /opt/FIRSTEVERGLUSTERRUN ]; then
+	nohup $THEDIR/PreGlusterRunActual.sh "$STACKNAME-$CURSTAMP-$RNDM" > /opt/RestartRUN/$STACKNAME-$CURSTAMP-$RNDM-PreGlusterRun.out 2>&1 &
+
+	SUCCESSFILE="/opt/RestartRUN/$STACKNAME-$CURSTAMP-$RNDM-PreGlusterRunSUCCESS"
+	ERRORFILE="/opt/RestartRUN/$STACKNAME-$CURSTAMP-$RNDM-PreGlusterRunERROR"
+
+	while true; do
+	    check_files
+	    status=$?
+	    
+	    if [[ $status -eq 0 || $status -eq 1 ]]; then
+		break
+	    fi
+	    
+	    sleep 15
+	done
+else
+	sudo rm -f /opt/FIRSTEVERGLUSTERRUN
+fi

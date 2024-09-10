@@ -58,6 +58,11 @@ sudo rm -f /opt/THEMENAME && sudo touch /opt/THEMENAME && echo "$THEHOST" | sudo
 
 sudo rm -f /opt/DSUDONE$STACKNAME
 
+sudo mkdir -p /opt/RestartRUN
+sudo chmod -R 777 /opt/RestartRUN
+sudo rm -f /opt/FIRSTEVERGLUSTERRUN && sudo touch /opt/FIRSTEVERGLUSTERRUN && sudo chmod 777 /opt/FIRSTEVERGLUSTERRUN
+sudo rm -f /opt/FIRSTEVERDOCKERRUN && sudo touch /opt/FIRSTEVERDOCKERRUN && sudo chmod 777 /opt/FIRSTEVERDOCKERRUN
+	
 if [[ "$CHITRAGUPTA" == "NA" ]]; then
 	if [ "$TheReqRL" == "B" ] ; then
 		echo "BRAHMA"
@@ -1184,6 +1189,16 @@ if [[ "$OS" == "UBU" || "$OS" == "Ubuntu" ]]; then
 	sudo NEEDRESTART_MODE=a apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin glusterfs-server glusterfs-client net-tools nfs-common cifs-utils jq wireguard socat whois tmux cron mysql-client s3fs
 fi
 
+sudo mv /home/$CURRENTUSER/PreGlusterRunActual.sh $DFS_DATA_DIR/Misc$STACKNAME/PreGlusterRunActual.sh
+sudo mv /home/$CURRENTUSER/PreGlusterRun.sh $DFS_DATA_DIR/Misc$STACKNAME/PreGlusterRun.sh
+sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/PreGlusterRunActual.sh
+sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/PreGlusterRun.sh
+
+sudo mv /home/$CURRENTUSER/PreDockerRunActual.sh $DFS_DATA_DIR/Misc$STACKNAME/PreDockerRunActual.sh
+sudo mv /home/$CURRENTUSER/PreDockerRun.sh $DFS_DATA_DIR/Misc$STACKNAME/PreDockerRun.sh
+sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/PreDockerRunActual.sh
+sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/PreDockerRun.sh
+
 sudo systemctl stop glusterd
 sudo rm -rf /var/lib/glusterd/*
 sudo rm -rf /etc/glusterfs/*
@@ -1206,8 +1221,39 @@ echo 'volume management
 end-volume' | sudo tee /etc/glusterfs/glusterd.vol
 
 if [ -f /usr/sbin/glusterfs ]; then
-	sudo systemctl restart glusterd
+	sudo rm -f /lib/systemd/system/glusterd.service
+	echo '[Unit]
+Description=GlusterFS, a clustered file-system server
+Documentation=man:glusterd(8)
+StartLimitBurst=6
+StartLimitIntervalSec=3600
+Requires=network.target
+After=network.target
+Before=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/glusterd.pid
+LimitNOFILE=65536
+Environment="LOG_LEVEL=INFO"
+EnvironmentFile=-/etc/default/glusterd
+ExecStartPre=/bin/bash '"$DFS_DATA_DIR/Misc$STACKNAME/PreGlusterRun.sh"'
+ExecStart=/usr/sbin/glusterd -p /var/run/glusterd.pid --log-level $LOG_LEVEL $GLUSTERD_OPTIONS
+KillMode=control-group
+TimeoutSec=300
+SuccessExitStatus=15
+Restart=on-abnormal
+RestartSec=60
+StartLimitBurst=6
+StartLimitInterval=3600
+
+[Install]
+WantedBy=multi-user.target
+' | sudo tee /lib/systemd/system/glusterd.service > /dev/null
+
+	sudo systemctl daemon-reload
 	sudo systemctl enable glusterd
+	sudo systemctl restart glusterd
 fi
 
 sudo mkdir -p /etc/docker && sudo rm -rf /etc/docker/daemon.json
@@ -1244,6 +1290,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+ExecStartPre=/bin/bash '"$DFS_DATA_DIR/Misc$STACKNAME/PreDockerRun.sh"'
 ExecStart=/usr/bin/dockerd '"$TLSSTUFF"'--containerd=/run/containerd/containerd.sock
 ExecReload=/bin/kill -s HUP $MAINPID
 TimeoutSec=0

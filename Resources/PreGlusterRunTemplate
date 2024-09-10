@@ -1,0 +1,185 @@
+#!/bin/bash
+
+STACKNAME="THECUR_STACK"
+THEOSCHOICE="NA"
+
+THISRUNSPECFICID="$1"
+SUCCESSFILE="/opt/RestartRUN/$THISRUNSPECFICID-PreGlusterRunSUCCESS"
+ERRORFILE="/opt/RestartRUN/$THISRUNSPECFICID-PreGlusterRunERROR"
+
+CheckService() {
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+	echo "$SERVICE_NAME Running..."
+	return 0
+    else
+	return 1
+    fi
+}
+		
+if [ ! -f /opt/CLD ]; then
+	echo 'ON PREMISE'
+else
+	THEOSCHOICE=$(head -n 1 /opt/CLD)
+	
+	if [ ! -f /opt/LCL ] || [ ! -f /opt/GBL ]; then
+	    echo "One or both files do not exist."
+	    sudo touch $ERRORFILE && sudo chmod 777 $ERRORFILE
+	    exit 1
+	else
+	    echo "Both files exist."
+	fi
+
+	if [[ "$THEOSCHOICE" == "AWS_UBU" ]]; then
+		LCLVAL=$(head -n 1 /opt/LCL)
+		GBLVAL=$(head -n 1 /opt/GBL)
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which s3fs >/dev/null || ! which aws >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
+		    FILEVAL="N"
+		fi
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 15
+			/opt/EXEC1ON
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+			/opt/EXEC1ON
+		    fi
+		fi	
+		DNS_NAME_FILE="/opt/EDN"
+		EFS_DNS_NAME=$(cat "$DNS_NAME_FILE")
+		MOUNT_POINT="/shiva/global/storage"
+		sudo mount -t nfs4 -o nfsvers=4.1 "$EFS_DNS_NAME":/ "$MOUNT_POINT"	
+		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
+	fi
+
+	if [[ "$THEOSCHOICE" == "GCP_UBU" ]]; then
+		INTERNALIP=$(ip addr show ens4 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
+		
+		LCLVAL=$(head -n 1 /opt/LCL)
+		GBLVAL=$(head -n 1 /opt/GBL)
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which gcsfuse >/dev/null || ! which gcsfuse >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -f "/shiva/local/bucket/$LCLVAL" ] || [ ! -f "/shiva/global/bucket/$GBLVAL" ]; then
+		    FILEVAL="N"
+		fi
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 5
+			/opt/EXEC1ON
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+			sudo rm -f /etc/apt/sources.list.d/gcsfuse.list
+			sudo rm -f /usr/share/keyrings/cloud.google.asc
+			echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt gcsfuse-jammy main" | sudo tee /etc/apt/sources.list.d/gcsfuse.list > /dev/null
+			curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc
+			sudo apt-get update -y
+			sudo apt-get install gcsfuse -y
+			sudo gcsfuse --file-mode 777 --dir-mode 777 $LCLVAL "/shiva/local/bucket"
+			sudo gcsfuse --file-mode 777 --dir-mode 777 $GBLVAL "/shiva/global/bucket"
+			sudo touch /shiva/local/bucket/$LCLVAL
+			sudo touch /shiva/global/bucket/$GBLVAL
+			sudo mv /opt/EXEC1ON /opt/EXEC1DONE
+		    fi
+		fi		
+	fi
+		
+	if [[ "$THEOSCHOICE" == "AZURE_UBU" ]]; then
+		INTERNALIP=$(ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
+		
+		SOFTVAL="Y"
+		FILEVAL="Y"
+		if ! which blobfuse2 >/dev/null || ! which blobfuse2 >/dev/null; then
+		    SOFTVAL="N"
+		fi
+		if [ ! -d "/shiva/local/bucket" ] || [ ! -d "/shiva/global/bucket" ]; then
+		    FILEVAL="N"
+		fi		
+		if [ "$SOFTVAL" = "N" ] || [ "$FILEVAL" = "N" ]; then
+		    if [ -f /opt/EXEC1ON ]; then
+			sleep 15
+		    elif [ -f /opt/EXEC1DONE ]; then
+			sudo mv /opt/EXEC1DONE /opt/EXEC1ON
+		    fi
+		    
+		    sudo wget https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && sudo dpkg -i packages-microsoft-prod.deb && sudo rm -f packages-microsoft-prod.deb && sudo apt-get update -y && sudo apt-get install libfuse3-dev fuse3 blobfuse2 cifs-utils jq -y
+		    
+		    /opt/EDN && sudo blobfuse2 mount all /shiva/global --config-file=/opt/globalSC.yaml && sudo blobfuse2 mount all /shiva/local --config-file=/opt/localSC.yaml && sudo mv /opt/EXEC1ON /opt/EXEC1DONE
+		fi									
+	fi
+	
+	if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+		INTERNALIP=$(ip addr show eth1 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
+	fi
+
+	if [[ "$THEOSCHOICE" == "CSMP_UBU" ]]; then
+		INTERNALIP=$(ip route get 8.8.8.8 | awk 'NR==1 {print $7}')
+		sudo rm -f /opt/WHOAMI2 && sudo touch /opt/WHOAMI2 && sudo chmod 777 /opt/WHOAMI2 && echo "$INTERNALIP" | sudo tee -a /opt/WHOAMI2 > /dev/null
+		PrimaryNIC=$(ip -o -4 addr show | awk -v ip="$INTERNALIP" '$4 ~ ip {print $2}')
+		PrimarySubnet=$(ip -o -f inet addr show $PrimaryNIC | awk '{print $4}' | cut -d '/' -f1 | sed 's/[0-9]*$/0/')"/24"
+		sudo rm -f /opt/PRISUB && sudo touch /opt/PRISUB && sudo chmod 777 /opt/PRISUB && echo "$PrimarySubnet" | sudo tee -a /opt/PRISUB > /dev/null
+	fi
+	
+	if [ ! -f /opt/WHOAMI3 ]; then
+		echo 'NON VPN CLUSTER NODE'
+	else
+		SERVICE_NAME="wg-quick@$STACKNAME"
+		TIMEOUT=300
+		INTERVAL=15
+
+		if systemctl list-units --type=service | grep -q "$SERVICE_NAME"; then
+		    echo "Service Found. Checking If It Is Running..."
+		    
+		    start_time=$(date +%s)
+		    while true; do
+			if CheckService; then
+			    break
+			else
+			    echo "Retrying..."	
+			fi
+			
+			current_time=$(date +%s)
+			elapsed_time=$((current_time - start_time))
+			
+			if [ "$elapsed_time" -ge "$TIMEOUT" ]; then
+			    echo "Service Error..."
+			    sudo touch $ERRORFILE && sudo chmod 777 $ERRORFILE
+			    exit 1
+			fi
+			
+			sleep "$INTERVAL"
+		    done
+		    
+		    echo "Service Is Running.Performing Further Actions..."		    
+		else
+		    echo "Service Error..."
+		    sudo touch $ERRORFILE && sudo chmod 777 $ERRORFILE
+		    exit 1
+		fi
+	fi				
+fi
+
+sudo touch $SUCCESSFILE && sudo chmod 777 $SUCCESSFILE 
+

@@ -1,0 +1,127 @@
+#!/bin/bash
+
+STACKNAME="THECUR_STACK"
+DFS_DATA_DIR="DFS1_DATA1_DIR"
+
+THISRUNSPECFICID="$1"
+SUCCESSFILE="/opt/RestartRUN/$THISRUNSPECFICID-PreDockerRunSUCCESS"
+ERRORFILE="/opt/RestartRUN/$THISRUNSPECFICID-PreDockerRunERROR"
+
+check_volume_accessible() {
+    sudo mount -t glusterfs -o ro $GLUSTERFS_ADDRESSES:/$VOLUME_NAME $MOUNT_POINT > /dev/null 2>&1
+    return $?
+}
+
+check_generic_volume_accessible() {
+    local ga1="$1"
+    local ga2="$2"
+    local ga3="$3"
+        
+    sudo mount -t glusterfs -o ro $ga1:/$ga2 $ga3 > /dev/null 2>&1
+    return $?
+}
+		
+if [ ! -f /opt/PHANA ]; then
+	if [ -f /opt/BRAHMA ]; then
+		PHAGDet=$(head -n 1 /opt/PHAGDet)
+        	IFS='■' read -ra PHAG_Det <<< "$PHAGDet"
+        	GLUSTERFS_ADDRESSES="${PHAG_Det[0]}"
+        	VOLUME_NAME="${PHAG_Det[1]}"
+        	MOUNT_POINT="${PHAG_Det[2]}"
+        	LOG_FILE="${PHAG_Det[3]}"
+		while true; do
+		    if mountpoint -q "$MOUNT_POINT"; then
+			echo "$(date): Volume is already mounted."
+			break
+		    fi
+		    if check_volume_accessible; then
+			echo "$(date): Volume is accessible. Attempting to mount."			
+			sudo umount "$MOUNT_POINT" > /dev/null 2>&1
+
+			sudo mount -t glusterfs $GLUSTERFS_ADDRESSES:/$VOLUME_NAME $MOUNT_POINT -o log-level=DEBUG,log-file=$LOG_FILE
+			if [ $? -eq 0 ]; then
+			    echo "$(date): Successfully mounted the volume."
+			    break
+			else
+			    echo "$(date): Mount failed, retrying in 10 seconds."
+			    sleep 10
+			fi
+		    else
+			echo "$(date): Volume is not accessible yet, retrying in 10 seconds."
+			sleep 10
+		    fi
+		done        			
+	fi
+fi
+
+check_generic_gluster_volume() {
+	local The_File="$1"
+	local GENERICDet=$(head -n 1 $The_File)
+	IFS='■' read -ra GENERIC_Det <<< "$GENERICDet"
+	local VAL1="${GENERIC_Det[0]}" #GLUSTERFS_ADDRESSES
+	local VAL2="${GENERIC_Det[1]}" #VOLUME_NAME
+	local VAL3="${GENERIC_Det[2]}" #MOUNT_POINT
+	local VAL4="${GENERIC_Det[3]}" #LOG_FILE
+	
+	TIMEOUT=900
+	CHECK_INTERVAL=10
+	
+	start_time=$(date +%s)
+	
+	while true; do
+	    if mountpoint -q "$VAL3"; then
+		echo "$(date): $VAL2 Volume is already mounted."
+		break
+	    fi
+	    if check_generic_volume_accessible "$VAL1" "$VAL2" "$VAL3"; then
+		echo "$(date): $VAL2 Volume is accessible. Attempting to mount."			
+		sudo umount "$VAL3" > /dev/null 2>&1
+
+		sudo mount -t glusterfs $VAL1:/$VAL2 $VAL3 -o log-level=DEBUG,log-file=$VAL4
+		if [ $? -eq 0 ]; then
+		    echo "$(date): Successfully mounted the volume $VAL2."
+		    break
+		else
+		    echo "$(date): $VAL2 Mount failed, retrying in $CHECK_INTERVAL seconds."
+		    sleep $CHECK_INTERVAL
+		fi
+	    else
+		echo "$(date): $VAL2 Volume is not accessible yet, retrying in $CHECK_INTERVAL seconds."
+		sleep $CHECK_INTERVAL
+	    fi
+	    
+	    current_time=$(date +%s)
+	    elapsed_time=$((current_time - start_time))
+	    if [ $elapsed_time -ge $TIMEOUT ]; then
+	    	echo "$(date): Timeout reached for volume $VAL2."
+		break
+	    fi	    
+	done	
+}
+
+check_stack_gluster_volume() {
+	if [ -f /opt/GV$STACKNAME ]; then
+		check_generic_gluster_volume "/opt/GV$STACKNAME"
+	fi
+}
+
+check_minio_gluster_volume() {
+	if [ -f /opt/GVminiogdata ]; then
+		check_generic_gluster_volume "/opt/GVminiogdata"
+	fi
+}
+
+check_nextcloud_gluster_volume() {
+	if [ -f /opt/GVnextgcloud ]; then
+		check_generic_gluster_volume "/opt/GVnextgcloud"
+	fi
+}
+
+check_stack_gluster_volume
+check_minio_gluster_volume
+check_nextcloud_gluster_volume
+
+sudo touch $SUCCESSFILE && sudo chmod 777 $SUCCESSFILE 
+
+sudo rm -f /tmp/MountSBB-RUN.out && nohup $DFS_DATA_DIR/MINIO/MountSBB.sh > /opt/RestartRUN/$THISRUNSPECFICID-MountSBB-RUN.out 2>&1 &
+
