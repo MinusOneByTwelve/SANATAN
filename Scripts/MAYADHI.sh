@@ -203,7 +203,18 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	PREP_ONLY=$(jq -r '.PrepOnly' <<< "$THEJSON")
 	ChitraGupta=$(jq -r '.ChitraGupta' <<< "$THEJSON")
 	AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
-		
+	TheNameForCluster=$(jq -r '.ClusterName' <<< "$THEJSON")
+	
+	TheNameOfVision=$(echo "$THEJSON" | jq -r 'if has("VisionName") then .VisionName else .VisionId end')
+	
+	sudo mkdir -p $BASE/Output/Logs/VAMANA
+	sudo chmod -R 777 $BASE/Output/Logs/VAMANA	
+
+	sudo mkdir -p $BASE/Output/Logs/VAMANA/$TheNameOfVision
+	sudo chmod -R 777 $BASE/Output/Logs/VAMANA/$TheNameOfVision
+	
+	ClusterName="NA"
+					
 	if [ "$FromMatsya" == "Y" ] ; then
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
@@ -211,17 +222,21 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		TheChoice="CORE"
 		random_number=$(shuf -i 30000-40000 -n 1)
 		ClusterId="$random_number"
-		charset='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-		length=$(shuf -i 1-15 -n 1)
-		word=$(cat /dev/urandom | tr -dc "$charset" | fold -w "$length" | head -n 1)		
-		ClusterName="$word"
-		RANDOMWORD=$(curl -s "https://random-word-api.herokuapp.com/word?number=1" | jq -r '.[0]')
-		if [ -n "$RANDOMWORD" ]; then
-		    ClusterName="${RANDOMWORD:0:15}"
+		if [ "$TheNameForCluster" == "N.A" ] ; then
+			charset='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+			length=$(shuf -i 1-15 -n 1)
+			word=$(cat /dev/urandom | tr -dc "$charset" | fold -w "$length" | head -n 1)		
+			ClusterName="$word"
+			RANDOMWORD=$(curl -s "https://random-word-api.herokuapp.com/word?number=1" | jq -r '.[0]')
+			if [ -n "$RANDOMWORD" ]; then
+			    ClusterName="${RANDOMWORD:0:15}"
+			fi
+		else
+			ClusterName="$TheNameForCluster"
 		fi		
 		Automated="Y"
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
-		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")	
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")							
 	else	
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
@@ -231,13 +246,35 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		ClusterName=$(jq -r '.ClusterName' <<< "$THEJSON")
 		Automated=$(jq -r '.Automated' <<< "$THEJSON")
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
-		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")		
 	fi
 	
-	sudo rm -f $BASE/Output/Logs/$REQUNQ-Cloud-Instance-Sync-B-VAMANA-Initiate.out
+	TheLogFolderForThisRUN="$BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName/$REQUNQ"
 	
+	sudo mkdir -p $BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName
+	sudo chmod -R 777 $BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName
+	sudo mkdir -p $BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName/$REQUNQ
+	sudo chmod -R 777 $BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName/$REQUNQ
+
+	if [[ ! -d "$BASE/Output/Vision/V$VisionId" ]]; then
+		sudo mkdir -p "$BASE/Output/Vision/V$VisionId"
+		sudo chmod -R 777 "$BASE/Output/Vision/V$VisionId"
+	fi
+
+	if [[ ! -d "$BASE/Output/Vision/V$VisionId/$ClusterName" ]]; then
+		sudo mkdir -p $BASE/Output/Vision/V$VisionId/$ClusterName
+		sudo chmod -R 777 $BASE/Output/Vision/V$VisionId/$ClusterName
+	fi
+			
+	TheClusterFolderForThisRUN="$BASE/Output/Vision/V$VisionId/$ClusterName"
+		
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$BASE/tmp/VAMANA-$ClusterName-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts" > $BASE/tmp/VAMANA-$ClusterName-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$TheLogFolderForThisRUN/MainRUN-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts├$TheNameOfVision├$TheLogFolderForThisRUN├$RNDM_├$TheClusterFolderForThisRUN" > $TheLogFolderForThisRUN/MainRUN-$RNDM_.out 2>&1 &
+	
+	if [ "$FromMatsya" == "Y" ] ; then
+		sudo mv $BASE/Output/Logs/VAMANA/$TheNameOfVision/$REQUNQ/Cloud-Instance-Sync-B-VAMANA-Initiate.out $TheLogFolderForThisRUN
+		sudo rm -rf $BASE/Output/Logs/VAMANA/$TheNameOfVision/$REQUNQ	
+	fi
 fi	
 
 if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
@@ -493,13 +530,15 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
 		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts"	
+		TheNameForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterName") then .ClusterName else "N.A" end')	
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster"	
 	fi
 	if [ "$ToVamana" == "X" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
 		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts"	
+		TheNameForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterName") then .ClusterName else "N.A" end')
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster"	
 	fi
 
 	CheckForOnPrem=$(echo "$THEJSON" | jq -r 'if has("CheckForOnPrem") then .CheckForOnPrem else "NA" end')	

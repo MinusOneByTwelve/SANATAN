@@ -423,6 +423,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 		else
 			echo "Processing VAMANA..."
 			notify-send -t 5000 "Progress" "Processing VAMANA..."
+			
 			IFS='├' read -r -a THE_ARGS <<< $VAMANA
 			echo "VAMANA : $VAMANA"
 			INSTANCE_DETAILS_FILE="${THE_ARGS[0]}"
@@ -431,7 +432,19 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			ADMIN_PASSWORD="${THE_ARGS[3]}"	
 			WEBSSH_PASSWORD="${THE_ARGS[4]}"
 			PREP_ONLY="${THE_ARGS[5]}"
-			AutoPorts="${THE_ARGS[6]}"			
+			AutoPorts="${THE_ARGS[6]}"
+			TheNameOfVision="${THE_ARGS[7]}"
+			TheNameForCluster="${THE_ARGS[8]}"
+						
+			sudo mkdir -p $BASE/Output/Logs/VAMANA
+			sudo chmod -R 777 $BASE/Output/Logs/VAMANA			
+
+			sudo mkdir -p $BASE/Output/Logs/VAMANA/$TheNameOfVision
+			sudo chmod -R 777 $BASE/Output/Logs/VAMANA/$TheNameOfVision
+			
+			sudo mkdir -p $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID
+			sudo chmod -R 777 $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID				
+									
 			echo '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
   "VisionKey": "'"$VISION_KEY"'",
@@ -442,11 +455,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "AdminKey": "'"$ADMIN_PASSWORD"'",       
   "PrepOnly": "'"$PREP_ONLY"'",       
   "ChitraGupta": "NA",       
-  "AutoPorts": "'"$AutoPorts"'"      
+  "AutoPorts": "'"$AutoPorts"'",       
+  "VisionName": "'"$TheNameOfVision"'",       
+  "ClusterName": "'"$TheNameForCluster"'"      
 }'			
-
-			#sleep 60
-			#notify-send -t 5000 "Progress" "Starting VAMANA..."
 			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
   "ScopeFile": "'"$INSTANCE_DETAILS_FILE"'",
@@ -458,8 +470,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "AdminKey": "'"$ADMIN_PASSWORD"'",       
   "PrepOnly": "'"$PREP_ONLY"'",       
   "ChitraGupta": "NA",       
-  "AutoPorts": "'"$AutoPorts"'"      
-}' > $BASE/Output/Logs/$UNQRUNID-Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
+  "AutoPorts": "'"$AutoPorts"'",       
+  "VisionName": "'"$TheNameOfVision"'",       
+  "ClusterName": "'"$TheNameForCluster"'"      
+}' > $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID/Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		
 		sudo touch $TheFinalMessageFile

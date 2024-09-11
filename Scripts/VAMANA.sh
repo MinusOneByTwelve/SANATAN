@@ -106,11 +106,19 @@ WEBSSH_PASSWORD="${THE_ARGS[8]}"
 REQUNQ="${THE_ARGS[9]}"
 PREP_ONLY="${THE_ARGS[10]}"
 AutoPorts="${THE_ARGS[12]}"
+TheNameOfVision="${THE_ARGS[13]}"
+THENAMEOFTHELOGFOLDER="${THE_ARGS[14]}"
+RND1M_="${THE_ARGS[15]}"
+TheClusterFolderForThisRUN="${THE_ARGS[16]}"
 
-if [[ ! -d "$BASE/Output/Vision/V$THEVISIONID" ]]; then
-	sudo mkdir -p "$BASE/Output/Vision/V$THEVISIONID"
-	sudo chmod -R 777 "$BASE/Output/Vision/V$THEVISIONID"
+THENAMEOFTHEMLOGFOLDER="$BASE/Output/Logs/MATSYA/$TheNameOfVision/$REQUNQ"
+TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-SUCCESS"
+
+THENATUREOFTHISRUN="RECURRING"
+if [[ ! -d "$TheClusterFolderForThisRUN/CERTS" ]]; then
+	THENATUREOFTHISRUN="FIRSTRUN"
 fi
+echo "THE STATE OF THIS RUN FOR CLUSTER {$STACKPRETTYNAME} IS {$THENATUREOFTHISRUN}"
 
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 ALT_INDR_HA_PRT=""
@@ -120,6 +128,7 @@ if [[ "$ISAUTOMATED" == "Y" ]]; then
 fi
 	
 SEARCH_DIR="$BASE/tmp/"
+SEARCH2_DIR="$BASE/Output/Logs/"
 PATTERN="${REQUNQ}*CIE.out"
 while true; do
     if ls ${SEARCH_DIR}${PATTERN} 1> /dev/null 2>&1; then
@@ -132,6 +141,7 @@ while true; do
         break
     fi
 done
+sudo mv ${SEARCH2_DIR}${PATTERN} $THENAMEOFTHEMLOGFOLDER
 
 function SetAllPorts {
 if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
@@ -222,9 +232,9 @@ echo "All Ports SET."
 }
 
 STACKNAME="v""$THEVISIONID""c""$CLUSTERID"
-UNLOCKFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsuk"
-MJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dsmjt"
-WJTFILEPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.dswjt"
+UNLOCKFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsuk"
+MJTFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsmjt"
+WJTFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dswjt"
 REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
@@ -701,12 +711,12 @@ copy_ssl_certificates() {
     local IPHF=$(echo "$SRC_IP" | sed 's/\./-/g')
     local THESRCUSER=${LOGIN_USERS[$SRC_IP]}
 
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-share.pem
                 
     # Download certificates from the first manager to the local machine
     run_remote $SRC_IP "
@@ -717,12 +727,12 @@ copy_ssl_certificates() {
         sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem 
         sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                      
     "    
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem
-    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share.pem $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem        
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $TheClusterFolderForThisRUN/$IPHF-docker.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share.pem $TheClusterFolderForThisRUN/$IPHF-share.pem        
     run_remote $SRC_IP "
         sudo chown root:root $CERTS_DIR/docker/$IPHF.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-cert.pem
@@ -739,20 +749,20 @@ copy_ssl_certificates() {
     " 
         
     # Upload certificates to each of the other manager nodes
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem 
-    sudo chmod 777 $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem           
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker.pem
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem 
+    sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-share.pem           
     for IP in "${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}"; do
         local THEREQUSER=${LOGIN_USERS[$IP]}
         
-        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF.pem
-        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-cert.pem
-        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-key.pem
-        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-VARAHA.pem
-        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-share-VARAHA.pem
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $TheClusterFolderForThisRUN/$IPHF-docker.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF.pem
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-cert.pem
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-server-key.pem
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-VARAHA.pem
+        scp -i "${PEM_FILES[$IP]}" -P "${PORTS[$IP]}" -o StrictHostKeyChecking=no $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem $THEREQUSER@$IP:/home/$THEREQUSER/$IPHF-share-VARAHA.pem
                         
         # Move the certificates to the correct location on the target manager
         I1PHF="$STACKNAME"
@@ -795,12 +805,12 @@ copy_ssl_certificates() {
     "      
     
     # Clean up local files
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-cert.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-server-key.pem
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/$IPHF-docker-VARAHA.pem
-    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share-VARAHA.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share-VARAHA.pem 
-    sudo mv $BASE/Output/Vision/V$THEVISIONID/$IPHF-share.pem $BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME-share.pem   
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
+    sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
+    sudo mv $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem $TheClusterFolderForThisRUN/$STACKPRETTYNAME-share-VARAHA.pem 
+    sudo mv $TheClusterFolderForThisRUN/$IPHF-share.pem $TheClusterFolderForThisRUN/$STACKPRETTYNAME-share.pem   
 }
 
 # Function to setup Docker
@@ -1330,7 +1340,10 @@ create_glusterfs_volume_portainer() {
     	
 	if [ "$success" = false ]; then
 		echo "Failed to create/start Portainer volume after $max_retries attempts."
-		sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-FATAL_ERROR-$STACKPRETTYNAME.out
+		sudo mv $THENOHUPFILE $THENAMEOFTHELOGFOLDER/MainRUN-FATAL_ERROR-Portainer-$RND1M_.out
+		TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-FAILURE"
+		sudo touch $TheFinalMessageFile
+		sudo chmod 777 $TheFinalMessageFile		
 		exit
 	else    	
 		glusterfs_addresses=""
@@ -1537,12 +1550,12 @@ sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $THEGUACASQL
 
 create_cert_for_all() {
-    sudo mkdir -p $BASE/Output/Vision/V$THEVISIONID/CERTS
-    sudo chmod -R 777 $BASE/Output/Vision/V$THEVISIONID/CERTS
-    sudo mkdir -p $BASE/Output/Vision/V$THEVISIONID/CERTS/CA
-    sudo chmod -R 777 $BASE/Output/Vision/V$THEVISIONID/CERTS/CA
-    sudo mkdir -p $BASE/Output/Vision/V$THEVISIONID/CERTS/FULL
-    sudo chmod -R 777 $BASE/Output/Vision/V$THEVISIONID/CERTS/FULL
+    sudo mkdir -p $TheClusterFolderForThisRUN/CERTS
+    sudo chmod -R 777 $TheClusterFolderForThisRUN/CERTS
+    sudo mkdir -p $TheClusterFolderForThisRUN/CERTS/CA
+    sudo chmod -R 777 $TheClusterFolderForThisRUN/CERTS/CA
+    sudo mkdir -p $TheClusterFolderForThisRUN/CERTS/FULL
+    sudo chmod -R 777 $TheClusterFolderForThisRUN/CERTS/FULL
             
     ALL_CERT_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 
@@ -1580,23 +1593,23 @@ create_cert_for_all() {
         sudo chmod 644 $CERTS_DIR/self/$IPHF.pem
         sudo chmod 644 $CERTS_DIR/self/$IPHF-VARAHA.pem"
 
-        scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no "$user@$ip:$CERTS_DIR/self/$IPHF.pem" "$BASE/Output/Vision/V$THEVISIONID/CERTS/CA/$THEIPNAME.pem"
-        scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no "$user@$ip:$CERTS_DIR/self/$IPHF-VARAHA.pem" "$BASE/Output/Vision/V$THEVISIONID/CERTS/FULL/$THEIPNAME.pem"
+        scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no "$user@$ip:$CERTS_DIR/self/$IPHF.pem" "$TheClusterFolderForThisRUN/CERTS/CA/$THEIPNAME.pem"
+        scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no "$user@$ip:$CERTS_DIR/self/$IPHF-VARAHA.pem" "$TheClusterFolderForThisRUN/CERTS/FULL/$THEIPNAME.pem"
     done 
     
-    sudo chmod -R 777 $BASE/Output/Vision/V$THEVISIONID/CERTS/*
+    sudo chmod -R 777 $TheClusterFolderForThisRUN/CERTS/*
 
-	pushd $BASE/Output/Vision/V$THEVISIONID
+	pushd $TheClusterFolderForThisRUN
 	tar -czf "CERTS.tar.gz" "CERTS"
 	sudo chmod 777 CERTS.tar.gz
 	popd
 	    	
 	for ip in "${ALL_CERT_IPS[@]}"; do
-	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/Output/Vision/V$THEVISIONID/CERTS.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$TheClusterFolderForThisRUN/CERTS.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
 	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -rf CERTS && tar -xzf \"CERTS.tar.gz\" && sudo mv CERTS/CA/* $CERTS_DIR/cluster/ca && sudo mv CERTS/FULL/* $CERTS_DIR/cluster/full && sudo rm -rf CERTS && sudo rm -f CERTS.tar.gz"
 	done
     
-    sudo rm -f $BASE/Output/Vision/V$THEVISIONID/CERTS.tar.gz       
+    sudo rm -f $TheClusterFolderForThisRUN/CERTS.tar.gz       
 }
 create_cert_for_all
 
@@ -1626,7 +1639,7 @@ get_remote_dsu_log() {
 	ssh -o StrictHostKeyChecking=no -i "$pem_file" -p "$port" "$user@$ip" "[ -f $FILE_PATH_1 ]"
 	if [ $? -eq 0 ]; then
 		echo "File found at $FILE_PATH_1 for $ip"
-		scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no $user@$ip:$FILE_PATH_1 $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME-$hyphenated_ip-DSU-ERROR.out
+		scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no $user@$ip:$FILE_PATH_1 $THENAMEOFTHELOGFOLDER/$hyphenated_ip-DSU-ERROR.out
 	    	FILE_COPIED=true
 	fi
     	
@@ -1634,7 +1647,7 @@ get_remote_dsu_log() {
 		ssh -o StrictHostKeyChecking=no -i "$pem_file" -p "$port" "$user@$ip" "[ -f $FILE_PATH_2 ]"
 		if [ $? -eq 0 ]; then
 			echo "File found at $FILE_PATH_2 for $ip"
-			scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no $user@$ip:$FILE_PATH_2 $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME-$hyphenated_ip-DSU.out
+			scp -i "$pem_file" -P "$port" -o StrictHostKeyChecking=no $user@$ip:$FILE_PATH_2 $THENAMEOFTHELOGFOLDER/$hyphenated_ip-DSU.out
 		    	FILE_COPIED=true
 		fi    	
     	fi
@@ -1674,7 +1687,10 @@ for ip in "${ALL1_IPS[@]}"; do
 	get_remote_dsu_log "$ip"
 done
 if [[ "$PROCSOS" == "Y" ]]; then
-	sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-FATAL_ERROR-$STACKPRETTYNAME.out
+	sudo mv $THENOHUPFILE $THENAMEOFTHELOGFOLDER/MainRUN-FATAL_ERROR-install_docker-$RND1M_.out
+	TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-FAILURE"
+	sudo touch $TheFinalMessageFile
+	sudo chmod 777 $TheFinalMessageFile	
 	exit
 fi
 
@@ -1906,9 +1922,9 @@ final_nodes_list() {
 	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE
 	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz
 	
-	FNNPATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.normal"
+	FNNPATH="$TheClusterFolderForThisRUN/$STACKNAME.normal"
 	if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
-		FNNPATH="$BASE/Output/Vision/V$THEVISIONID/Nodes$STACKNAME.vpn"		
+		FNNPATH="$TheClusterFolderForThisRUN/Nodes$STACKNAME.vpn"		
 	fi
 
 	FNN_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
@@ -1942,7 +1958,7 @@ echo "" && echo "Install Guacamole & MySql..."
 echo "$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort5,$ChitraGuptaPort6,$ChitraGuptaPort7"
 echo "" && echo "Install Prometheus, Grafana, Node Exporter & cAdvisor..."
 echo "$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortY1"
-nohup $BASE/tmp/$DOCKERCGTEMPLATE > $BASE/tmp/CHITRAGUPTA-$STACKNAME-$RNDM_.out 2>&1 &
+nohup $BASE/tmp/$DOCKERCGTEMPLATE > $THENAMEOFTHELOGFOLDER/CHITRAGUPTA-$RND1M_.out 2>&1 &
 
 create_cluster_cdn_proxy "ACTIVE"
 if [ ${#INDRA_IPS[@]} -eq 2 ]; then
@@ -2058,7 +2074,7 @@ if [ ${#INDRA_IPS[@]} -eq 2 ]; then
     thenamefor2nc="${HOST_NAMES[${INDRA_IPS[1]}]}"
 fi
 
-FNN2PATH="$BASE/Output/Vision/V$THEVISIONID/$STACKNAME.json"
+FNN2PATH="$TheClusterFolderForThisRUN/$STACKNAME.json"
 echo "[
   {
     \"Portainer\": \"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3 | https://$THEHAINDRHOST:$AltIndrhaprt1\"
@@ -2163,6 +2179,9 @@ PortainerGUI=$(ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=
 
 echo "Docker Swarm setup completed successfully.Ports List ${PORTSLIST[@]}.URL : https://$PortainerGUI:$PortainerSPort"
 
+sudo touch $TheFinalMessageFile
+sudo chmod 777 $TheFinalMessageFile
+
 simulate_first_login() {
     echo "camehere1"
     TOKEN=$(curl -k -s -X POST "$PORTAINER_URL/auth" \
@@ -2201,12 +2220,12 @@ until is_environment_ready || [ $RETRIES -eq $MAX_RETRIES ]; do
 done
 if [ $RETRIES -eq $MAX_RETRIES ]; then
     echo "Local environment did not become ready in time. Exiting."
-    sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
+    #sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
     exit 1
 fi
 rename_environment
 
-sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
+#sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
 fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts

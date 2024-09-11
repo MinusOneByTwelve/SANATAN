@@ -426,9 +426,12 @@ if [ "$THEMODEOFEXECUTION" == "E" ]; then
 	    FuncVal10="${fiel1ds[9]}"
 	    	    
 	    R1NDMJ1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	    hyphenated_ip="${FuncVal1//./-}"	    	    	    	    	    
+	    hyphenated_ip="${FuncVal1//./-}"
+	    
+	    sleep 5
+	    	    	    	    	    	    
 	    nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh "F" "$input_folder" "$BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out" "$FuncVal1" "$FuncVal2" "$FuncVal3" "$FuncVal4" "$FuncVal5" "$FuncVal6" "$FuncVal7" "$FuncVal8" "$FuncVal9" "$FuncVal10" "$F1IL2E" "$T1V1_KEY" "$input_unique" "$THEORIGINALINSTFILE" "$THE_EXECUTE_FILE" > $BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out 2>&1 &
-	    echo "Processing For $FuncVal1..."
+	    echo "Processing For $FuncVal1...  nohup $BASE/Scripts/Vagrant-VirtualBox-Instance-Sync.sh \"F\" \"$input_folder\" \"$BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out\" \"$FuncVal1\" \"$FuncVal2\" \"$FuncVal3\" \"$FuncVal4\" \"$FuncVal5\" \"$FuncVal6\" \"$FuncVal7\" \"$FuncVal8\" \"$FuncVal9\" \"$FuncVal10\" \"$F1IL2E\" \"$T1V1_KEY\" \"$input_unique\" \"$THEORIGINALINSTFILE\" \"$THE_EXECUTE_FILE\" > $BASE/tmp/$input_unique-$R1NDMJ1-$hyphenated_ip-VVISF.out 2>&1 &"
 	    
 	done < "$input_file"
 	
@@ -436,6 +439,7 @@ if [ "$THEMODEOFEXECUTION" == "E" ]; then
 	
 	sudo mv $input_log_unique $local_directory
 	sudo mv $BASE/tmp/$input_unique-MAYADHI.out $local_directory
+	sudo chmod -R 777 $local_directory
 fi
 
 if [ "$THEMODEOFEXECUTION" == "F" ]; then
@@ -463,6 +467,8 @@ if [ "$THEMODEOFEXECUTION" == "F" ]; then
 	
     joblog_filename=$(basename "$joblog_file")
     ip_out_filename=$(basename "$ip_out_file")
+
+    echo "$inputX_folder : $FunctionLogFile : $ip : $user : $port : $password : $pem : $joblog_file : $ip_out_file : $enc_pem : $dec_pem : $the1scope1id : $F1I1L2E : $T1V1KEY : $input1_1unique : $THEORIGINAL1INSTFILE : $THE_EXECUTE_1_FILE : $local_directory : $local_2_directory : $joblog_filename : $ip_out_filename"
 
     if [[ -f "$local_2_directory/$joblog_filename" ]]; then
 	echo "$joblog_filename already exists, skipping download."
@@ -493,6 +499,9 @@ if [ "$THEMODEOFEXECUTION" == "F" ]; then
 	    ssh -i "$pem" -o StrictHostKeyChecking=no -p $port "$user@$ip" "sudo rm -f $ip_out_file"
 	fi
     fi
+    
+    sleep 5
+    ls $local_2_directory
     
     if [[ -f "$local_2_directory/$ip_out_filename" ]]; then
     	THEDATAVAL=$(head -n 1 $local_2_directory/$ip_out_filename)
