@@ -1172,6 +1172,10 @@ if [ "$TheReqRL" == "I" ] ; then
 	create_error_files
 	setup_http_server	
 	
+	if [[ "$THEOSCHOICE" == "E2E_UBU" ]]; then
+		install_python
+	fi
+	
 	if ! python3 -c "import PIL" &> /dev/null; then
 	    echo "Pillow is not installed. Installing now..."
 	    pip3 install Pillow

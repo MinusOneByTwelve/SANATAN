@@ -561,5 +561,5 @@ ssh -i "$VL1" -o StrictHostKeyChecking=no -p $VL2 $VL3@$VL4 "sudo rm -f /home/$V
 
 sudo rm -f $TEMPLOC/$DOCKERPTEMPLATE
 sudo rm -f $MEMYSELF
-sudo mv $NOHUP $BASE/Output/Logs/$REQUNQ-CHITRAGUPTA$STACKNAME.out
+#sudo mv $NOHUP $BASE/Output/Logs/$REQUNQ-CHITRAGUPTA$STACKNAME.out
 
