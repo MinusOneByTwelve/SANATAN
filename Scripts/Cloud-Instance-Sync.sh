@@ -326,6 +326,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 	RNDMJX1="${10}"
 	TheFileToMonitor="${11}"
 	TheFinalLogFolder="${12}"
+
+	echo "THEMAINJOBFOLDER $THEMAINJOBFOLDER: WIP_FOLDER $WIP_FOLDER: WIPX_LIST $WIPX_LIST: THE1STACK1FILE $THE1STACK1FILE: THE1VISION1KEY $THE1VISION1KEY: SOFTSTACK $SOFTSTACK: VAMANA $VAMANA: UNQRUNID $UNQRUNID: RNDMJX1 $RNDMJX1: TheFileToMonitor $TheFileToMonitor: TheFinalLogFolder $TheFinalLogFolder"
 			
 	source $BASE/Resources/StackVersioningAndMisc
 
@@ -387,10 +389,15 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			sudo rm $BASE/tmp/$PART_1.csv $BASE/tmp/$PART_2.csv
 		fi
 		
+		echo "THEMAINJOBFOLDER $THEMAINJOBFOLDER: WIP_FOLDER $WIP_FOLDER: WIPX_LIST $WIPX_LIST: THE1STACK1FILE $THE1STACK1FILE: THE1VISION1KEY $THE1VISION1KEY: SOFTSTACK $SOFTSTACK: VAMANA $VAMANA: UNQRUNID $UNQRUNID: RNDMJX1 $RNDMJX1: TheFileToMonitor $TheFileToMonitor: TheFinalLogFolder $TheFinalLogFolder"
+		
 		TheFinalMessageFile="$BASE/Output/Logs/$UNQRUNID-MATSYA-SUCCESS"
+		
+		echo 'camehere1'
 		
 		if [ "$TheFileToMonitor" == "NA" ] ; then
 			echo "No End Level Monitoring Required For $UNQRUNID..."
+			echo 'camehere2'
 		else
 			max_time=3600
 			interval=10
@@ -399,6 +406,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			    if [ -e "$TheFileToMonitor" ]; then
 				echo "$TheFileToMonitor Now Available..."
 				sudo rm -f $TheFileToMonitor
+				echo 'camehere3'
 				break
 			    fi
 			    current_time=$(date +%s)
@@ -407,8 +415,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 				echo "Error: Maximum Time Limit Reached... $TheFileToMonitor Not Found..."
 				TheFinalMessageFile="$BASE/Output/Logs/$UNQRUNID-MATSYA-FAILURE"
 				VAMANA="NA"
+				echo 'camehere4'
 				break
 			    fi
+			    echo 'camehere5...'
 			    sleep $interval
 			done		
 		fi
@@ -417,9 +427,11 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 							
 		echo "All files processed. Exiting."
 		notify-send -t 5000 "Progress" "All files processed. Exiting.Cloud-Instance-Sync B Function"
+		sudo mv $BASE/tmp/$UNQRUNID-*-MAYADHI.out $TheFinalLogFolder
 		
 		if [ "$VAMANA" == "NA" ]; then
 			echo "VAMANA : $VAMANA"
+			echo 'camehere6'
 		else
 			echo "Processing VAMANA..."
 			notify-send -t 5000 "Progress" "Processing VAMANA..."
@@ -435,6 +447,7 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			AutoPorts="${THE_ARGS[6]}"
 			TheNameOfVision="${THE_ARGS[7]}"
 			TheNameForCluster="${THE_ARGS[8]}"
+			NativeApps="${THE_ARGS[9]}"
 						
 			sudo mkdir -p $BASE/Output/Logs/VAMANA
 			sudo chmod -R 777 $BASE/Output/Logs/VAMANA			
@@ -457,7 +470,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "ChitraGupta": "NA",       
   "AutoPorts": "'"$AutoPorts"'",       
   "VisionName": "'"$TheNameOfVision"'",       
-  "ClusterName": "'"$TheNameForCluster"'"      
+  "ClusterName": "'"$TheNameForCluster"'",       
+  "NativeApps": "'"$NativeApps"'"      
 }'			
 			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
@@ -472,7 +486,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "ChitraGupta": "NA",       
   "AutoPorts": "'"$AutoPorts"'",       
   "VisionName": "'"$TheNameOfVision"'",       
-  "ClusterName": "'"$TheNameForCluster"'"      
+  "ClusterName": "'"$TheNameForCluster"'",       
+  "NativeApps": "'"$NativeApps"'"      
 }' > $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID/Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		

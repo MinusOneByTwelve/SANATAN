@@ -85,7 +85,7 @@ if [ "$TASKIDENTIFIER" == "NARASIMHA" ] ; then
 	THETASK=$2
 	
 	if [ "$THETASK" == "NewVisionKey" ] ; then
-		NewVisionKey=$(NARASIMHA "newkey")
+		NewVisionKey=$(NARASIMHA "newkey")		
 		echo "$NewVisionKey"
 	fi
 fi
@@ -196,6 +196,12 @@ if [ "$TASKIDENTIFIER" == "KRISHNA" ] ; then
 fi
 
 if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
+	THE1TASK="$2"
+	if [ "$THE1TASK" == "GetAppVersionCompleteJSON" ] ; then
+		GetAppVersionCompleteJSON "$3"
+		exit
+	fi
+	
 	THEJSON=$2
 
 	FromMatsya=$(jq -r '.FromMatsya' <<< "$THEJSON")
@@ -236,7 +242,8 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		fi		
 		Automated="Y"
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
-		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")							
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")
+		NativeApps=$(echo "$THEJSON" | jq -r 'if has("NativeApps") then .NativeApps else "NA" end')							
 	else	
 		ScopeFile=$(jq -r '.ScopeFile' <<< "$THEJSON")
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
@@ -246,7 +253,13 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		ClusterName=$(jq -r '.ClusterName' <<< "$THEJSON")
 		Automated=$(jq -r '.Automated' <<< "$THEJSON")
 		AdminKey=$(jq -r '.AdminKey' <<< "$THEJSON")
-		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")		
+		WebSSHKey=$(jq -r '.WebSSHKey' <<< "$THEJSON")
+		NativeEApps=$(echo "$THEJSON" | jq -r 'if has("NativeApps") then .NativeApps else "NA" end')
+		if [ "$NativeEApps" == "NA" ]; then
+			NativeApps="NA"
+		else
+			NativeApps=$(echo -n $NativeEApps | xxd -p | tr -d '\n')
+		fi				
 	fi
 	
 	TheLogFolderForThisRUN="$BASE/Output/Logs/VAMANA/$TheNameOfVision/$ClusterName/$REQUNQ"
@@ -269,7 +282,7 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	TheClusterFolderForThisRUN="$BASE/Output/Vision/V$VisionId/$ClusterName"
 		
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$TheLogFolderForThisRUN/MainRUN-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts├$TheNameOfVision├$TheLogFolderForThisRUN├$RNDM_├$TheClusterFolderForThisRUN" > $TheLogFolderForThisRUN/MainRUN-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$TheLogFolderForThisRUN/MainRUN-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts├$TheNameOfVision├$TheLogFolderForThisRUN├$RNDM_├$TheClusterFolderForThisRUN├$NativeApps" > $TheLogFolderForThisRUN/MainRUN-$RNDM_.out 2>&1 &
 	
 	if [ "$FromMatsya" == "Y" ] ; then
 		sudo mv $BASE/Output/Logs/VAMANA/$TheNameOfVision/$REQUNQ/Cloud-Instance-Sync-B-VAMANA-Initiate.out $TheLogFolderForThisRUN
@@ -485,7 +498,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "onprem : $THEWORKFILE"
 			RNDOPRMXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDOPRMXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null				
-			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'", "SingleLAN": "'"$SingleLAN"'", "TheNameOfVision": "'"$TheNameOfVision"'"}' > $BASE/tmp/$UNQRUNID-MAYADHI.out 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'ONPREMVVB' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDOPRMXM"'", "SingleLAN": "'"$SingleLAN"'", "TheNameOfVision": "'"$TheNameOfVision"'"}' > $BASE/tmp/$UNQRUNID-onprem-MAYADHI.out 2>&1 &
 		fi
 				
 		if [ "$THEWORK_FILE" == "gcp" ] ; then
@@ -494,14 +507,14 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDGCPXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'gcp' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDGCPXM"'"}' > $BASE/tmp/$UNQRUNID-gcp-MAYADHI.out 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "aws" ] ; then
 			echo "aws : $THEWORKFILE"
 			RNDAWSXM=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 			echo "$ALLWORKFOLDERSYNC/$RNDAWSXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
-			nohup $BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}' 2>&1 &
+			nohup $BASE/Scripts/MAYADHI.sh 'aws' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAWSXM"'"}' > $BASE/tmp/$UNQRUNID-aws-MAYADHI.out 2>&1 &
 		fi
 		
 		if [ "$THEWORK_FILE" == "azure" ] ; then
@@ -510,7 +523,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDAZRXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' 2>&1 &						
+			nohup $BASE/Scripts/MAYADHI.sh 'azure' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDAZRXM"'"}' > $BASE/tmp/$UNQRUNID-azure-MAYADHI.out 2>&1 &						
 		fi
 		
 		if [ "$THEWORK_FILE" == "e2e" ] ; then
@@ -519,7 +532,7 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			echo "$ALLWORKFOLDERSYNC/$RNDE2EXM" | sudo tee -a $ALLWORKFILESYNC > /dev/null			
 			#$BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'","VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}'
 			#exit
-			nohup $BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}' 2>&1 &	
+			nohup $BASE/Scripts/MAYADHI.sh 'e2e' '{"ScopeFile": "'"$THEWORKFILE"'", "Identity": "'"$UNQRUNID"'", "VisionKey": "'"$THEVISIONKEY"'", "VisionId": "'"$THEVISIONID"'", "RealFile": "'"$THESTACKFILE"'", "AllWorkFolder": "'"$ALLWORKFOLDERSYNC"'", "AllWorkFile": "'"$RNDE2EXM"'"}' > $BASE/tmp/$UNQRUNID-e2e-MAYADHI.out 2>&1 &	
 		fi		
 	done	
 	# INSTANCE TYPE BASED FILE ACTION
@@ -530,15 +543,27 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
 		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
-		TheNameForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterName") then .ClusterName else "N.A" end')	
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster"	
+		TheNameForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterName") then .ClusterName else "N.A" end')
+		NativeApps=$(echo "$THEJSON" | jq -r 'if has("NativeApps") then .NativeApps else "NA" end')
+		if [ "$NativeApps" == "NA" ]; then
+			NativeEApps="NA"
+		else
+			NativeEApps=$(echo -n $NativeApps | xxd -p | tr -d '\n')
+		fi
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps"	
 	fi
 	if [ "$ToVamana" == "X" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
 		VamanaWebSSHKey=$(jq -r '.VamanaWebSSHKey' <<< "$THEJSON")
 		AutoPorts=$(jq -r '.AutoPorts' <<< "$THEJSON")
 		TheNameForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterName") then .ClusterName else "N.A" end')
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster"	
+		NativeApps=$(echo "$THEJSON" | jq -r 'if has("NativeApps") then .NativeApps else "NA" end')
+		if [ "$NativeApps" == "NA" ]; then
+			NativeEApps="NA"
+		else
+			NativeEApps=$(echo -n $NativeApps | xxd -p | tr -d '\n')
+		fi
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps"	
 	fi
 
 	CheckForOnPrem=$(echo "$THEJSON" | jq -r 'if has("CheckForOnPrem") then .CheckForOnPrem else "NA" end')	
