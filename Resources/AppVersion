@@ -3,6 +3,56 @@
 # https://console.cloud.google.com/gcr/images/cadvisor/global/cadvisor@sha256:2f3ea45c7ee3d7a0ce9f9d55a5053bd12285b02aca307ce9657af8e3ea7f6761/details?tab=vulnz
 # wget https://dl.min.io/client/mc/release/linux-amd64/mc.$(curl -s https://api.github.com/repos/minio/mc/releases/latest | grep tag_name | cut -d '"' -f 4)
 
+CLUSTER_APPS_TOTAL_NUMBER="21"
+
+declare -A CLUSTER_APPS_NUMBERING
+CLUSTER_APPS_NUMBERING["1"]="BRAHMA"
+CLUSTER_APPS_NUMBERING["2"]="VISHVAKARMA"
+CLUSTER_APPS_NUMBERING["3"]="INDRA"
+CLUSTER_APPS_NUMBERING["4"]="BUCKET"
+CLUSTER_APPS_NUMBERING["5"]="CLOUDCOMMANDER"
+CLUSTER_APPS_NUMBERING["6"]="PVTCLD"
+CLUSTER_APPS_NUMBERING["7"]="BUCKETCLIENT"
+CLUSTER_APPS_NUMBERING["8"]="CHITRAGUPTA1"
+CLUSTER_APPS_NUMBERING["9"]="CHITRAGUPTA2"
+CLUSTER_APPS_NUMBERING["10"]="CHITRAGUPTA3"
+CLUSTER_APPS_NUMBERING["11"]="CHITRAGUPTA4"
+CLUSTER_APPS_NUMBERING["12"]="CHITRAGUPTA5"
+CLUSTER_APPS_NUMBERING["13"]="CHITRAGUPTA6"
+CLUSTER_APPS_NUMBERING["14"]="CHITRAGUPTA7"
+CLUSTER_APPS_NUMBERING["15"]="CHITRAGUPTA8"
+CLUSTER_APPS_NUMBERING["16"]="CHITRAGUPTA9"
+CLUSTER_APPS_NUMBERING["17"]="CHITRAGUPTA10"
+CLUSTER_APPS_NUMBERING["18"]="CHITRAGUPTA11"
+CLUSTER_APPS_NUMBERING["19"]="EFK1"
+CLUSTER_APPS_NUMBERING["20"]="EFK2"
+CLUSTER_APPS_NUMBERING["21"]="EFK3"
+
+#CLUSTER_APPS_OTHER_DETAILS["BRAHMA"]="{\"name\":\"GETITDYNAMICALLY1\",\"displayName\":\"BRAHMA\",\"isCoreStack\":true,\"isConfigurable\":true,\"isHidden\":false,\"Memory\":\"GETITDYNAMICALLY2\",\"Cores\":GETITDYNAMICALLY3,\"version\":\"GETITDYNAMICALLY4\",\"suite\":\"NA\",\"suiteVersion\":\"NA\",\"isOpen\":true,\"iconUrl\":\"BRAHMA.png\",\"downloadUrl\":\"GETITDYNAMICALLY5\",\"identifier\":\"kafka_confluent_zk\",\"properties\":[{\"name\":\"port\",\"value\":\"2181\",\"type\":\"private\"},{\"name\":\"dataDir\",\"value\":\"\",\"type\":\"public\"},{\"name\":\"id\",\"value\":\"1\",\"type\":\"protected\"}],\"identifierId\":7}"
+
+declare -A CLUSTER_APPS_OTHER_DETAILS
+CLUSTER_APPS_OTHER_DETAILS["BRAHMA"]='{"name":"GETITDYNAMICALLY1","displayName":"BRAHMA","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"GETITDYNAMICALLY8","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["VISHVAKARMA"]='{"name":"GETITDYNAMICALLY1","displayName":"VISHVAKARMA","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"GETITDYNAMICALLY8","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["INDRA"]='{"name":"GETITDYNAMICALLY1","displayName":"INDRA","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/_/haproxy/tags","identifier":"HAProxy","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["BUCKET"]='{"name":"GETITDYNAMICALLY1","displayName":"Minio","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Minio","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CLOUDCOMMANDER"]='{"name":"GETITDYNAMICALLY1","displayName":"Cloud Commander","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"CloudCommander","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["PVTCLD"]='{"name":"GETITDYNAMICALLY1","displayName":"Nextcloud","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Nextcloud","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["BUCKETCLIENT"]='{"name":"GETITDYNAMICALLY1","displayName":"MC","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://dl.min.io/client/mc/release/linux-amd64/","identifier":"GETITDYNAMICALLY8","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA1"]='{"name":"GETITDYNAMICALLY1","displayName":"Apache Guacamole","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Guacamole","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA2"]='{"name":"GETITDYNAMICALLY1","displayName":"Apache Guacamole","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"GuacamoleD","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA3"]='{"name":"GETITDYNAMICALLY1","displayName":"MySQL","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"MySQL","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA4"]='{"name":"GETITDYNAMICALLY1","displayName":"phpMyAdmin","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"phpMyAdmin","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA5"]='{"name":"GETITDYNAMICALLY1","displayName":"Prometheus","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Prometheus","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA6"]='{"name":"GETITDYNAMICALLY1","displayName":"CAdvisor","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"CAdvisor","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA7"]='{"name":"GETITDYNAMICALLY1","displayName":"Grafana","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Grafana","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA8"]='{"name":"GETITDYNAMICALLY1","displayName":"NodeExporter","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"NodeExporter","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA9"]='{"name":"GETITDYNAMICALLY1","displayName":"OpenLDAP","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"OpenLDAP","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA10"]='{"name":"GETITDYNAMICALLY1","displayName":"phpLDAPadmin","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"phpLDAPadmin","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["CHITRAGUPTA11"]='{"name":"GETITDYNAMICALLY1","displayName":"Kerberos","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Kerberos","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["EFK1"]='{"name":"GETITDYNAMICALLY1","displayName":"Elastic Search","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"ElasticSearch","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["EFK2"]='{"name":"GETITDYNAMICALLY1","displayName":"Kibana","isCoreStack":true,"isConfigurable":true,"isHidden":false,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Kibana","properties":[],"identifierId":GETITDYNAMICALLY6}'
+CLUSTER_APPS_OTHER_DETAILS["EFK3"]='{"name":"GETITDYNAMICALLY1","displayName":"Filebeat","isCoreStack":true,"isConfigurable":false,"isHidden":true,"Memory":"GETITDYNAMICALLY2","Cores":"GETITDYNAMICALLY3","version":"GETITDYNAMICALLY4","suite":"NA","suiteVersion":"NA","isOpen":true,"iconUrl":"GETITDYNAMICALLY7","downloadUrl":"https://hub.docker.com/r/GETITDYNAMICALLY5/tags","identifier":"Filebeat","properties":[],"identifierId":GETITDYNAMICALLY6}'
+
 declare -A CLUSTER_APPS_MAPPING
 CLUSTER_APPS_MAPPING["BRAHMA"]="portainer/portainer-ce"
 CLUSTER_APPS_MAPPING["VISHVAKARMA"]="portainer/agent"
@@ -26,10 +76,9 @@ CLUSTER_APPS_MAPPING["EFK1"]="docker.elastic.co/elasticsearch/elasticsearch"
 CLUSTER_APPS_MAPPING["EFK2"]="docker.elastic.co/kibana/kibana"
 CLUSTER_APPS_MAPPING["EFK3"]="docker.elastic.co/beats/filebeat"
 
-
 declare -A CLUSTERAPPSMAPPING
-CLUSTERAPPSMAPPING["BRAHMA"]="2.21.0"
-CLUSTERAPPSMAPPING["VISHVAKARMA"]="2.21.0"
+CLUSTERAPPSMAPPING["BRAHMA"]="lts"
+CLUSTERAPPSMAPPING["VISHVAKARMA"]="lts"
 CLUSTERAPPSMAPPING["INDRA"]="3.0.2"
 CLUSTERAPPSMAPPING["BUCKET"]="latest"
 CLUSTERAPPSMAPPING["BUCKETCLIENT"]="RELEASE.2024-07-26T13-08-44Z"
@@ -51,7 +100,11 @@ CLUSTERAPPSMAPPING["EFK2"]="8.15.0"
 CLUSTERAPPSMAPPING["EFK3"]="8.15.0"
 
 declare -A CLUSTER_MEMORYCORES_MAPPING
+CLUSTER_MEMORYCORES_MAPPING["BRAHMA"]="2048:2"
+CLUSTER_MEMORYCORES_MAPPING["VISHVAKARMA"]="512:0.5"
+CLUSTER_MEMORYCORES_MAPPING["INDRA"]="2048:2"
 CLUSTER_MEMORYCORES_MAPPING["BUCKET"]="1024:1"
+CLUSTER_MEMORYCORES_MAPPING["BUCKETCLIENT"]="1024:1"
 CLUSTER_MEMORYCORES_MAPPING["CLOUDCOMMANDER"]="512:0.5"
 CLUSTER_MEMORYCORES_MAPPING["PVTCLD"]="2048:2"
 CLUSTER_MEMORYCORES_MAPPING["CHITRAGUPTA1"]="1024:1"
@@ -69,3 +122,60 @@ CLUSTER_MEMORYCORES_MAPPING["EFK1"]="4096:2"
 CLUSTER_MEMORYCORES_MAPPING["EFK2"]="2048:1"
 CLUSTER_MEMORYCORES_MAPPING["EFK3"]="512:0.5"
 
+# Function to generate final JSON
+GetAppVersionCompleteJSON() {
+  # File path
+  local json_file="$1.temp"
+  local temp_file="$1"
+  
+  # Delete the existing file if it exists
+  if [ -f "$json_file" ]; then
+    rm -f "$json_file"
+  fi
+
+  # Create a new file
+  touch "$json_file"
+
+  # Start the JSON array
+  echo "{\"stackOptions\": [" > "$json_file"
+
+  # Loop through the total number of apps
+  for ((i=1; i<=CLUSTER_APPS_TOTAL_NUMBER; i++)); do
+    app_name=${CLUSTER_APPS_NUMBERING[$i]}  # Get app name
+
+    # Get respective details from other mappings
+    memory_and_cores=${CLUSTER_MEMORYCORES_MAPPING[$app_name]}
+    memory=$(echo $memory_and_cores | cut -d':' -f1)  # Extract memory
+    cores=$(echo $memory_and_cores | cut -d':' -f2)   # Extract cores
+
+    mapping=${CLUSTER_APPS_MAPPING[$app_name]}
+    app_version=${CLUSTERAPPSMAPPING[$app_name]}
+
+    full_version="${mapping}:${app_version}"  # Compose full version
+
+    icon_url="${app_name}.png"  # Set the icon URL
+
+    # Get the app details and replace the placeholders dynamically
+    app_details=${CLUSTER_APPS_OTHER_DETAILS[$app_name]}
+    app_details=${app_details//GETITDYNAMICALLY1/$app_name}
+    app_details=${app_details//GETITDYNAMICALLY2/$memory}
+    app_details=${app_details//GETITDYNAMICALLY3/$cores}
+    app_details=${app_details//GETITDYNAMICALLY4/$full_version}
+    app_details=${app_details//GETITDYNAMICALLY5/$mapping}
+    app_details=${app_details//GETITDYNAMICALLY6/$i}
+    app_details=${app_details//GETITDYNAMICALLY7/$icon_url}
+    app_details=${app_details//GETITDYNAMICALLY8/$app_name}
+
+    # Append the details to the JSON file
+    echo "$app_details," >> "$json_file"
+  done
+
+  # Remove the last comma and close the JSON array
+  sed -i '$ s/,$//' "$json_file"
+  echo "]}" >> "$json_file"
+  
+  jq '.' "$json_file" > "$temp_file"
+  rm -f "$json_file"  
+}
+
+#/opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' 'GetAppVersionCompleteJSON' '/opt/Matsya/tmp/Apps.json'

@@ -1224,6 +1224,8 @@ echo 'volume management
     option max-port  60999
 end-volume' | sudo tee /etc/glusterfs/glusterd.vol
 
+#Requires=network.target wg-quick@$THECURSTACK.service
+#After=network.target wg-quick@$THECURSTACK.service
 if [ -f /usr/sbin/glusterfs ]; then
 	sudo rm -f /lib/systemd/system/glusterd.service
 	echo '[Unit]
