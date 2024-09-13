@@ -226,8 +226,11 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 		VisionKey=$(jq -r '.VisionKey' <<< "$THEJSON")
 		VisionId=$(jq -r '.VisionId' <<< "$THEJSON")
 		TheChoice="CORE"
-		random_number=$(shuf -i 30000-40000 -n 1)
-		ClusterId="$random_number"
+		ClusterId=$(echo "$THEJSON" | jq -r 'if has("ClusterId") then .ClusterId else "N..A" end')
+		if [ "$ClusterId" == "N..A" ]; then
+			random_number=$(shuf -i 30000-40000 -n 1)
+			ClusterId="$random_number"		
+		fi		
 		if [ "$TheNameForCluster" == "N.A" ] ; then
 			charset='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 			length=$(shuf -i 1-15 -n 1)
@@ -550,7 +553,12 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		else
 			NativeEApps=$(echo -n $NativeApps | xxd -p | tr -d '\n')
 		fi
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps"	
+		TheIDForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterId") then .ClusterId else "N..A" end')
+		if [ "$TheIDForCluster" == "N..A" ]; then
+			random1_1number=$(shuf -i 30000-40000 -n 1)
+			TheIDForCluster="$random1_1number"		
+		fi				
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster"	
 	fi
 	if [ "$ToVamana" == "X" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
@@ -563,7 +571,12 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		else
 			NativeEApps=$(echo -n $NativeApps | xxd -p | tr -d '\n')
 		fi
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps"	
+		TheIDForCluster=$(echo "$THEJSON" | jq -r 'if has("ClusterId") then .ClusterId else "N..A" end')
+		if [ "$TheIDForCluster" == "N..A" ]; then
+			random1_1number=$(shuf -i 30000-40000 -n 1)
+			TheIDForCluster="$random1_1number"		
+		fi
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster"	
 	fi
 
 	CheckForOnPrem=$(echo "$THEJSON" | jq -r 'if has("CheckForOnPrem") then .CheckForOnPrem else "NA" end')	
