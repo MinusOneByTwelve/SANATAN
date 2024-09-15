@@ -49,6 +49,8 @@ THECLUSTERISMULTICLOUD="TCIMC"
 THEIPTO="THEIP1TO"	
 THEINDRA1="THE1INDRA1"
 THEINDRA2="THE2INDRA2"
+THEDEVIWEB="THE_DEVI_WEB"
+THEDEVI2WEB="THE_DEVI2_WEB"
 
 sudo rm -rf /etc/hostname && echo "$THEHOST" | sudo tee /etc/hostname
 sudo hostnamectl set-hostname $THEHOST --static
@@ -574,8 +576,27 @@ RUN chmod +x '"$webssh_DIR"'/custom_ssh.sh '"$webssh_DIR"'/inactivity_check.sh' 
 setup_http_server() {
     sudo mkdir -p $DFS_DATA2_DIR/Static$STACKNAME
     sudo chown -R root:root $DFS_DATA2_DIR/Static$STACKNAME
-    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Index.html
-    echo "VARAHA For $STACKPRETTYNAME" | sudo tee $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    #sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    #echo "VARAHA For $STACKPRETTYNAME" | sudo tee $DFS_DATA2_DIR/Static$STACKNAME/Index.html
+    sudo mv /home/$CURRENTUSER/$THEDEVIWEB $DFS_DATA2_DIR/Static$STACKNAME
+    
+    pushd $DFS_DATA2_DIR/Static$STACKNAME
+    tar -xzf "$THEDEVIWEB"
+    sudo rm -f $THEDEVIWEB
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/boxed.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/cluster.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/collapsed-sidebar.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/fixed.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/thenodeslist
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/top-nav.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/index.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/index2.html
+    sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/starter.html    
+    #sudo mv /home/$CURRENTUSER/$THEDEVI2WEB $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/Dashboard.html 
+    #sudo ln -s $DFS_DATA2_DIR/Static$STACKNAME/DEVI/pages/layout/Dashboard.html $DFS_DATA2_DIR/Static$STACKNAME/DEVI/Dashboard.html
+    sudo mv /home/$CURRENTUSER/$THEDEVI2WEB $DFS_DATA2_DIR/Static$STACKNAME/DEVI/index.html
+    popd
+    
     sudo chmod -R 777 $DFS_DATA2_DIR/Static$STACKNAME
     
     sudo rm -f /etc/systemd/system/VARAHA$STACKNAME.service
@@ -597,7 +618,7 @@ After=network.target
 
 [Service]
 User=root
-WorkingDirectory='"$DFS_DATA2_DIR/Static$STACKNAME"'
+WorkingDirectory='"$DFS_DATA2_DIR/Static$STACKNAME/DEVI"'
 ExecStart=/usr/bin/python3 -m http.server '"$VarahaPort1"'
 Restart=always
 
@@ -1182,7 +1203,7 @@ if [ "$TheReqRL" == "I" ] ; then
 	else
 	    echo "Pillow is already installed."
 	fi
-	sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/Logo$STACKNAME.png
+	sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/Logo$STACKNAME.png
 	#cat /home/$CURRENTUSER/ImageMaker.py
 	python3 /home/$CURRENTUSER/ImageMaker.py
 	sudo rm -f /home/$CURRENTUSER/ImageMaker.py
