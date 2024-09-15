@@ -89,6 +89,7 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	THECLUSTERISMULTICLOUD="${36}"
 	THECGSERVERS="${37}"
 	THEIPTO="${38}"
+	THEREALCLUSTERNODELIST="${39}"
 	
 	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
 	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
@@ -547,6 +548,9 @@ services:
       - type: bind
         source: '"$webssh_DIR"'
         target: '"$webssh_DIR"'
+      - type: bind
+        source: '"$THEREALCLUSTERNODELIST"'
+        target: '"$THEREALCLUSTERNODELIST"'
     networks:
       - '"$STACKNAME"'-encrypted-overlay    
    

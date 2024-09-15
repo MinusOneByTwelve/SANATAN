@@ -538,6 +538,10 @@ EXECUTESCRIPT=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) 
 EXECUTE1SCRIPT='#!/bin/bash'"
 "
 echo "$EXECUTE1SCRIPT" | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+THEREALCLUSTERNODELIST=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1) && touch $BASE/tmp/$THEREALCLUSTERNODELIST && sudo chmod 777 $BASE/tmp/$THEREALCLUSTERNODELIST
+THECURDT=$(date)
+echo "# The List Post Iteration [ $REQUNQ ] Executed [ $THECURDT ]" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null
+echo "" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null
 		
 # Arrays to hold manager and worker details
 declare -a BRAHMA_IPS
@@ -763,7 +767,8 @@ parse_instance_details() {
 		    BRAHMA_IPS+=("$IP")
 		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
 		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
-		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		    echo "$IP $lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null            
 		elif [ "$ROLE" == "VISHVAKARMA" ]; then
 		    VISHVAKARMA_IPS+=("$IP")
 		    THELETTER="v"
@@ -796,13 +801,15 @@ parse_instance_details() {
 		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
 		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
 		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+	    	    echo "$IP $lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null
 	    	    	    	    	    	    	   	               
 		    COUNTvER=$((COUNTvER + 1))
 		elif [ "$ROLE" == "INDRA" ]; then
 		    INDRA_IPS+=("$IP")
 		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
 		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
-		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+		    echo "$IP $lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null           
 		fi        
 		
 		ls -l $PEM
@@ -874,7 +881,8 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
 		HOST_ALT_NAMES["$EDVip"]="$EDVHOST_ALT_NAMES"        
         																
 		echo 'sudo sed -i -e "/\<'"${ER_1D_VAL1}"'\>/s/^/#/" /etc/hosts' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
-		echo 'sudo -H -u root bash -c "echo \"'"$ER_1D_VAL1"' '"$ER_1D_VAL2"' #'"$ER_1D_VAL3"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                   					
+		echo 'sudo -H -u root bash -c "echo \"'"$ER_1D_VAL1"' '"$ER_1D_VAL2"' #'"$ER_1D_VAL3"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
+		echo "$ER_1D_VAL1 $ER_1D_VAL2 #$ER_1D_VAL3" | sudo tee -a $BASE/tmp/$THEREALCLUSTERNODELIST > /dev/null                   					
 	done
 	echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' '"$REQUNQ"' FOR EXISTING END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
 	echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null	    
@@ -919,7 +927,19 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
     THEINDRA2="NA" 
     if [ ${#INDRA_IPS[@]} -eq 2 ]; then
     	THEINDRA2="${INDRA_IPS[1]}"
-    fi                   
+    fi 
+    
+    THEHAINDRHOST="INDRA_HA"
+    thenamefor2nc="INDRA_HA"
+    if [ ${#INDRA_IPS[@]} -eq 2 ]; then
+        THEHAINDRHOST="${HOST_NAMES[${INDRA_IPS[1]}]}"
+        thenamefor2nc="${HOST_NAMES[${INDRA_IPS[1]}]}"
+    fi 
+    
+    thenamefornc="${HOST_NAMES[${INDRA_IPS[0]}]}"
+    if [ "$NATIVE" -lt 2 ]; then
+	thenamefornc="${INDRA_IPS[0]}"
+    fi                         
 }
 
 # Function to run commands on remote hosts
@@ -1224,7 +1244,9 @@ install_docker() {
     sed -i -e s~"THEIP1TO"~"$THEIPTO"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THE1INDRA1"~"$THEINDRA1"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THE2INDRA2"~"$THEINDRA2"~g $BASE/tmp/$DOCKERTEMPLATE
-
+    sed -i -e s~"THE_DEVI_WEB"~"DEVI$STACKNAME-$REQUNQ.tar.gz"~g $BASE/tmp/$DOCKERTEMPLATE
+    sed -i -e s~"THE_DEVI2_WEB"~"DEVI$STACKNAME-$REQUNQ.html"~g $BASE/tmp/$DOCKERTEMPLATE
+    
     THEINDRAIPFORSTUFF="${INDRA_IPS[0]}"
     if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
 	IFS=',' read -r -a TEC2B <<< $THEEXISTINGCLUSTERINDRA
@@ -1441,12 +1463,84 @@ install_docker() {
 	    sudo cp $BASE/Resources/ImageMaker.py $BASE/tmp/$DOCKER1TEMPLATE
 	    sed -i -e s~"THEREQHEADER"~"$STACKPRETTYNAME"~g $BASE/tmp/$DOCKER1TEMPLATE
 	    sed -i -e s~"THEREQFONT"~"/home/$THE1REQUSER/CoreFont.ttf"~g $BASE/tmp/$DOCKER1TEMPLATE
-	    sed -i -e s~"THEREQLOC"~"$DFS_DATA2_DIR/Static$STACKNAME/Logo$STACKNAME.png"~g $BASE/tmp/$DOCKER1TEMPLATE        
+	    sed -i -e s~"THEREQLOC"~"$DFS_DATA2_DIR/Static$STACKNAME/DEVI/Logo$STACKNAME.png"~g $BASE/tmp/$DOCKER1TEMPLATE        
 	    sudo chmod 777 $BASE/tmp/$DOCKER1TEMPLATE
+	    
+	    pushd $BASE/Resources
+	    tar -czf "DEVI$STACKNAME-$REQUNQ.tar.gz" "DEVI"
+	    sudo chmod 777 DEVI$STACKNAME-$REQUNQ.tar.gz
+	    sudo mv DEVI$STACKNAME-$REQUNQ.tar.gz $BASE/tmp
+	    popd	    
+
+	    ISACTIVEINDRA="N"
+	    if [ "$IP" == "$THEINDRA1" ] ; then
+	    	ISACTIVEINDRA="Y"
+	    fi
+	    
+	    DB_TMPL_1=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    sudo cp $BASE/Resources/VARAHA $BASE/tmp/$DB_TMPL_1
+	    sed -i -e s~"THECLUSTERNAME"~"$STACKPRETTYNAME"~g $BASE/tmp/$DB_TMPL_1
+	    if [[ "$ISACTIVEINDRA" == "Y" ]]; then
+	    	sed -i -e s~"THECLUSTER_NAME"~"$STACKPRETTYNAME*"~g $BASE/tmp/$DB_TMPL_1	    
+	    	sed -i -e s~"THENATUREOFINDRA"~"/pages/layout/active.png"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TARGET1"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET2"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET3"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET4"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET5"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET6"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort3"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TARGET7"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET8"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET9"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TEGRAT1"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO3"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT2"~"https://$thenamefornc:$PVTCLDPortIO2"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT3"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT4"~"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT5"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT6"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort7"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT7"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT8"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT9"~"/THEREALCLUSTERNODELIST$STACKNAME"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THECURRENTVERSIONOFSANATANIMPL"~"$THECURRENTVERSIONOFSANATANIMPL"~g $BASE/tmp/$DB_TMPL_1
+	    	#sed -i -e s~"THEACTUALPATHOFDEVI"~"$DFS_DATA2_DIR/Static$STACKNAME/DEVI/"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THEACTUALPATHOFDEVI"~"/"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THEACTUALPATH_IMAGES"~"/pages/layout/"~g $BASE/tmp/$DB_TMPL_1
+	    else
+	    	sed -i -e s~"THECLUSTER_NAME"~"$STACKPRETTYNAME"~g $BASE/tmp/$DB_TMPL_1		    
+	    	sed -i -e s~"THENATUREOFINDRA"~"/pages/layout/inactive.png"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TARGET1"~"https://$THEHAINDRHOST:$AltIndrhaprt7"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET2"~"https://$THEHAINDRHOST:$AltIndrhaprt11"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET3"~"https://$THEHAINDRHOST:$AltIndrhaprt8/guacamole/"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET4"~"https://$THEHAINDRHOST:$AltIndrhaprt2"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET5"~"https://$THEHAINDRHOST:$AltIndrhaprt19"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET6"~"https://$THEHAINDRHOST:$AltIndrhaprt18"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TARGET7"~"$THEHAINDRHOST:$AltIndrhaprt15"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET8"~"$THEHAINDRHOST:$AltIndrhaprt16"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TARGET9"~"https://$THEHAINDRHOST:$AltIndrhaprt6"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"TEGRAT1"~"https://$THEHAINDRHOST:$AltIndrhaprt5"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT2"~"https://$thenamefor2nc:$AltIndrhaprt17"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT3"~"https://$THEHAINDRHOST:$AltIndrhaprt13"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT4"~"ldaps://$THEHAINDRHOST:$AltIndrhaprt14"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT5"~"https://$THEHAINDRHOST:$AltIndrhaprt9"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT6"~"$THEHAINDRHOST:$AltIndrhaprt10"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT7"~"https://$THEHAINDRHOST:$AltIndrhaprt1"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT8"~"https://$THEHAINDRHOST:$AltIndrhaprt12"~g $BASE/tmp/$DB_TMPL_1	
+	    	sed -i -e s~"TEGRAT9"~"/THEREALCLUSTERNODELIST$STACKNAME"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THECURRENTVERSIONOFSANATANIMPL"~"$THECURRENTVERSIONOFSANATANIMPL"~g $BASE/tmp/$DB_TMPL_1
+	    	#sed -i -e s~"THEACTUALPATHOFDEVI"~"$DFS_DATA2_DIR/Static$STACKNAME/DEVI/"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THEACTUALPATHOFDEVI"~"/"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THEACTUALPATH_IMAGES"~"/pages/layout/"~g $BASE/tmp/$DB_TMPL_1	    			    	
+	    fi
+	    sudo chmod 777 $BASE/tmp/$DB_TMPL_1
+	    
 	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DOCKER1TEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER"
 	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/CoreFont.ttf" "$THE1REQUSER@$IP:/home/$THE1REQUSER/CoreFont.ttf"
+	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$DB_TMPL_1" "$THE1REQUSER@$IP:/home/$THE1REQUSER/DEVI$STACKNAME-$REQUNQ.html"
+	    scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/DEVI$STACKNAME-$REQUNQ.tar.gz" "$THE1REQUSER@$IP:/home/$THE1REQUSER/DEVI$STACKNAME-$REQUNQ.tar.gz"	    
 	    ssh -i "$THE1REQPEM" -o StrictHostKeyChecking=no -p $P1ORT $THE1REQUSER@$IP "sudo rm -f /home/$THE1REQUSER/ImageMaker.py && sudo mv /home/$THE1REQUSER/$DOCKER1TEMPLATE /home/$THE1REQUSER/ImageMaker.py && sudo chmod 777 /home/$THE1REQUSER/ImageMaker.py"
 	    sudo rm -f $BASE/tmp/$DOCKER1TEMPLATE
+	    sudo rm -f $BASE/tmp/DEVI$STACKNAME-$REQUNQ.tar.gz
+	    sudo rm -f $BASE/tmp/$DB_TMPL_1
     fi
     
     max_attempts=5
@@ -1809,7 +1903,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGR1IPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGR1IPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" \"/opt/THEREALCLUSTERNODELIST$STACKNAME\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -1990,12 +2084,16 @@ create_cert_for_all() {
     	if ping -c 5 "$ip" > /dev/null; then
         	scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$TheClusterFolderForThisRUN/CERTS.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
         	ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -rf CERTS && tar -xzf \"CERTS.tar.gz\" && sudo mv CERTS/CA/* $CERTS_DIR/cluster/ca && sudo mv CERTS/FULL/* $CERTS_DIR/cluster/full && sudo rm -rf CERTS && sudo rm -f CERTS.tar.gz"
+        	
+        	scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$THEREALCLUSTERNODELIST" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+        	ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f /opt/THEREALCLUSTERNODELIST$STACKNAME && sudo mv /home/${LOGIN_USERS[$ip]}/$THEREALCLUSTERNODELIST /opt/THEREALCLUSTERNODELIST$STACKNAME && sudo chmod 777 /opt/THEREALCLUSTERNODELIST$STACKNAME && sudo rm -f $DFS_DATA2_DIR/Static$STACKNAME/DEVI/THEREALCLUSTERNODELIST$STACKNAME && sudo cp /opt/THEREALCLUSTERNODELIST$STACKNAME $DFS_DATA2_DIR/Static$STACKNAME/DEVI/THEREALCLUSTERNODELIST$STACKNAME && sudo chmod 777 $DFS_DATA2_DIR/Static$STACKNAME/DEVI/THEREALCLUSTERNODELIST$STACKNAME"        	        	
         else
         	echo "IP $ip Not Pinging For CERTS Copy..."
         fi
     done
     
-    sudo rm -f $TheClusterFolderForThisRUN/CERTS.tar.gz       
+    sudo rm -f $TheClusterFolderForThisRUN/CERTS.tar.gz   
+    sudo rm -f $BASE/tmp/$THEREALCLUSTERNODELIST    
 }
 
 check_status() {
@@ -2173,8 +2271,6 @@ fi
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $THEGUACASQL
 
-create_cert_for_all
-
 ALL1_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 COUNTER=0
 PROCSOS="N"
@@ -2217,6 +2313,8 @@ if [[ "$PROCSOS" == "Y" ]]; then
 	sudo chmod 777 $TheFinalMessageFile	
 	exit
 fi
+
+create_cert_for_all
 
 if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
 	GLUSTERVPATH_1=""
@@ -2619,24 +2717,14 @@ echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 
-thenamefornc="${HOST_NAMES[${INDRA_IPS[0]}]}"
-if [ "$NATIVE" -lt 2 ]; then
-	thenamefornc="${INDRA_IPS[0]}"
-fi
-
 if [[ "$ISAUTOMATED" == "Y" ]]; then
-	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://$thenamefornc:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
+	#google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://$thenamefornc:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
+	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" &
 	
 	if [ ${#INDRA_IPS[@]} -eq 2 ]; then
-		/opt/firefox/firefox  "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
+		#/opt/firefox/firefox "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt1" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt2" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt8/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt9" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt11" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt12" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt13" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt6" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt7" "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt19" &
+		/opt/firefox/firefox "https://${HOST_NAMES[${INDRA_IPS[1]}]}:$AltIndrhaprt3" &
 	fi
-fi
-
-THEHAINDRHOST="INDRA_HA"
-thenamefor2nc="INDRA_HA"
-if [ ${#INDRA_IPS[@]} -eq 2 ]; then
-    THEHAINDRHOST="${HOST_NAMES[${INDRA_IPS[1]}]}"
-    thenamefor2nc="${HOST_NAMES[${INDRA_IPS[1]}]}"
 fi
 
 FNN2PATH="$TheClusterFolderForThisRUN/$STACKNAME.json"
