@@ -524,6 +524,9 @@ UNLOCKFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsuk"
 MJTFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsmjt"
 WJTFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dswjt"
 RODFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsrod"
+GLUSTERVPATH1="$TheClusterFolderForThisRUN/$STACKNAME.gvp1"
+GLUSTERVPATH2="$TheClusterFolderForThisRUN/$STACKNAME.gvp2"
+GLUSTERVPATH3="$TheClusterFolderForThisRUN/$STACKNAME.gvp3"
 REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
@@ -570,6 +573,7 @@ MIN_IO_DET=""
 THENATUREOFTHISRUN="RECURRING"
 THEEXISTINGRUNWASVPNBASED="N"
 THEEXISTINGCLUSTERBRAHMA="NA"
+THEEXISTINGCLUSTERINDRA="NA"
 if [[ ! -d "$TheClusterFolderForThisRUN/CERTS" ]]; then
 	THENATUREOFTHISRUN="FIRSTRUN"
 else
@@ -588,7 +592,11 @@ else
 		ER1D="${EXISTING_RUN_DETAILS[$E1R1D]}"
 		echo "($E1R1D) : $ER1D"	
 		IFS=',' read -r -a ER_1D <<< $ER1D
-		ROLE_VAL1="${ER_1D[7]}"		
+		ROLE_VAL1="${ER_1D[7]}"
+			
+		ER1_1D_VAL1="${ER_1D[0]}"		
+		EXISTING_IPS+=("$ER1_1D_VAL1")
+					
 		if (( $COUNTebhER == 0 )) ; then
 			if [[ "$ROLE_VAL1" == "BRAHMA" ]]; then
 				THEEXISTINGCLUSTERBRAHMA="$ER1D"
@@ -596,7 +604,19 @@ else
 			fi
 		fi
 	done
-	COUNTebhER=0        	
+	COUNTebhER=0 
+	for E1R1D in "${!EXISTING_RUN_DETAILS[@]}"; do
+		ER1D="${EXISTING_RUN_DETAILS[$E1R1D]}"	
+		IFS=',' read -r -a ER_1D <<< $ER1D
+		ROLE_VAL1="${ER_1D[7]}"		
+		if (( $COUNTebhER == 0 )) ; then
+			if [[ "$ROLE_VAL1" == "INDRA" ]]; then
+				THEEXISTINGCLUSTERINDRA="$ER1D"
+				COUNTebhER=$((COUNTebhER + 1))
+			fi
+		fi
+	done
+	COUNTebhER=0	       	
 	sudo rm -f $BASE/tmp/$TMP_RNDM_FL
 fi
 echo "THE STATE OF THIS RUN FOR CLUSTER {$STACKPRETTYNAME} IS {$THENATUREOFTHISRUN}"
@@ -690,87 +710,107 @@ fi
 THEGUACA_SQL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 THEGUACASQL="$BASE/tmp/THEGUACA_SQL_$THEGUACA_SQL.sql" && touch $THEGUACASQL && sudo chmod 777 $THEGUACASQL
 
+if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	echo "SET @entityid = (select entity_id from guacamole_entity where name = 'admin');" | sudo tee -a $THEGUACASQL > /dev/null
+fi
+
 # Function to parse the instance details file
 parse_instance_details() {
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' '"$REQUNQ"' START \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+    
     COUNTxER=0
     COUNTvER=0
     NACGD1="N"
+    
     while IFS=',' read -r SCPID INSTID IP HOSTNAME PORT PEM OS U1SER C1TYPE ROLE M1EM C1ORE; do
-        PEM_FILES["$IP"]="$PEM"
-        PORTS["$IP"]="$PORT"
-        OS_TYPES["$IP"]="$OS"
-        LOGIN_USERS["$IP"]="$U1SER"
-        APP_MEM["$IP"]="$M1EM"
-        APP_CORE["$IP"]="$C1ORE" 
-        CLUSTER_TYPE["$IP"]="$C1TYPE"
-        hyphenated_ip="${IP//./-}"
-        lowercase_text="${C1TYPE,,}"
-        ROLE_TYPE["$IP"]="$ROLE"
-        
-        if [[ "$C1TYPE" == "ONPREM" ]]; then
-        	echo "KRISHNA NA"
-        else
-        	KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
-        fi
-        
-        SAMPOORNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
-                       
-        #echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
-        echo 'sudo sed -i -e "/\<'"${IP}"'\>/s/^/#/" /etc/hosts' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                    
-        if [ "$ROLE" == "BRAHMA" ]; then
-            BRAHMA_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
-        elif [ "$ROLE" == "VISHVAKARMA" ]; then
-            VISHVAKARMA_IPS+=("$IP")
-            THELETTER="v"
-            
-            if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
-		    if [[ "$ISAUTOMATED" == "Y" ]]; then
-		    	if (( $COUNTvER == 0 )) ; then
-		    		THELETTER="c"
-		    		CHITRAGUPTA="$IP"
-		    		CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
-		    	fi
-		    	if (( $COUNTvER == 1 )) ; then
-		    		THELETTER="c"
-		    		CHITRAGUPTA="$CHITRAGUPTA"",""$IP"
-		    	fi 
-		    else
-			IS_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")            
-		    	if [[ "$NACGD1" == "N" ]]; then
-		    		if [[ "$IS_CG" == "Y" ]]; then
-		    			CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
-		    			NACGD1="Y"	
-		    		fi 
-		    	fi
-		    	if [[ "$IS_CG" == "Y" ]]; then
-		    		THELETTER="c"
-		    	fi        	
+	IP_EXISTS="N"
+	
+	if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+		for existing_ip in "${EXISTING_IPS[@]}"; do
+			if [[ "$IP" == "$existing_ip" ]]; then
+			    IP_EXISTS="Y"
+			    break
+			fi
+		done
+	fi
+	
+	if [[ "$IP_EXISTS" == "Y" ]]; then
+		echo "IP $IP Exists In The Cluster..."
+	else	    
+		PEM_FILES["$IP"]="$PEM"
+		PORTS["$IP"]="$PORT"
+		OS_TYPES["$IP"]="$OS"
+		LOGIN_USERS["$IP"]="$U1SER"
+		APP_MEM["$IP"]="$M1EM"
+		APP_CORE["$IP"]="$C1ORE" 
+		CLUSTER_TYPE["$IP"]="$C1TYPE"
+		hyphenated_ip="${IP//./-}"
+		lowercase_text="${C1TYPE,,}"
+		ROLE_TYPE["$IP"]="$ROLE"
+		
+		if [[ "$C1TYPE" == "ONPREM" ]]; then
+			echo "KRISHNA NA"
+		else
+			KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
+		fi
+		
+		SAMPOORNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
+		               
+		#echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+		echo 'sudo sed -i -e "/\<'"${IP}"'\>/s/^/#/" /etc/hosts' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null                    
+		if [ "$ROLE" == "BRAHMA" ]; then
+		    BRAHMA_IPS+=("$IP")
+		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
+		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-b"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+		elif [ "$ROLE" == "VISHVAKARMA" ]; then
+		    VISHVAKARMA_IPS+=("$IP")
+		    THELETTER="v"
+		    
+		    if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+			    if [[ "$ISAUTOMATED" == "Y" ]]; then
+			    	if (( $COUNTvER == 0 )) ; then
+			    		THELETTER="c"
+			    		CHITRAGUPTA="$IP"
+			    		CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
+			    	fi
+			    	if (( $COUNTvER == 1 )) ; then
+			    		THELETTER="c"
+			    		CHITRAGUPTA="$CHITRAGUPTA"",""$IP"
+			    	fi 
+			    else
+				IS_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")            
+			    	if [[ "$NACGD1" == "N" ]]; then
+			    		if [[ "$IS_CG" == "Y" ]]; then
+			    			CHITRAGUPTA1_DET="$CHITRAGUPTA1_DET""$IP,$PORT,$PEM,$U1SER"
+			    			NACGD1="Y"	
+			    		fi 
+			    	fi
+			    	if [[ "$IS_CG" == "Y" ]]; then
+			    		THELETTER="c"
+			    	fi        	
+			    fi
 		    fi
-            fi
-            
-	    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
-	    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
-	    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
-    	    	    	    	    	    	   	               
-            COUNTvER=$((COUNTvER + 1))
-        elif [ "$ROLE" == "INDRA" ]; then
-            INDRA_IPS+=("$IP")
-            HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
-            HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
-            echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
-        fi        
-        
-        ls -l $PEM
-        sudo chown $CURRENTUSER:$CURRENTUSER $PEM
-        sudo chmod 600 $PEM
-        ls -l $PEM
+		    
+		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
+		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-$THELETTER"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
+	    	    	    	    	    	    	   	               
+		    COUNTvER=$((COUNTvER + 1))
+		elif [ "$ROLE" == "INDRA" ]; then
+		    INDRA_IPS+=("$IP")
+		    HOST_NAMES["$IP"]="$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
+		    HOST_ALT_NAMES["$IP"]="alt-$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"
+		    echo 'sudo -H -u root bash -c "echo \"'"$IP"' '"$lowercase_text-$hyphenated_ip-v$THEVISIONID""-s$SCPID""-i$INSTID""-c$CLUSTERID-i"'\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null            
+		fi        
+		
+		ls -l $PEM
+		sudo chown $CURRENTUSER:$CURRENTUSER $PEM
+		sudo chmod 600 $PEM
+		ls -l $PEM
                 
-        echo "
+        	echo "
 insert into guacamole_connection (connection_name,protocol) values (\"${HOST_NAMES[$IP]}\",\"ssh\");
 SET @conid$COUNTxER = (select connection_id from guacamole_connection where connection_name = '${HOST_NAMES[$IP]}');
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"hostname\",\"$IP\");
@@ -778,20 +818,21 @@ insert into guacamole_connection_parameter values(@conid$COUNTxER,\"port\",\"$PO
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"font-name\",\"Courier New, monospace\");
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"font-size\",\"12\");
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"private-key\",\"" | sudo tee -a $THEGUACASQL > /dev/null
-	cat $PEM >> $THEGUACASQL 
-        echo "\");
+		cat $PEM >> $THEGUACASQL 
+        	echo "\");
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"color-scheme\",\"" | sudo tee -a $THEGUACASQL > /dev/null
-	cat $BASE/Resources/ColourSchemeWebSSH >> $THEGUACASQL 
-        echo "\");        
+		cat $BASE/Resources/ColourSchemeWebSSH >> $THEGUACASQL 
+        	echo "\");        
 insert into guacamole_connection_parameter values(@conid$COUNTxER,\"username\",\"$U1SER\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"READ\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"UPDATE\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"DELETE\");
 insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"ADMINISTER\");
 " | sudo tee -a $THEGUACASQL > /dev/null 
-	COUNTxER=$((COUNTxER + 1))
-	              
+		COUNTxER=$((COUNTxER + 1))
+	fi	              
     done < "$INSTANCE_DETAILS_FILE"
+    
     echo 'sudo -H -u root bash -c "echo \"#VAMANA => '"$STACKPRETTYNAME"' '"$REQUNQ"' END \" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
     echo 'sudo -H -u root bash -c "echo \"\" >> /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null
 
@@ -805,7 +846,7 @@ insert into guacamole_connection_permission values(@entityid,@conid$COUNTxER,\"A
 		ER_1D_VAL2="${ER_1D[4]}"
 		ER_1D_VAL3="${ER_1D[8]}"
 		
-		EXISTING_IPS+=("$ER_1D_VAL1")
+		#EXISTING_IPS+=("$ER_1D_VAL1")
 		
 		EDVip="${ER_1D[0]}"
 		EDVPORTS="${ER_1D[1]}"
@@ -965,7 +1006,8 @@ copy_ssl_certificates() {
     sudo rm -f $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
     sudo rm -f $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem
     sudo rm -f $TheClusterFolderForThisRUN/$IPHF-share.pem
-                
+    
+    if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then                
     # Download certificates from the first manager to the local machine
     run_remote $SRC_IP "
         sudo chmod 644 $CERTS_DIR/docker/$IPHF.pem
@@ -974,13 +1016,15 @@ copy_ssl_certificates() {
         sudo chmod 644 $CERTS_DIR/docker/$IPHF-VARAHA.pem 
         sudo chmod 644 $CERTS_DIR/common/$IPHF-share-VARAHA.pem 
         sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                      
-    "    
+    "
+        
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF.pem $TheClusterFolderForThisRUN/$IPHF-docker.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-cert.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-server-key.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$IPHF-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem
     scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share.pem $TheClusterFolderForThisRUN/$IPHF-share.pem        
+    
     run_remote $SRC_IP "
         sudo chown root:root $CERTS_DIR/docker/$IPHF.pem
         sudo chown root:root $CERTS_DIR/docker/$IPHF-server-cert.pem
@@ -995,7 +1039,42 @@ copy_ssl_certificates() {
         sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                
         sudo chmod 600 $CERTS_DIR/docker/$IPHF-server-key.pem
     " 
+    fi
+    
+    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then    
+    # Download certificates from the first manager to the local machine
+    run_remote $SRC_IP "
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-server-cert.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-server-key.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-VARAHA.pem 
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-share-VARAHA.pem 
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                      
+    "
         
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$STACKNAME.pem $TheClusterFolderForThisRUN/$IPHF-docker.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$STACKNAME-server-cert.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$STACKNAME-server-key.pem $TheClusterFolderForThisRUN/$IPHF-docker-server-key.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$STACKNAME-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-docker-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/docker/$STACKNAME-share-VARAHA.pem $TheClusterFolderForThisRUN/$IPHF-share-VARAHA.pem
+    scp -i ${PEM_FILES[$SRC_IP]} -P ${PORTS[$SRC_IP]} -o StrictHostKeyChecking=no $THESRCUSER@$SRC_IP:$CERTS_DIR/common/$IPHF-share.pem $TheClusterFolderForThisRUN/$IPHF-share.pem        
+    
+    run_remote $SRC_IP "
+        sudo chown root:root $CERTS_DIR/docker/$STACKNAME.pem
+        sudo chown root:root $CERTS_DIR/docker/$STACKNAME-server-cert.pem
+        sudo chown root:root $CERTS_DIR/docker/$STACKNAME-server-key.pem  
+        sudo chown root:root $CERTS_DIR/docker/$STACKNAME-VARAHA.pem 
+        sudo chown root:root $CERTS_DIR/docker/$STACKNAME-share-VARAHA.pem    
+        sudo chown root:root $CERTS_DIR/common/$IPHF-share.pem              
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-server-cert.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-VARAHA.pem
+        sudo chmod 644 $CERTS_DIR/docker/$STACKNAME-share-VARAHA.pem
+        sudo chmod 644 $CERTS_DIR/common/$IPHF-share.pem                
+        sudo chmod 600 $CERTS_DIR/docker/$STACKNAME-server-key.pem
+    " 
+    fi 
+            
     # Upload certificates to each of the other manager nodes
     sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker.pem
     sudo chmod 777 $TheClusterFolderForThisRUN/$IPHF-docker-server-cert.pem
@@ -1145,6 +1224,12 @@ install_docker() {
     sed -i -e s~"THEIP1TO"~"$THEIPTO"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THE1INDRA1"~"$THEINDRA1"~g $BASE/tmp/$DOCKERTEMPLATE
     sed -i -e s~"THE2INDRA2"~"$THEINDRA2"~g $BASE/tmp/$DOCKERTEMPLATE
+
+    THEINDRAIPFORSTUFF="${INDRA_IPS[0]}"
+    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	IFS=',' read -r -a TEC2B <<< $THEEXISTINGCLUSTERINDRA
+	THEINDRAIPFORSTUFF="${TEC2B[0]}"	
+    fi
                                 
     BUCKETCLIENT="${CLUSTER_APPS_MAPPING["BUCKETCLIENT"]}.${CLUSTERAPPSMAPPING["BUCKETCLIENT"]}"
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/Resources/$BUCKETCLIENT" "$THE1REQUSER@$IP:/home/$THE1REQUSER/mc"
@@ -1153,18 +1238,18 @@ install_docker() {
     sed -i -e s~"MNIO1"~"$STACK_PRETTY_NAME"~g $BASE/tmp/$MIOTEMPLATE
     sed -i -e s~"MNIO2"~"/shiva/bdd/bucket/$STACKNAME"~g $BASE/tmp/$MIOTEMPLATE 
     sed -i -e s~"MNIO3"~"$DFS_DATA_DIR/MINIO/.$STACK_PRETTY_NAME"~g $BASE/tmp/$MIOTEMPLATE 
-    sed -i -e s~"MNIO4"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO3"~g $BASE/tmp/$MIOTEMPLATE 
+    sed -i -e s~"MNIO4"~"https://${HOST_NAMES[$THEINDRAIPFORSTUFF]}:$MINPortIO3"~g $BASE/tmp/$MIOTEMPLATE 
     sed -i -e s~"MNIO5"~"$STACK_PRETTY_NAME"~g $BASE/tmp/$MIOTEMPLATE 
-    sed -i -e s~"MNIO6"~"$CERTS_DIR/cluster/ca/${HOST_NAMES[${INDRA_IPS[0]}]}.pem"~g $BASE/tmp/$MIOTEMPLATE
+    sed -i -e s~"MNIO6"~"$CERTS_DIR/cluster/ca/${HOST_NAMES[$THEINDRAIPFORSTUFF]}.pem"~g $BASE/tmp/$MIOTEMPLATE
     scp -i "$THE1REQPEM" -o StrictHostKeyChecking=no -P $P1ORT "$BASE/tmp/$MIOTEMPLATE" "$THE1REQUSER@$IP:/home/$THE1REQUSER/MountSBB.sh"
     sudo rm -f $BASE/tmp/$MIOTEMPLATE
 
     KRBBTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/SetUpKerberosLDAP $BASE/tmp/$KRBBTEMPLATE
     
-    sed -i -e s~"THEVAL1"~"ldaps://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP5"~g $BASE/tmp/$KRBBTEMPLATE
-    sed -i -e s~"THEVAL2"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB3"~g $BASE/tmp/$KRBBTEMPLATE
-    sed -i -e s~"THEVAL3"~"${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortKERB4"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL1"~"ldaps://${HOST_NAMES[$THEINDRAIPFORSTUFF]}:$ChitraGuptaPortLDP5"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL2"~"${HOST_NAMES[$THEINDRAIPFORSTUFF]}:$ChitraGuptaPortKERB3"~g $BASE/tmp/$KRBBTEMPLATE
+    sed -i -e s~"THEVAL3"~"${HOST_NAMES[$THEINDRAIPFORSTUFF]}:$ChitraGuptaPortKERB4"~g $BASE/tmp/$KRBBTEMPLATE
     sed -i -e s~"THEVAL4"~"$STACK_PRETTY_NAME.VAMANA"~g $BASE/tmp/$KRBBTEMPLATE
     sed -i -e s~"THEVAL5"~"$STACKPRETTYNAME.vamana"~g $BASE/tmp/$KRBBTEMPLATE
     sed -i -e s~"THEVAL6"~"$ADMIN_PASSWORD"~g $BASE/tmp/$KRBBTEMPLATE
@@ -1437,6 +1522,7 @@ create_glusterfs_volume_cluster() {
     success=false
     S1TA1CKN1AME="$1"
     DFS1_CLUSTER1_DIR="$2"
+    GLUSTER_VPATH="$3"
     
     ALL_IPS=("${BRAHMA_IPS[@]:1}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
     total_nodes=${#ALL_IPS[@]}
@@ -1535,6 +1621,14 @@ create_glusterfs_volume_cluster() {
 		glusterfs_addresses+="$HOST,"
 	    done
 	    glusterfs_addresses=${glusterfs_addresses%,}  # Remove trailing comma
+	    
+	    GD1F_DATA="$glusterfs_addresses■$THEFINALVOLUMENAME■$DFS1_CLUSTER1_DIR■/var/log/glusterfs/$THEFINALVOLUMENAME-mount.log"
+	    GD1F_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    GD1F1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+	    echo $GD1F_DATA > $BASE/tmp/$GD1F1_FILE
+	    $BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$GD1F1_FILE├$GLUSTER_VPATH├$ADMIN_PASSWORD├$GD1F_FILE"
+	    sudo chmod 777 $GLUSTER_VPATH
+	    sudo rm -f $BASE/tmp/$GD1F1_FILE
 
 	    ALL2_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
 	    for IP in "${ALL2_IPS[@]}"; do
@@ -1618,29 +1712,38 @@ create_glusterfs_volume_portainer() {
 
 # Function to create swarm labels
 create_swarm_labels() {
-	for IP in "${BRAHMA_IPS[@]}"; do
-		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
-		if [ -n "$NODE_ID" ]; then
-		    run_remote $IP "docker node update --label-add $STACKNAME""BRAHMAreplica=true $NODE_ID"
-		else
-		    echo "Node $IP is not part of a Swarm"
-		fi
-	done
+	if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+		for IP in "${BRAHMA_IPS[@]}"; do
+			NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
+			if [ -n "$NODE_ID" ]; then
+			    run_remote $IP "docker node update --label-add $STACKNAME""BRAHMAreplica=true $NODE_ID"
+			else
+			    echo "Node $IP is not part of a Swarm"
+			fi
+		done
+		
+		INDRHA="N"
+		for IP in "${INDRA_IPS[@]}"; do
+			NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
+			if [ -n "$NODE_ID" ]; then
+			    if [ "$INDRHA" == "N" ]; then
+			    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_ACTIVEreplica=true $NODE_ID"
+			    	INDRHA="Y"
+			    else
+			    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_PASSIVEreplica=true $NODE_ID"
+			    fi
+			else
+			    echo "Node $IP is not part of a Swarm"
+			fi
+		done
+	fi
 	
-	INDRHA="N"
-	for IP in "${INDRA_IPS[@]}"; do
-		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
-		if [ -n "$NODE_ID" ]; then
-		    if [ "$INDRHA" == "N" ]; then
-		    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_ACTIVEreplica=true $NODE_ID"
-		    	INDRHA="Y"
-		    else
-		    	run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""INDRA_PASSIVEreplica=true $NODE_ID"
-		    fi
-		else
-		    echo "Node $IP is not part of a Swarm"
-		fi
-	done
+	THEBRAHMAIPFOR1SSL="${BRAHMA_IPS[0]}"
+
+	if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+		IFS=',' read -r -a TEC1B <<< $THEEXISTINGCLUSTERBRAHMA
+		THEBRAHMAIPFOR1SSL="${TEC1B[0]}"	
+	fi	
 	
 	for IP in "${VISHVAKARMA_IPS[@]}"; do
 		NODE_ID=$(run_remote $IP "docker info -f '{{.Swarm.NodeID}}'")
@@ -1652,12 +1755,12 @@ create_swarm_labels() {
 		    IS1_CG=$(echo "$CHITRAGUPTA" | grep -qw "$IP" && echo "Y" || echo "N")
 		    if [[ "$IS1_CG" == "Y" ]]; then		    				
 		    #if [[ "$IP" == "$CHITRAGUPTA" ]]; then
-			    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
+			    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
 		    fi
 		    if [[ "$IP" == "$THE_PVT_CLD" ]]; then
-			    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""THE_PVT_CLDreplica=true $NODE_ID"
+			    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""THE_PVT_CLDreplica=true $NODE_ID"
 		    fi            
-		    run_remote ${BRAHMA_IPS[0]} "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"		
+		    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"		
 		else
 		    echo "Node $IP is not part of a Swarm"
 		fi
@@ -1764,32 +1867,34 @@ final_nodes_list() {
 	    echo "$item" >> "$BASE/tmp/$DOCKER9TEMPLATE"
 	done	
 
-	sudo mkdir -p $BASE/tmp/Folder$DOCKER9TEMPLATE
-	pem_files=$(awk -F ',' '{print $3}' "$BASE/tmp/$DOCKER9TEMPLATE" | sort | uniq)
-	echo "Distinct PEM files:"
-	for pem_file in $pem_files
-	do
-	    echo "$pem_file"
-	    filenamePEM="${pem_file##*/}"
-	    sudo cp $pem_file $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
-	    sudo chmod 777 $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
-	    sudo chown root:root $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
-	done
-	sudo chown root:root -R $BASE/tmp/Folder$DOCKER9TEMPLATE
-	sudo chmod 777 -R $BASE/tmp/Folder$DOCKER9TEMPLATE
-	pushd $BASE/tmp
-	tar -czf "Folder$DOCKER9TEMPLATE.tar.gz" "Folder$DOCKER9TEMPLATE"
-	sudo chmod 777 Folder$DOCKER9TEMPLATE.tar.gz
-	popd
-	    	
-	for ip in "${ALL92_IPS[@]}"; do
-	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
-	    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER9TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
-	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER9TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && tar -xzf \"Folder$DOCKER9TEMPLATE.tar.gz\" && sudo mv Folder$DOCKER9TEMPLATE/* $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && pushd $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && chmod 400 *.pem && popd && sudo rm -rf Folder$DOCKER9TEMPLATE && sudo rm -f Folder$DOCKER9TEMPLATE.tar.gz"
-	done
-	
-	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE
-	sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz
+	if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+		sudo mkdir -p $BASE/tmp/Folder$DOCKER9TEMPLATE
+		pem_files=$(awk -F ',' '{print $3}' "$BASE/tmp/$DOCKER9TEMPLATE" | sort | uniq)
+		echo "Distinct PEM files:"
+		for pem_file in $pem_files
+		do
+		    echo "$pem_file"
+		    filenamePEM="${pem_file##*/}"
+		    sudo cp $pem_file $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+		    sudo chmod 777 $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+		    sudo chown root:root $BASE/tmp/Folder$DOCKER9TEMPLATE/$filenamePEM
+		done
+		sudo chown root:root -R $BASE/tmp/Folder$DOCKER9TEMPLATE
+		sudo chmod 777 -R $BASE/tmp/Folder$DOCKER9TEMPLATE
+		pushd $BASE/tmp
+		tar -czf "Folder$DOCKER9TEMPLATE.tar.gz" "Folder$DOCKER9TEMPLATE"
+		sudo chmod 777 Folder$DOCKER9TEMPLATE.tar.gz
+		popd
+		    	
+		for ip in "${ALL92_IPS[@]}"; do
+		    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+		    scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$DOCKER9TEMPLATE" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+		    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo mv /home/${LOGIN_USERS[$ip]}/$DOCKER9TEMPLATE $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && sudo chmod 777 $DFS_DATA_DIR/Misc$STACKNAME/webssh/.Nodes && tar -xzf \"Folder$DOCKER9TEMPLATE.tar.gz\" && sudo mv Folder$DOCKER9TEMPLATE/* $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && pushd $DFS_DATA_DIR/Misc$STACKNAME/webssh/PEMS && chmod 400 *.pem && popd && sudo rm -rf Folder$DOCKER9TEMPLATE && sudo rm -f Folder$DOCKER9TEMPLATE.tar.gz"
+		done
+		
+		sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE
+		sudo rm -rf $BASE/tmp/Folder$DOCKER9TEMPLATE.tar.gz
+	fi
 	
 	FNNPATH="$TheClusterFolderForThisRUN/$STACKNAME.normal"
 	if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
@@ -1875,10 +1980,19 @@ create_cert_for_all() {
     tar -czf "CERTS.tar.gz" "CERTS"
     sudo chmod 777 CERTS.tar.gz
     popd
+    
+    ALL_CERT2_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
+    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+    	ALL_CERT2_IPS=("${VISHVAKARMA_IPS[@]}" "${EXISTING_IPS[@]}")
+    fi    
     	
-    for ip in "${ALL_CERT_IPS[@]}"; do
-        scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$TheClusterFolderForThisRUN/CERTS.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
-        ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -rf CERTS && tar -xzf \"CERTS.tar.gz\" && sudo mv CERTS/CA/* $CERTS_DIR/cluster/ca && sudo mv CERTS/FULL/* $CERTS_DIR/cluster/full && sudo rm -rf CERTS && sudo rm -f CERTS.tar.gz"
+    for ip in "${ALL_CERT2_IPS[@]}"; do
+    	if ping -c 5 "$ip" > /dev/null; then
+        	scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$TheClusterFolderForThisRUN/CERTS.tar.gz" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+        	ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -rf CERTS && tar -xzf \"CERTS.tar.gz\" && sudo mv CERTS/CA/* $CERTS_DIR/cluster/ca && sudo mv CERTS/FULL/* $CERTS_DIR/cluster/full && sudo rm -rf CERTS && sudo rm -f CERTS.tar.gz"
+        else
+        	echo "IP $ip Not Pinging For CERTS Copy..."
+        fi
     done
     
     sudo rm -f $TheClusterFolderForThisRUN/CERTS.tar.gz       
@@ -2004,6 +2118,58 @@ if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
 fi
 sudo chmod 777 $BASE/tmp/$EXECUTESCRIPT
 $BASE/tmp/$EXECUTESCRIPT
+if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	ALL_23IPS=("${EXISTING_IPS[@]}")
+	for ip in "${ALL_23IPS[@]}"; do
+		if ping -c 5 "$ip" > /dev/null; then
+			scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTESCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
+			ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT"
+		else
+			echo "IP $ip Not Pinging For Hosts File Update..."
+		fi
+	done
+			
+	IFS=',' read -r -a TEC5B <<< $THEEXISTINGCLUSTERBRAHMA
+	THEBRAHMADETFORSQL0="${TEC5B[0]}"
+	THEBRAHMADETFORSQL1="${TEC5B[1]}"
+	THEBRAHMADETFORSQL2="${TEC5B[2]}"
+	THEBRAHMADETFORSQL3="${TEC5B[3]}"
+				
+	THERESULTIP=$(ssh -i $THEBRAHMADETFORSQL2 -p $THEBRAHMADETFORSQL1 -o StrictHostKeyChecking=no $THEBRAHMADETFORSQL3@$THEBRAHMADETFORSQL0 "docker service ps $STACKNAME""_CHITRAGUPTA_mysql | grep 'Running' | head -n 1")
+	THERESULTIP=$(echo $THERESULTIP | awk '{print $4}')
+	
+	echo "Original Output For MySQL : $THERESULTIP"
+	for E1R2D in "${!EXISTING_RUN_DETAILS[@]}"; do
+		ER1D="${EXISTING_RUN_DETAILS[$E1R2D]}"
+		IFS=',' read -r -a ER_1D <<< $ER1D
+		ER_1D1_VAL1="${ER_1D[4]}"
+		ER_1D1_VAL2="${ER_1D[0]}"
+		if [ "$THERESULTIP" == "$ER_1D1_VAL1" ] ; then
+			THERESULTIP="$ER_1D1_VAL2"
+			break
+		fi                   					
+	done
+	echo "Actual Output For MySQL : $THERESULTIP"
+	
+	THEBRAHMADETFORSQL1="${PORTS[$THERESULTIP]}"
+	THEBRAHMADETFORSQL2="${PEM_FILES[$THERESULTIP]}"	
+	THEBRAHMADETFORSQL3="${LOGIN_USERS[$THERESULTIP]}"
+	
+	CONTAINER_ID=$(ssh -i $THEBRAHMADETFORSQL2 -p $THEBRAHMADETFORSQL1 -o StrictHostKeyChecking=no $THEBRAHMADETFORSQL3@$THERESULTIP "docker ps --filter 'name=$STACKNAME""_CHITRAGUPTA_mysql' --format '{{.ID}}'")
+	
+	echo "MySQL Container On IP $THERESULTIP : $CONTAINER_ID"
+	
+	if ping -c 5 "$THERESULTIP" > /dev/null; then
+		scp -i $THEBRAHMADETFORSQL2 -P $THEBRAHMADETFORSQL1 -o StrictHostKeyChecking=no $THEGUACASQL $THEBRAHMADETFORSQL3@$THERESULTIP:/tmp/$STACKPRETTYNAME-$REQUNQ-$THEGUACA_SQL.sql
+		ssh -i $THEBRAHMADETFORSQL2 -p $THEBRAHMADETFORSQL1 -o StrictHostKeyChecking=no $THEBRAHMADETFORSQL3@$THERESULTIP "docker cp /tmp/$STACKPRETTYNAME-$REQUNQ-$THEGUACA_SQL.sql $CONTAINER_ID:/tmp/$STACKPRETTYNAME-$REQUNQ-$THEGUACA_SQL.sql"
+		ssh -i $THEBRAHMADETFORSQL2 -p $THEBRAHMADETFORSQL1 -o StrictHostKeyChecking=no $THEBRAHMADETFORSQL3@$THERESULTIP "docker exec -i $CONTAINER_ID mysql -uroot -p$REVERSED_PASSWORD guacamole_$STACK_PRETTY_NAME < /tmp/$STACKPRETTYNAME-$REQUNQ-$THEGUACA_SQL.sql"
+	else
+		echo "IP $THERESULTIP Not Pinging For Guacamole MYSQL [$THEGUACASQL : /tmp/$STACKPRETTYNAME-$REQUNQ-$THEGUACA_SQL.sql] Update..."
+		echo "---------------"
+		cat $THEGUACASQL
+		echo "---------------"
+	fi						
+fi
 sudo rm -f $BASE/tmp/$EXECUTESCRIPT
 sudo rm -f $THEGUACASQL
 
@@ -2050,6 +2216,53 @@ if [[ "$PROCSOS" == "Y" ]]; then
 	sudo touch $TheFinalMessageFile
 	sudo chmod 777 $TheFinalMessageFile	
 	exit
+fi
+
+if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	GLUSTERVPATH_1=""
+	GLUSTERVPATH_2=""
+	GLUSTERVPATH_3=""
+	ALL12_IPS=("${VISHVAKARMA_IPS[@]}")
+			
+	TMP_RNDM_GD1F1FL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	$BASE/Scripts/SecretsFile-Decrypter "$GLUSTERVPATH1├1├1├$BASE/tmp/$TMP_RNDM_GD1F1FL├$ADMIN_PASSWORD"
+	sudo chmod 777 $BASE/tmp/$TMP_RNDM_GD1F1FL
+	GLUSTERVPATH_1=$(head -n 1 $BASE/tmp/$TMP_RNDM_GD1F1FL)
+	sudo rm -f $BASE/tmp/$TMP_RNDM_GD1F1FL
+	TMP_RNDM_GD1F1FL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	$BASE/Scripts/SecretsFile-Decrypter "$GLUSTERVPATH2├1├1├$BASE/tmp/$TMP_RNDM_GD1F1FL├$ADMIN_PASSWORD"
+	sudo chmod 777 $BASE/tmp/$TMP_RNDM_GD1F1FL
+	GLUSTERVPATH_2=$(head -n 1 $BASE/tmp/$TMP_RNDM_GD1F1FL)
+	sudo rm -f $BASE/tmp/$TMP_RNDM_GD1F1FL
+	TMP_RNDM_GD1F1FL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	$BASE/Scripts/SecretsFile-Decrypter "$GLUSTERVPATH3├1├1├$BASE/tmp/$TMP_RNDM_GD1F1FL├$ADMIN_PASSWORD"
+	sudo chmod 777 $BASE/tmp/$TMP_RNDM_GD1F1FL
+	GLUSTERVPATH_3=$(head -n 1 $BASE/tmp/$TMP_RNDM_GD1F1FL)
+	sudo rm -f $BASE/tmp/$TMP_RNDM_GD1F1FL
+
+	IFS='■' read -r -a GLUSTERVPATH_V_1 <<< $GLUSTERVPATH_1
+	GLUSTERVPATH_V_V_1="${GLUSTERVPATH_V_1[0]}"
+	GLUSTERVPATH_V_V_2="${GLUSTERVPATH_V_1[1]}"
+	GLUSTERVPATH_V_V_3="${GLUSTERVPATH_V_1[2]}"		
+	for IP in "${ALL12_IPS[@]}"; do
+	run_remote $IP "sudo rm -f /opt/GV$STACKNAME && sudo touch /opt/GV$STACKNAME && echo \"$GLUSTERVPATH_1\" | sudo tee -a /opt/GV$STACKNAME > /dev/null && sudo chmod 777 /opt/GV$STACKNAME && hostname && sudo mount -t glusterfs $GLUSTERVPATH_V_V_1:/$GLUSTERVPATH_V_V_2 $GLUSTERVPATH_V_V_3 -o log-level=DEBUG,log-file=/var/log/glusterfs/$GLUSTERVPATH_V_V_2-mount.log"
+	done 
+
+	IFS='■' read -r -a GLUSTERVPATH_V_1 <<< $GLUSTERVPATH_2
+	GLUSTERVPATH_V_V_1="${GLUSTERVPATH_V_1[0]}"
+	GLUSTERVPATH_V_V_2="${GLUSTERVPATH_V_1[1]}"
+	GLUSTERVPATH_V_V_3="${GLUSTERVPATH_V_1[2]}"		
+	for IP in "${ALL12_IPS[@]}"; do
+	run_remote $IP "sudo rm -f /opt/GVminiogdata && sudo touch /opt/GVminiogdata && echo \"$GLUSTERVPATH_2\" | sudo tee -a /opt/GVminiogdata > /dev/null && sudo chmod 777 /opt/GVminiogdata && hostname && sudo mount -t glusterfs $GLUSTERVPATH_V_V_1:/$GLUSTERVPATH_V_V_2 $GLUSTERVPATH_V_V_3 -o log-level=DEBUG,log-file=/var/log/glusterfs/$GLUSTERVPATH_V_V_2-mount.log"
+	done
+	
+	IFS='■' read -r -a GLUSTERVPATH_V_1 <<< $GLUSTERVPATH_3
+	GLUSTERVPATH_V_V_1="${GLUSTERVPATH_V_1[0]}"
+	GLUSTERVPATH_V_V_2="${GLUSTERVPATH_V_1[1]}"
+	GLUSTERVPATH_V_V_3="${GLUSTERVPATH_V_1[2]}"		
+	for IP in "${ALL12_IPS[@]}"; do
+	run_remote $IP "sudo rm -f /opt/GVnextgcloud && sudo touch /opt/GVnextgcloud && echo \"$GLUSTERVPATH_3\" | sudo tee -a /opt/GVnextgcloud > /dev/null && sudo chmod 777 /opt/GVnextgcloud && hostname && sudo mount -t glusterfs $GLUSTERVPATH_V_V_1:/$GLUSTERVPATH_V_V_2 $GLUSTERVPATH_V_V_3 -o log-level=DEBUG,log-file=/var/log/glusterfs/$GLUSTERVPATH_V_V_2-mount.log"
+	done					
 fi
 
 ALL5_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
@@ -2108,6 +2321,9 @@ if [ "$NATIVE" -lt 2 ]; then
 	fi
 
 	ALL_IPS=("${BRAHMA_IPS[@]}" "${VISHVAKARMA_IPS[@]}" "${INDRA_IPS[@]}")
+	if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+		ALL_IPS=("${VISHVAKARMA_IPS[@]}" "${EXISTING_IPS[@]}")
+	fi
 	for ip in "${ALL_IPS[@]}"; do
 		scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTE2SCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
 		ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTE2SCRIPT"
@@ -2265,9 +2481,9 @@ if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
 	SUBNET=$(ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p $P1O1R1T $THE1R1E1QUSE1R@${BRAHMA_IPS[0]} "docker network inspect ${STACKNAME}-encrypted-overlay | grep -m 1 -oP '(?<=\"Subnet\": \")[^\"]+'")
 	echo "Using Subnet $SUBNET ..."
 
-	create_glusterfs_volume_cluster "$STACKNAME" "$DFS_CLUSTER_DIR"
-	create_glusterfs_volume_cluster "miniogdata" "$DFS_DATA_DIR/MINIODATA"
-	create_glusterfs_volume_cluster "nextgcloud" "$DFS_DATA_DIR/NEXTCLOUD"
+	create_glusterfs_volume_cluster "$STACKNAME" "$DFS_CLUSTER_DIR" "$GLUSTERVPATH1"
+	create_glusterfs_volume_cluster "miniogdata" "$DFS_DATA_DIR/MINIODATA" "$GLUSTERVPATH2"
+	create_glusterfs_volume_cluster "nextgcloud" "$DFS_DATA_DIR/NEXTCLOUD" "$GLUSTERVPATH3"
 
 	if [ ${#BRAHMA_IPS[@]} -lt 2 ]; then
 		echo "No need for Portainer HA"
@@ -2524,6 +2740,11 @@ if [ $RETRIES -eq $MAX_RETRIES ]; then
 fi
 rename_environment
 else
+	ALLL_IPS=("${VISHVAKARMA_IPS[@]}")
+	for ip in "${ALLL_IPS[@]}"; do
+	    ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo rm -f /tmp/MountSBB-RUN.out && nohup $DFS_DATA_DIR/MINIO/MountSBB.sh > /tmp/MountSBB-RUN.out 2>&1 &" < /dev/null > /dev/null 2>&1 &
+	done
+
 	sudo touch $TheFinalMessageFile
 	sudo chmod 777 $TheFinalMessageFile
 fi
