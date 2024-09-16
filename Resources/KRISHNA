@@ -1,16 +1,60 @@
 #!/bin/bash
 
-THELISTOFIPS="THEIPLIST"
-THEINTERFACE="THENIC"
-IFS='|' read -r -a VARNA <<< "$THELISTOFIPS"
+BASE="/opt/Matsya"
 
-# Define WireGuard configuration
-WG_CONFIG_DIR="THEWGPATH"
-WG_CONFIG_FILE="${WG_CONFIG_DIR}/$THEINTERFACE.conf"
-THEPATH="$WG_CONFIG_DIR/$THEINTERFACE"
-WG_INTERFACE="$THEINTERFACE"
-WG_PORT="THEKRISHNAPORT"
-WG_SUBNET="THESUBNET.0/24"
+ADMIN_PASSWORD="$1"
+
+THENATUREOFTHISRUN="THENATUREOFTHIS_RUN"
+VPNENCFILEPATH="VPNENC_FILEPATH"
+
+if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+	THELISTOFIPS="THEIPLIST"
+	THEINTERFACE="THENIC"
+	WG_CONFIG_DIR="THEWGPATH"
+	WG_CONFIG_FILE="${WG_CONFIG_DIR}/$THEINTERFACE.conf"
+	THEPATH="$WG_CONFIG_DIR/$THEINTERFACE"
+	WG_INTERFACE="$THEINTERFACE"
+	WG_PORT="THEKRISHNAPORT"
+	WG_SUBNET="THESUBNET.0/24"
+	IFS='|' read -r -a VARNA <<< "$THELISTOFIPS"
+	IFS='|' read -r -a VAR_NA <<< "$THELISTOFIPS"
+	THE_SUB_NET="THESUBNET"	
+fi
+
+if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	TMP_RNDM_VPN1ENC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+	$BASE/Scripts/SecretsFile-Decrypter "$VPNENCFILEPATH├1├1├$BASE/tmp/$TMP_RNDM_VPN1ENC├$ADMIN_PASSWORD"
+	sudo chmod 777 $BASE/tmp/$TMP_RNDM_VPN1ENC
+	THEEXISTVPNCONTENT=$(head -n 1 $BASE/tmp/$TMP_RNDM_VPN1ENC)
+	sudo rm -f $BASE/tmp/$TMP_RNDM_VPN1ENC
+	
+	IFS='■' read -r -a TEC5B <<< $THEEXISTVPNCONTENT
+	THEINTERFACE="${TEC5B[0]}"
+	WG_CONFIG_DIR="${TEC5B[1]}"
+	WG_CONFIG_FILE="${WG_CONFIG_DIR}/$THEINTERFACE.conf"
+	THEPATH="$WG_CONFIG_DIR/$THEINTERFACE"
+	WG_INTERFACE="$THEINTERFACE"
+	WG_PORT="${TEC5B[2]}"
+	WG_SUBNET="${TEC5B[3]}"".0/24"
+	THE_SUB_NET="${TEC5B[3]}"
+	THECOMPLETEIPS="${TEC5B[4]}"
+	THELISTOFIPS=$(echo "$THECOMPLETEIPS" | awk -F '¤' '{print $NF}')
+	IFS='|' read -r -a VARNA <<< "$THELISTOFIPS"
+	
+	declare -a SAMPOORNA_IPS
+	IFS='¤' read -r -a THELISTOF_IPS <<< "$THECOMPLETEIPS"
+	for part in "${THELISTOF_IPS[@]}"; do
+	  IFS='|' read -r -a VA1RNA <<< "$part"
+	  for item in "${VA1RNA[@]}"; do
+	    IFS=',' read -r ip _ <<< "$item"
+	    SAMPOORNA_IPS+=("$ip")
+	  done
+	done
+	echo "SAMPOORNA_IPS : ${SAMPOORNA_IPS[@]}"
+	
+	newlistofips="${THECOMPLETEIPS//¤/|}"
+	IFS='|' read -r -a VAR_NA <<< "$newlistofips"				
+fi
 
 # SSH run command
 ssh_run() {
@@ -71,31 +115,81 @@ configure_wireguard() {
     local public_key="$6"
     
     local conf="[Interface]
-Address = THESUBNET.$((i+1))/24
+Address = $THE_SUB_NET.$((i+1))/24
 PrivateKey = $PRIVATE_KEY
 ListenPort = $WG_PORT
 "
     local j=0
-    for peer in "${VARNA[@]}"; do
+    for peer in "${VAR_NA[@]}"; do
         if [ "$i" -ne "$j" ]; then
             IFS=',' read -r PEER_IP PEER_PORT PEER_PEM PEER_USER <<< "$peer"
-            PEER_PUBLIC_KEY=$(ssh_run "$PEER_IP" "$PEER_PORT" "$PEER_PEM" "$PEER_USER" "sudo cat ""$THEPATH""publickey")
-            conf+="
+            if ping -c 5 "$PEER_IP" > /dev/null; then
+		    PEER_PUBLIC_KEY=$(ssh_run "$PEER_IP" "$PEER_PORT" "$PEER_PEM" "$PEER_USER" "sudo cat ""$THEPATH""publickey")
+		    conf+="
 [Peer]
 PublicKey = $PEER_PUBLIC_KEY
 Endpoint = $PEER_IP:$WG_PORT
-AllowedIPs = THESUBNET.$((j+1))/32
+AllowedIPs = $THE_SUB_NET.$((j+1))/32
 PersistentKeepalive = 25
 "
+
+		    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+			IP1_EXISTS="N"	
+			for existing_ip in "${NEWVPN_IPS[@]}"; do
+				if [[ "$PEER_IP" == "$existing_ip" ]]; then
+				    IP1_EXISTS="Y"
+				    break
+				fi
+			done
+			IP2_EXISTS="N"	
+			for existing_ip in "${NEWVPN_IPS[@]}"; do
+				if [[ "$ip" == "$existing_ip" ]]; then
+				    IP2_EXISTS="Y"
+				    break
+				fi
+			done			
+			if [ "$IP1_EXISTS" == "Y" ] ; then
+				if [ "$IP2_EXISTS" == "N" ] ; then
+			    		if ping -c 5 "$ip" > /dev/null; then
+			    			ssh_run "$ip" "$port" "$pem_file" "$user" "sudo wg set $WG_INTERFACE peer $PEER_PUBLIC_KEY allowed-ips $THE_SUB_NET.$((j+1))/32 persistent-keepalive 25"
+			    		else
+			    			echo "IP $ip Not Pinging For Dynamic Conf Update..."
+			    		fi			
+				fi
+			fi 		
+		    fi
+	    else
+	    	echo "IP $PEER_IP Not Pinging For VPN Publickey Download..."
+            fi		
         fi
         ((j++))
     done
    
     echo "$conf" > $THEINTERFACE.conf
-    scp_run "$ip" "$port" "$pem_file" "$user" $THEINTERFACE.conf "/tmp/$THEINTERFACE.conf"
+    if ping -c 5 "$ip" > /dev/null; then
+    	scp_run "$ip" "$port" "$pem_file" "$user" $THEINTERFACE.conf "/tmp/$THEINTERFACE.conf"
+    	ssh_run "$ip" "$port" "$pem_file" "$user" "sudo mv /tmp/$THEINTERFACE.conf ${WG_CONFIG_FILE} && sudo chmod 600 ${WG_CONFIG_FILE}"
+    else
+    	echo "IP $ip Not Pinging For VPN Conf Copy..."
+    fi
     rm -f $THEINTERFACE.conf
-    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo mv /tmp/$THEINTERFACE.conf ${WG_CONFIG_FILE} && sudo chmod 600 ${WG_CONFIG_FILE}"
-    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo systemctl enable wg-quick@${WG_INTERFACE} && sudo systemctl restart wg-quick@${WG_INTERFACE} && sudo systemctl status wg-quick@${WG_INTERFACE}"
+        
+    if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+    	ssh_run "$ip" "$port" "$pem_file" "$user" "sudo systemctl enable wg-quick@${WG_INTERFACE} && sudo systemctl restart wg-quick@${WG_INTERFACE} && sudo systemctl status wg-quick@${WG_INTERFACE}"
+    fi
+    
+    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	IP_EXISTS="N"	
+	for existing_ip in "${NEWVPN_IPS[@]}"; do
+		if [[ "$ip" == "$existing_ip" ]]; then
+		    IP_EXISTS="Y"
+		    break
+		fi
+	done   
+    	if [[ "$IP_EXISTS" == "Y" ]]; then
+    		ssh_run "$ip" "$port" "$pem_file" "$user" "sudo systemctl enable wg-quick@${WG_INTERFACE} && sudo systemctl restart wg-quick@${WG_INTERFACE} && sudo systemctl status wg-quick@${WG_INTERFACE}"    	
+    	fi
+    fi    
 }
 
 # Ensure IP forwarding is enabled
@@ -148,9 +242,12 @@ reconfigure_dpkg
 update_package_list
 echo "System is ready for package installation..."
 
+declare -a NEWVPN_IPS
 # Main script execution
 for ((i=0; i<${#VARNA[@]}; i++)); do
     IFS=',' read -r IP PORT PEM_FILE USER <<< "${VARNA[$i]}"
+    
+    NEWVPN_IPS+=("$IP")
     
     # Install WireGuard
     install_wireguard "$IP" "$PORT" "$PEM_FILE" "$USER"
@@ -158,8 +255,8 @@ for ((i=0; i<${#VARNA[@]}; i++)); do
     # Generate keys
     generate_keys "$IP" "$PORT" "$PEM_FILE" "$USER"
 done
-for ((i=0; i<${#VARNA[@]}; i++)); do
-    IFS=',' read -r IP PORT PEM_FILE USER <<< "${VARNA[$i]}"
+for ((i=0; i<${#VAR_NA[@]}; i++)); do
+    IFS=',' read -r IP PORT PEM_FILE USER <<< "${VAR_NA[$i]}"
         
     # Retrieve keys
     get_keys "$IP" "$PORT" "$PEM_FILE" "$USER"

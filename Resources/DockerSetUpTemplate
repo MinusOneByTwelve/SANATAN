@@ -884,6 +884,11 @@ THEOSCHOICE="NA"
 
 if [ ! -f /opt/CLD ]; then
 	echo 'ON PREMISE'
+	if [[ "$ELIGIBLEFORVPN" == "Y" ]]; then
+		INTERNALIP2=$(ip addr show $STACKNAME | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1)
+		sudo rm -f /opt/WHOAMI3 && sudo touch /opt/WHOAMI3 && sudo chmod 777 /opt/WHOAMI3 && echo "$INTERNALIP2" | sudo tee -a /opt/WHOAMI3 > /dev/null	
+		echo 'ON PREMISE VPN'	
+	fi	
 else
 	THEOSCHOICE=$(head -n 1 /opt/CLD)
 	
