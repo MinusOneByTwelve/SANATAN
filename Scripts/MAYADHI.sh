@@ -283,9 +283,10 @@ if [ "$TASKIDENTIFIER" == "VAMANA" ] ; then
 	fi
 			
 	TheClusterFolderForThisRUN="$BASE/Output/Vision/V$VisionId/$ClusterName"
+	IsHybridCluster=$(echo "$THEJSON" | jq -r 'if has("Hybrid") then .Hybrid else "N" end')	
 		
 	RNDM_=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
-	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$TheLogFolderForThisRUN/MainRUN-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts├$TheNameOfVision├$TheLogFolderForThisRUN├$RNDM_├$TheClusterFolderForThisRUN├$NativeApps" > $TheLogFolderForThisRUN/MainRUN-$RNDM_.out 2>&1 &
+	nohup $BASE/Scripts/VAMANA.sh "$TheChoice" "$ScopeFile├$VisionKey├$AdminKey├$VisionId├$ClusterId├$ClusterName├$Automated├$TheLogFolderForThisRUN/MainRUN-$RNDM_.out├$WebSSHKey├$REQUNQ├$PREP_ONLY├$ChitraGupta├$AutoPorts├$TheNameOfVision├$TheLogFolderForThisRUN├$RNDM_├$TheClusterFolderForThisRUN├$NativeApps├$IsHybridCluster" > $TheLogFolderForThisRUN/MainRUN-$RNDM_.out 2>&1 &
 	
 	if [ "$FromMatsya" == "Y" ] ; then
 		sudo mv $BASE/Output/Logs/VAMANA/$TheNameOfVision/$REQUNQ/Cloud-Instance-Sync-B-VAMANA-Initiate.out $TheLogFolderForThisRUN
@@ -557,8 +558,9 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 		if [ "$TheIDForCluster" == "N..A" ]; then
 			random1_1number=$(shuf -i 30000-40000 -n 1)
 			TheIDForCluster="$random1_1number"		
-		fi				
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster"	
+		fi
+		IsHybridCluster=$(echo "$THEJSON" | jq -r 'if has("Hybrid") then .Hybrid else "N" end')				
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├N├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster├$IsHybridCluster"	
 	fi
 	if [ "$ToVamana" == "X" ]; then
 		VamanaAdminKey=$(jq -r '.VamanaAdminKey' <<< "$THEJSON")
@@ -576,7 +578,8 @@ if [ "$TASKIDENTIFIER" == "MATSYA" ] ; then
 			random1_1number=$(shuf -i 30000-40000 -n 1)
 			TheIDForCluster="$random1_1number"		
 		fi
-		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster"	
+		IsHybridCluster=$(echo "$THEJSON" | jq -r 'if has("Hybrid") then .Hybrid else "N" end')
+		VAMANAVAL="$THESTACKFILE├$THEVISIONKEY├$THEVISIONID├$VamanaAdminKey├$VamanaWebSSHKey├Y├$AutoPorts├$TheNameOfVision├$TheNameForCluster├$NativeEApps├$TheIDForCluster├$IsHybridCluster"	
 	fi
 
 	CheckForOnPrem=$(echo "$THEJSON" | jq -r 'if has("CheckForOnPrem") then .CheckForOnPrem else "NA" end')	

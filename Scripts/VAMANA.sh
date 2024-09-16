@@ -280,6 +280,11 @@ if [[ "$THECLUSTERISMULTICLOUD" == "Y" ]]; then
     echo "1) VarahaPort1:$VarahaPort1,2) ChitraGuptaPort1:$ChitraGuptaPort1,3) ChitraGuptaPort2:$ChitraGuptaPort2,4) ChitraGuptaPort3:$ChitraGuptaPort3,5) ChitraGuptaPort4:$ChitraGuptaPort4,6) ChitraGuptaPort8:$ChitraGuptaPort8,7) ChitraGuptaPortU1:$ChitraGuptaPortU1,8) ChitraGuptaPortV1:$ChitraGuptaPortV1,9) ChitraGuptaPortW1:$ChitraGuptaPortW1,10) ChitraGuptaPortLDP1:$ChitraGuptaPortLDP1,11) ChitraGuptaPortLDP2:$ChitraGuptaPortLDP2,12) ChitraGuptaPortLDP3:$ChitraGuptaPortLDP3,13) ChitraGuptaPortKERB1:$ChitraGuptaPortKERB1,14) ChitraGuptaPortKERB2:$ChitraGuptaPortKERB2,15) MINPortIO1:$MINPortIO1,16) MINPortIO2:$MINPortIO2,17) FLBRPortIO1:$FLBRPortIO1,18) PVTCLDPortIO1:$PVTCLDPortIO1,19) EFKPort1:$EFKPort1,20) EFKPort2:$EFKPort2"
 fi
 
+if [[ "$IsHybridCluster" == "Y" ]]; then
+	THEIPTO="$VarahaPort1,$ChitraGuptaPort1,$ChitraGuptaPort2,$ChitraGuptaPort3,$ChitraGuptaPort4,$ChitraGuptaPort8,$ChitraGuptaPortU1,$ChitraGuptaPortV1,$ChitraGuptaPortW1,$ChitraGuptaPortLDP1,$ChitraGuptaPortLDP2,$ChitraGuptaPortLDP3,$ChitraGuptaPortKERB1,$ChitraGuptaPortKERB2,$MINPortIO1,$MINPortIO2,$FLBRPortIO1,$PVTCLDPortIO1,$EFKPort1,$EFKPort2"
+    echo "1) VarahaPort1:$VarahaPort1,2) ChitraGuptaPort1:$ChitraGuptaPort1,3) ChitraGuptaPort2:$ChitraGuptaPort2,4) ChitraGuptaPort3:$ChitraGuptaPort3,5) ChitraGuptaPort4:$ChitraGuptaPort4,6) ChitraGuptaPort8:$ChitraGuptaPort8,7) ChitraGuptaPortU1:$ChitraGuptaPortU1,8) ChitraGuptaPortV1:$ChitraGuptaPortV1,9) ChitraGuptaPortW1:$ChitraGuptaPortW1,10) ChitraGuptaPortLDP1:$ChitraGuptaPortLDP1,11) ChitraGuptaPortLDP2:$ChitraGuptaPortLDP2,12) ChitraGuptaPortLDP3:$ChitraGuptaPortLDP3,13) ChitraGuptaPortKERB1:$ChitraGuptaPortKERB1,14) ChitraGuptaPortKERB2:$ChitraGuptaPortKERB2,15) MINPortIO1:$MINPortIO1,16) MINPortIO2:$MINPortIO2,17) FLBRPortIO1:$FLBRPortIO1,18) PVTCLDPortIO1:$PVTCLDPortIO1,19) EFKPort1:$EFKPort1,20) EFKPort2:$EFKPort2"
+fi
+
 # EXTERNAL PORTS
 PortainerAPort=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[1]}" || GetNewPort) && PORTSLIST+=("$PortainerAPort") #21 #1
 PortainerSPort=$([ "$AutoPorts" = "N" ] && echo "${E_P_R[2]}" || GetNewPort) && PORTSLIST+=("$PortainerSPort") #22 #2
@@ -491,6 +496,7 @@ THENAMEOFTHELOGFOLDER="${THE_ARGS[14]}"
 RND1M_="${THE_ARGS[15]}"
 TheClusterFolderForThisRUN="${THE_ARGS[16]}"
 NativeApps="${THE_ARGS[17]}"
+IsHybridCluster="${THE_ARGS[18]}"
 
 THENAMEOFTHEMLOGFOLDER="$BASE/Output/Logs/MATSYA/$TheNameOfVision/$REQUNQ"
 TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-SUCCESS"
@@ -527,6 +533,7 @@ RODFILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.dsrod"
 GLUSTERVPATH1="$TheClusterFolderForThisRUN/$STACKNAME.gvp1"
 GLUSTERVPATH2="$TheClusterFolderForThisRUN/$STACKNAME.gvp2"
 GLUSTERVPATH3="$TheClusterFolderForThisRUN/$STACKNAME.gvp3"
+VPNENC_FILEPATH="$TheClusterFolderForThisRUN/$STACKNAME.vpnd"
 REVERSED_PASSWORD=$(echo "$ADMIN_PASSWORD" | rev)
 DOCKER_DATA_DIR="/shiva/local/storage/docker$STACKNAME"
 DFS_DATA_DIR="/shiva/local/storage/dfs$STACKNAME"
@@ -563,11 +570,6 @@ declare -A JIVA_IPS
 declare -A ROLE_TYPE
 
 NATIVE="1"
-if [[ "$ISAUTOMATED" == "Y" ]]; then
-	CHITRAGUPTA=""
-else
-	CHITRAGUPTA="${THE_ARGS[11]}"
-fi
 THE_PVT_CLD=""
 CHITRAGUPTA_DET=""
 CHITRAGUPTA1_DET=""
@@ -714,8 +716,19 @@ fi
 THEGUACA_SQL=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 THEGUACASQL="$BASE/tmp/THEGUACA_SQL_$THEGUACA_SQL.sql" && touch $THEGUACASQL && sudo chmod 777 $THEGUACASQL
 
+if [[ "$ISAUTOMATED" == "Y" ]]; then
+	CHITRAGUPTA=""
+else
+	CHITRAGUPTA="${THE_ARGS[11]}"
+fi
+CHITRA_GUPTA=""
 if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
-	echo "SET @entityid = (select entity_id from guacamole_entity where name = 'admin');" | sudo tee -a $THEGUACASQL > /dev/null
+	CHITRA_GUPTA="$CHITRAGUPTA"
+	CHITRAGUPTA=""
+fi
+
+if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	echo "SET @entityid = (select entity_id from guacamole_entity where name = 'admin');" | sudo tee -a $THEGUACASQL > /dev/null	
 fi
 
 # Function to parse the instance details file
@@ -753,7 +766,8 @@ parse_instance_details() {
 		lowercase_text="${C1TYPE,,}"
 		ROLE_TYPE["$IP"]="$ROLE"
 		
-		if [[ "$C1TYPE" == "ONPREM" ]]; then
+		if [[ "$IsHybridCluster" == "N" ]]; then
+		#if [[ "$C1TYPE" == "ONPREM" ]]; then
 			echo "KRISHNA NA"
 		else
 			KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
@@ -1853,7 +1867,15 @@ create_swarm_labels() {
 		    fi
 		    if [[ "$IP" == "$THE_PVT_CLD" ]]; then
 			    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""THE_PVT_CLDreplica=true $NODE_ID"
-		    fi            
+		    fi 
+		    
+		    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+			    IS1_1CG=$(echo "$CHITRA_GUPTA" | grep -qw "$IP" && echo "Y" || echo "N")
+			    if [[ "$IS1_1CG" == "Y" ]]; then		    				
+				    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""CHITRAGUPTAreplica=true $NODE_ID"
+			    fi		    
+		    fi		    		    
+		               
 		    run_remote $THEBRAHMAIPFOR1SSL "docker node update --label-add $STACKNAME""VISHVAKARMAreplica=true $NODE_ID"		
 		else
 		    echo "Node $IP is not part of a Swarm"
@@ -1891,7 +1913,10 @@ create_cluster_cdn_proxy() {
     	THEREQINDRA="${JIVA_IPS[$THEINDRIP]}"
     	SYNCWITHIFCONFIG="Y"
     fi
-   
+    if [[ "$IsHybridCluster" == "Y" ]]; then
+    	SYNCWITHIFCONFIG="Y"    
+    fi
+    
     sudo chmod 777 $BASE/tmp/$DOCKERTEMPLATE
     
     MIN_IO_DET="$REVERSED_PASSWORD,$MINPortIO1,$MINPortIO2,$MINPortIO3,$MINPortIO4,$DFS_DATA_DIR/MINIO/EntryPoint.sh,$DFS_DATA_DIR/MINIODATA,${CLUSTER_APPS_MAPPING["BUCKET"]}:${CLUSTERAPPSMAPPING["BUCKET"]},$V_A_MC_MAP_BUCKET,$FLBRPortIO2"
@@ -1903,7 +1928,7 @@ create_cluster_cdn_proxy() {
         scp -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -P ${PORTS[${BRAHMA_IPS[0]}]} "$BASE/tmp/$DOCKERTEMPLATE" "${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]}:/home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}"
         status=$?
         if [ $status -eq 0 ]; then
-            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGR1IPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" \"/opt/THEREALCLUSTERNODELIST$STACKNAME\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
+            ssh -i "${PEM_FILES[${BRAHMA_IPS[0]}]}" -o StrictHostKeyChecking=no -p ${PORTS[${BRAHMA_IPS[0]}]} ${LOGIN_USERS[${BRAHMA_IPS[0]}]}@${BRAHMA_IPS[0]} "sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo mv /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/$DOCKERTEMPLATE /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && sudo chmod 777 /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh && /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh \"CORE\" \"$MGR1IPS\" \"$STACKNAME\" \"$STACKPRETTYNAME\" \"$DFS_DATA2_DIR/Static$STACKNAME\" \"$VarahaPort1\" \"$VarahaPort2\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THECFGPATH.cfg\" \"$VarahaPort3\" \"$VarahaPort4\" \"$ADMIN_PASSWORD\" \"$PortainerSPort\" \"$DFS_DATA_DIR/Tmp$STACKNAME/$THEDCYPATH.yml\" \"$C2ORE\" \"$R2AM\" \"$CERTS_DIR\" \"$DFS_DATA_DIR/Errors$STACKNAME\" \"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy\" \"$THEREQINDRA\" \"${CLUSTERAPPSMAPPING["INDRA"]}\" \"${CLUSTER_APPS_MAPPING["INDRA"]}\" \"$SYNCWITHIFCONFIG\" \"$WEBSSHPort1\" \"$WEBSSH_PASSWORD\" \"$DFS_DATA_DIR/Misc$STACKNAME/webssh\" \"$THEWEBSSHIDLELIMIT\" \"${CLUSTERAPPSMAPPING["WEBSSH"]}\" \"${CLUSTER_APPS_MAPPING["WEBSSH"]}\" \"$CHITRAGUPTA_DET\" \"$MIN_IO_DET\" \"${HOST_NAMES[$THEINDRIP]}\" \"$EFKPort3\" \"$EFKPort4\" \"$CDNPRX\" \"$ALT_INDR_HA_PRT\" \"$THECLUSTERISMULTICLOUD\" \"$CHITRAGUPTA\" \"$THEIPTO\" \"/opt/THEREALCLUSTERNODELIST$STACKNAME\" \"$IsHybridCluster\" && sudo rm -f /home/${LOGIN_USERS[${BRAHMA_IPS[0]}]}/VARAHA.sh"
             sudo rm -f $BASE/tmp/$DOCKERTEMPLATE
             break
         else
@@ -2176,6 +2201,9 @@ ELIGIBLEFORKRISHNA="N"
 if [ "${#unique_counts[@]}" -gt 1 ]; then
     ELIGIBLEFORKRISHNA="Y"
 fi
+if [[ "$IsHybridCluster" == "Y" ]]; then
+    ELIGIBLEFORKRISHNA="Y"
+fi
 if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
 	ELIGIBLEFORKRISHNA="$THEEXISTINGRUNWASVPNBASED"
 fi
@@ -2184,7 +2212,7 @@ if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
 	KRISHNATEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
 	sudo cp $BASE/Resources/KRISHNA $BASE/tmp/$KRISHNATEMPLATE
 	
-	THEKRISHNAIPDET=$(IFS='|'; echo "${KRISHNA_IPS[*]}")
+	THEKRISHNAIPDET=$(IFS='|'; echo "${KRISHNA_IPS[*]}")	
 	sed -i -e s~"THEIPLIST"~"$THEKRISHNAIPDET"~g $BASE/tmp/$KRISHNATEMPLATE
 	sed -i -e s~"THENIC"~"$STACKNAME"~g $BASE/tmp/$KRISHNATEMPLATE
 	sed -i -e s~"THEWGPATH"~"/etc/wireguard"~g $BASE/tmp/$KRISHNATEMPLATE
@@ -2195,9 +2223,39 @@ if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
 	num3=$((RANDOM % 241 + 10))
 	THESUBNET="${num1}.${num2}.${num3}"	
 	sed -i -e s~"THESUBNET"~"$THESUBNET"~g $BASE/tmp/$KRISHNATEMPLATE
+	sed -i -e s~"THENATUREOFTHIS_RUN"~"$THENATUREOFTHISRUN"~g $BASE/tmp/$KRISHNATEMPLATE
+	sed -i -e s~"VPNENC_FILEPATH"~"$VPNENC_FILEPATH"~g $BASE/tmp/$KRISHNATEMPLATE		
 	sudo chmod 777 $BASE/tmp/$KRISHNATEMPLATE
-	$BASE/tmp/$KRISHNATEMPLATE
-	sudo rm -f $BASE/tmp/$KRISHNATEMPLATE	
+	
+	if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+		VPNENC_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		VPNENC1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		echo "$STACKNAME■/etc/wireguard■$THEKRISHNAPORT■$THESUBNET■$THEKRISHNAIPDET" > $BASE/tmp/$VPNENC1_FILE
+		$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$VPNENC1_FILE├$VPNENC_FILEPATH├$ADMIN_PASSWORD├$VPNENC_FILE"
+		sudo chmod 777 $VPNENC_FILEPATH
+		sudo rm -f $BASE/tmp/$VPNENC1_FILE		
+	fi
+	if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+		TMP_RNDM_VPN1ENC=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		$BASE/Scripts/SecretsFile-Decrypter "$VPNENC_FILEPATH├1├1├$BASE/tmp/$TMP_RNDM_VPN1ENC├$ADMIN_PASSWORD"
+		sudo chmod 777 $BASE/tmp/$TMP_RNDM_VPN1ENC
+		THEEXISTVPNCONTENT=$(head -n 1 $BASE/tmp/$TMP_RNDM_VPN1ENC)
+		sudo rm -f $BASE/tmp/$TMP_RNDM_VPN1ENC
+		
+		THEEXISTVPNCONTENT="$THEEXISTVPNCONTENT""¤""$THEKRISHNAIPDET"
+		
+		sudo rm -f $VPNENC_FILEPATH
+		VPNENC_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+		VPNENC1_FILE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)	
+		echo "$THEEXISTVPNCONTENT" > $BASE/tmp/$VPNENC1_FILE
+		$BASE/Scripts/SecretsFile-Encrypter "$BASE/tmp/$VPNENC1_FILE├$VPNENC_FILEPATH├$ADMIN_PASSWORD├$VPNENC_FILE"
+		sudo chmod 777 $VPNENC_FILEPATH
+		sudo rm -f $BASE/tmp/$VPNENC1_FILE			
+	fi
+	
+	$BASE/tmp/$KRISHNATEMPLATE "$ADMIN_PASSWORD"
+	
+	sudo rm -f $BASE/tmp/$KRISHNATEMPLATE			
 fi
 
 # Install Docker on all nodes
@@ -2222,6 +2280,7 @@ if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
 		if ping -c 5 "$ip" > /dev/null; then
 			scp -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -P ${PORTS[$ip]} "$BASE/tmp/$EXECUTESCRIPT" "${LOGIN_USERS[$ip]}@$ip:/home/${LOGIN_USERS[$ip]}"
 			ssh -i "${PEM_FILES[$ip]}" -o StrictHostKeyChecking=no -p ${PORTS[$ip]} ${LOGIN_USERS[$ip]}@$ip "sudo chmod 777 /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT && /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT && sudo rm -f /home/${LOGIN_USERS[$ip]}/$EXECUTESCRIPT"
+			echo "IP $ip Hosts File Update..."
 		else
 			echo "IP $ip Not Pinging For Hosts File Update..."
 		fi
@@ -2450,7 +2509,9 @@ if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
 	    	THESWARMFIRSTMANAGER=$(fetch_internal_ip ${BRAHMA_IPS[0]})
 	    fi
 	fi
-
+	if [[ "$IsHybridCluster" == "Y" ]]; then
+	    THESWARMFIRSTMANAGER=$(fetch_internal_ip ${BRAHMA_IPS[0]})
+	fi
 	# Initialize Docker Swarm with custom ports and autolock on the first manager node
 	run_remote ${BRAHMA_IPS[0]} "docker swarm init --advertise-addr $THESWARMFIRSTMANAGER --autolock"
 
@@ -2529,7 +2590,11 @@ if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
 		if [[ "$ELIGIBLEFORKRISHNA" == "Y" ]]; then
 	    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
 		fi        
-	    fi    
+	    fi
+	    if [[ "$IsHybridCluster" == "Y" ]]; then
+	        THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+	    fi
+	    	        
 	    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$BRAHMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $BRAHMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"    
 	done
 
@@ -2549,6 +2614,10 @@ for IP in "${VISHVAKARMA_IPS[@]}"; do
     	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
         fi
     fi
+    if [[ "$IsHybridCluster" == "Y" ]]; then
+        THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+    fi
+	    
     run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 done
 
@@ -2564,6 +2633,10 @@ if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
 	    	    THEIPOFTHISMGR=$(fetch_internal_ip $IP)
 		fi
 	    fi
+	    if [[ "$IsHybridCluster" == "Y" ]]; then
+	        THEIPOFTHISMGR=$(fetch_internal_ip $IP)
+	    fi
+	    
 	    run_remote $IP "sudo rm -f /var/lib/.dsuk$STACKNAME && echo '$SWARM_UNLOCK_KEY' | sudo tee /var/lib/.dsuk$STACKNAME > /dev/null && sudo rm -f /var/lib/.dsjt$STACKNAME && echo '$VISHVAKARMA_JOIN_TOKEN' | sudo tee /var/lib/.dsjt$STACKNAME > /dev/null && docker swarm join --token $VISHVAKARMA_JOIN_TOKEN --advertise-addr $THEIPOFTHISMGR $THESWARMFIRSTMANAGER:2377 && $DFS_DATA_DIR/Misc$STACKNAME/DockerRestartJoinTemplate$STACKNAME '$MGR1IPS' '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME' && $DFS_DATA_DIR/Misc$STACKNAME/DockerCleanUpTemplate$STACKNAME '$STACKNAME' '$DFS_DATA_DIR/Misc$STACKNAME'"
 	done
 

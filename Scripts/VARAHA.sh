@@ -90,6 +90,7 @@ if [ "$THECHOICE" == "CORE" ] ; then
 	THECGSERVERS="${37}"
 	THEIPTO="${38}"
 	THEREALCLUSTERNODELIST="${39}"
+	IsHybridCluster="${40}"
 	
 	sudo chown root:root $CERTS_DIR/cluster/full/$MYNAME.pem
 	sudo chmod 644 $CERTS_DIR/cluster/full/$MYNAME.pem
@@ -228,7 +229,27 @@ if [ "$THECHOICE" == "CORE" ] ; then
 		thebackendtarget13="$THEROUTER:${THEIP_TO[9]}"
 		thebackendtarget14="$THEROUTER:${THEIP_TO[12]}"
 		thebackendtarget15="$THEROUTER:${THEIP_TO[13]}"
-	fi												
+	fi
+
+	if [[ "$IsHybridCluster" == "Y" ]]; then
+		IFS=',' read -r -a THEIP_TO <<< "$THEIPTO"
+		
+		thebackendtarget1="$THEROUTER:${THEIP_TO[16]}"
+		thebackendtarget2="$THEROUTER:${THEIP_TO[14]}"
+		thebackendtarget3="$THEROUTER:${THEIP_TO[15]}"
+		thebackendtarget4="$THEROUTER:${THEIP_TO[18]}"
+		thebackendtarget5="$THEROUTER:${THEIP_TO[19]}"
+		thebackendtarget6="$THEROUTER:${THEIP_TO[17]}"
+		thebackendtarget7="$THEROUTER:${THEIP_TO[2]}"
+		thebackendtarget8="$THEROUTER:${THEIP_TO[4]}"
+		thebackendtarget9="$THEROUTER:${THEIP_TO[1]}"
+		thebackendtarget10="$THEROUTER:${THEIP_TO[5]}"
+		thebackendtarget11="$THEROUTER:${THEIP_TO[7]}"
+		thebackendtarget12="$THEROUTER:${THEIP_TO[11]}"
+		thebackendtarget13="$THEROUTER:${THEIP_TO[9]}"
+		thebackendtarget14="$THEROUTER:${THEIP_TO[12]}"
+		thebackendtarget15="$THEROUTER:${THEIP_TO[13]}"
+	fi														
 fi
 
 # Generate the HAProxy configuration

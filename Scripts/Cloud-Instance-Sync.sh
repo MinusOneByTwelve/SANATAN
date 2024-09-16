@@ -449,7 +449,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			TheNameForCluster="${THE_ARGS[8]}"
 			NativeApps="${THE_ARGS[9]}"
 			TheIDForCluster="${THE_ARGS[10]}"
-						
+			IsHybridCluster="${THE_ARGS[11]}"
+					
 			sudo mkdir -p $BASE/Output/Logs/VAMANA
 			sudo chmod -R 777 $BASE/Output/Logs/VAMANA			
 
@@ -473,7 +474,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "VisionName": "'"$TheNameOfVision"'",       
   "ClusterName": "'"$TheNameForCluster"'",       
   "NativeApps": "'"$NativeApps"'",       
-  "ClusterId": "'"$TheIDForCluster"'"      
+  "ClusterId": "'"$TheIDForCluster"'",       
+  "Hybrid": "'"$IsHybridCluster"'"      
 }'			
 			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
@@ -490,7 +492,8 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "VisionName": "'"$TheNameOfVision"'",       
   "ClusterName": "'"$TheNameForCluster"'",       
   "NativeApps": "'"$NativeApps"'",       
-  "ClusterId": "'"$TheIDForCluster"'"      
+  "ClusterId": "'"$TheIDForCluster"'",       
+  "Hybrid": "'"$IsHybridCluster"'"      
 }' > $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID/Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		
