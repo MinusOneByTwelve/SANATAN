@@ -182,6 +182,10 @@ data "template_file" "init_script" {
   }
 }
 
+resource "aws_eip" "THEREQUIREDINSTANCEeip" {
+  count = var.num_instances
+}
+
 resource "aws_instance" "THEREQUIREDINSTANCE" {
   count                       = var.num_instances
   ami                         = "THEREQUIREDAMI"
@@ -208,11 +212,24 @@ resource "aws_instance" "THEREQUIREDINSTANCE" {
   user_data = data.template_file.init_script.rendered 
 }
 
+resource "aws_eip_association" "THEREQUIREDINSTANCEeipassociation" {
+  count          = var.num_instances
+  instance_id    = aws_instance.THEREQUIREDINSTANCE[count.index].id
+  allocation_id   = aws_eip.THEREQUIREDINSTANCEeip[count.index].id
+}
+
+#output "public_ips" {
+#  value = aws_instance.THEREQUIREDINSTANCE.*.public_ip
+#}
+
+#output "instance_names" {
+#  value = aws_instance.THEREQUIREDINSTANCE.*.tags.Name
+#}
 output "public_ips" {
-  value = aws_instance.THEREQUIREDINSTANCE.*.public_ip
+  value = aws_eip.THEREQUIREDINSTANCEeip[*].public_ip
 }
 
 output "instance_names" {
-  value = aws_instance.THEREQUIREDINSTANCE.*.tags.Name
+  value = aws_instance.THEREQUIREDINSTANCE[*].tags.Name
 }
 

@@ -198,7 +198,23 @@ enable_ip_forwarding() {
     local port="$2"
     local pem_file="$3"
     local user="$4"
-    ssh_run "$ip" "$port" "$pem_file" "$user" "sudo sysctl -w net.ipv4.ip_forward=1 && sudo sysctl -w net.ipv6.conf.all.forwarding=1 && sudo sysctl -p"
+    
+    if [ "$THENATUREOFTHISRUN" == "RECURRING" ] ; then
+	IP_EXISTS="N"	
+	for existing_ip in "${NEWVPN_IPS[@]}"; do
+		if [[ "$ip" == "$existing_ip" ]]; then
+		    IP_EXISTS="Y"
+		    break
+		fi
+	done   
+    	if [[ "$IP_EXISTS" == "Y" ]]; then
+    		ssh_run "$ip" "$port" "$pem_file" "$user" "sudo sysctl -w net.ipv4.ip_forward=1 && sudo sysctl -w net.ipv6.conf.all.forwarding=1 && sudo sysctl -p"
+    	fi
+    fi 
+    
+    if [ "$THENATUREOFTHISRUN" == "FIRSTRUN" ] ; then
+    	ssh_run "$ip" "$port" "$pem_file" "$user" "sudo sysctl -w net.ipv4.ip_forward=1 && sudo sysctl -w net.ipv6.conf.all.forwarding=1 && sudo sysctl -p"
+    fi    
 }
 
 # Function to check and remove lock files
@@ -235,11 +251,11 @@ update_package_list() {
     sudo apt-get update -y
 }
 
-remove_locks
-terminate_processes
-remove_locks
-reconfigure_dpkg
-update_package_list
+#remove_locks
+#terminate_processes
+#remove_locks
+#reconfigure_dpkg
+#update_package_list
 echo "System is ready for package installation..."
 
 declare -a NEWVPN_IPS

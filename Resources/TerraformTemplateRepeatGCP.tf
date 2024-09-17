@@ -106,6 +106,12 @@ resource "google_storage_bucket_iam_binding" "THEREQUIREDINSTANCEebb" {
   ]
 }
 
+resource "google_compute_address" "THEREQUIREDINSTANCEstaticip" {
+  count  = var.instance_count
+  name   = "THEREQUIREDINSTANCEstaticip-${count.index}"
+  region = var.region
+}
+
 resource "google_compute_instance" "THEREQUIREDINSTANCEvm" {
   count        		= var.instance_count
   name         		= "THEREQUIREDINSTANCEvm-${count.index}"
@@ -132,9 +138,12 @@ resource "google_compute_instance" "THEREQUIREDINSTANCEvm" {
     network = data.google_compute_network.THE1VAL1HASHvpc.name
     subnetwork = data.google_compute_subnetwork.THE1VAL1HASHsnt.name
 
+#    access_config {
+#      
+#    }
     access_config {
-      
-    }
+      nat_ip = google_compute_address.THEREQUIREDINSTANCEstaticip[count.index].address
+    }    
   }
   
   service_account {
@@ -170,8 +179,11 @@ resource "google_compute_instance" "THEREQUIREDINSTANCEvm" {
   ]
 }
 
+#output "public_ips" {
+#  value = google_compute_instance.THEREQUIREDINSTANCEvm.*.network_interface.0.access_config.0.nat_ip
+#}
 output "public_ips" {
-  value = google_compute_instance.THEREQUIREDINSTANCEvm.*.network_interface.0.access_config.0.nat_ip
+  value = google_compute_address.THEREQUIREDINSTANCEstaticip[*].address
 }
 
 output "hostnames" {

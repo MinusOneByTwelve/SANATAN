@@ -2,6 +2,7 @@
 
 STACKNAME="THECUR_STACK"
 DFS_DATA_DIR="DFS1_DATA1_DIR"
+THE_SOCK_FILE="THESOCKFILE"
 
 THISRUNSPECFICID="$1"
 SUCCESSFILE="/opt/RestartRUN/$THISRUNSPECFICID-PreDockerRunSUCCESS"
@@ -20,6 +21,10 @@ check_generic_volume_accessible() {
     sudo mount -t glusterfs -o ro $ga1:/$ga2 $ga3 > /dev/null 2>&1
     return $?
 }
+
+if [ -f $THE_SOCK_FILE ]; then
+	sudo rm -f $THE_SOCK_FILE
+fi
 		
 if [ ! -f /opt/PHANA ]; then
 	if [ -f /opt/BRAHMA ]; then
