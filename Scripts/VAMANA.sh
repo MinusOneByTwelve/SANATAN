@@ -766,13 +766,31 @@ parse_instance_details() {
 		lowercase_text="${C1TYPE,,}"
 		ROLE_TYPE["$IP"]="$ROLE"
 		
+		itisalreadydecidedforvpn="N"
 		if [[ "$IsHybridCluster" == "N" ]]; then
-		#if [[ "$C1TYPE" == "ONPREM" ]]; then
-			echo "KRISHNA NA"
+			echo "KRISHNA NA : IsHybridCluster $IsHybridCluster"
 		else
+			echo "KRISHNA YES : IsHybridCluster $IsHybridCluster"
 			KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
+			itisalreadydecidedforvpn="Y"
 		fi
-		
+		if [[ "$THECLUSTERISMULTICLOUD" == "N" ]]; then
+			echo "KRISHNA NA : THECLUSTERISMULTICLOUD $THECLUSTERISMULTICLOUD"
+		else
+			if [ "$itisalreadydecidedforvpn" == "N" ]; then
+				echo "KRISHNA YES : THECLUSTERISMULTICLOUD $THECLUSTERISMULTICLOUD"
+				KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
+			fi
+		fi		
+		if [[ "$C1TYPE" == "ONPREM" ]]; then
+			echo "KRISHNA NA : CLUSTER_TYPE $C1TYPE"
+		else
+			if [ "$itisalreadydecidedforvpn" == "N" ]; then
+				echo "KRISHNA YES : CLUSTER_TYPE $C1TYPE"
+				KRISHNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
+			fi
+		fi		
+				
 		SAMPOORNA_IPS+=("$IP,$PORT,$PEM,$U1SER")
 		               
 		#echo 'sudo -H -u root bash -c "sed -i -e s~'"$IP"'~#'"$IP"'~g /etc/hosts"' | sudo tee -a $BASE/tmp/$EXECUTESCRIPT > /dev/null 
@@ -1404,7 +1422,9 @@ install_docker() {
     sudo cp $BASE/Resources/PreDockerRunTemplate $BASE/tmp/$PVT_DOCKTEMPLATE
     sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$PVT_DOCKTEMPLATE
     sed -i -e s~"DFS1_DATA1_DIR"~"$DFS_DATA_DIR"~g $BASE/tmp/$PVT_DOCKTEMPLATE
-
+    thenameofthevarahasock="$STACK_PRETTY_NAME""admin.sock"
+    sed -i -e s~"THESOCKFILE"~"$DFS_DATA_DIR/Misc$STACKNAME/RunHAProxy/$thenameofthevarahasock"~g $BASE/tmp/$PVT_DOCKTEMPLATE
+    
     P2VT2_DOCKTEMPLATE=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
     sudo cp $BASE/Resources/PreDockerRunTemplateII $BASE/tmp/$P2VT2_DOCKTEMPLATE
     sed -i -e s~"THECUR_STACK"~"$STACKNAME"~g $BASE/tmp/$P2VT2_DOCKTEMPLATE
