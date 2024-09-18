@@ -497,6 +497,10 @@ RND1M_="${THE_ARGS[15]}"
 TheClusterFolderForThisRUN="${THE_ARGS[16]}"
 NativeApps="${THE_ARGS[17]}"
 IsHybridCluster="${THE_ARGS[18]}"
+ToBeMonitored="${THE_ARGS[19]}"
+FromMatsya="${THE_ARGS[20]}"
+MonitorIP="${THE_ARGS[21]}"
+MonitorPort="${THE_ARGS[22]}"
 
 THENAMEOFTHEMLOGFOLDER="$BASE/Output/Logs/MATSYA/$TheNameOfVision/$REQUNQ"
 TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-SUCCESS"
@@ -504,8 +508,16 @@ TheFinalMessageFile="$THENAMEOFTHELOGFOLDER/VAMANA-SUCCESS"
 HASHED_PASSWORD=$(python3 -c "from bcrypt import hashpw, gensalt; print(hashpw(b'$ADMIN_PASSWORD', gensalt()).decode())")
 ALT_INDR_HA_PRT=""
 
-if [[ "$ISAUTOMATED" == "Y" ]]; then
-	terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
+monitorserver=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 15 | head -n 1)
+if [[ "$MonitorPort" == "AUTO" ]]; then
+	msport=$($BASE/Scripts/GetRandomPort.sh)
+else
+	msport="$MonitorPort"
+fi
+
+if [[ "$ToBeMonitored" == "Y" ]]; then
+	#terminator -e "bash -c 'tail -f $THENOHUPFILE; exec bash'"
+	nohup $BASE/Scripts/MonitorRUN.sh "$BASE/tmp" "$THENAMEOFTHELOGFOLDER" "$THENOHUPFILE" "$msport" "$BASE" "google-chrome" "$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ" "VAMANA" "$THECURRENTVERSIONOFSANATANIMPL" "V$THEVISIONID/$STACKPRETTYNAME" "$BASE/Output/Pem" "$BASE/Output/Terraform" "$BASE/Output/Vision/V$THEVISIONID/$STACKPRETTYNAME" "V.A.M.A.N.A Log Folder $REQUNQ" "V$THEVISIONID" "$BASE/Output/Vision/V$THEVISIONID" "$FromMatsya" "$THENAMEOFTHEMLOGFOLDER" "$BASE/Output/Vision/V$THEVISIONID/ONPREMVVB" "M.A.T.S.Y.A Log Folder $REQUNQ" "$MonitorIP" > $BASE/tmp/Monitor-VAMANA-$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ-$monitorserver.out 2>&1 &
 fi
 	
 SEARCH_DIR="$BASE/tmp/"
@@ -1515,7 +1527,8 @@ install_docker() {
 	    sudo cp $BASE/Resources/VARAHA $BASE/tmp/$DB_TMPL_1
 	    sed -i -e s~"THECLUSTERNAME"~"$STACKPRETTYNAME"~g $BASE/tmp/$DB_TMPL_1
 	    if [[ "$ISACTIVEINDRA" == "Y" ]]; then
-	    	sed -i -e s~"THECLUSTER_NAME"~"$STACKPRETTYNAME*"~g $BASE/tmp/$DB_TMPL_1	    
+	    	sed -i -e s~"THECLUSTER_NAME"~"$STACKPRETTYNAME*"~g $BASE/tmp/$DB_TMPL_1
+	    	sed -i -e s~"THEFULLCLUSTERNAME"~"$TheNameOfVision-$STACKPRETTYNAME"~g $BASE/tmp/$DB_TMPL_1	    
 	    	sed -i -e s~"THENATUREOFINDRA"~"/pages/layout/active.png"~g $BASE/tmp/$DB_TMPL_1
 	    	sed -i -e s~"TARGET1"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2"~g $BASE/tmp/$DB_TMPL_1	
 	    	sed -i -e s~"TARGET2"~"https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1"~g $BASE/tmp/$DB_TMPL_1	
@@ -2810,7 +2823,7 @@ echo "Portainer Proxy : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3"
 echo "Portainer Admin : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4"
 echo "Static Global : https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2"
 
-if [[ "$ISAUTOMATED" == "Y" ]]; then
+if [[ "$ToBeMonitored" == "Y" ]]; then
 	#google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort3" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort5/guacamole/" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPort6" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortY1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortZ1" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$ChitraGuptaPortLDP4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$MINPortIO4" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$FLBRPortIO2" "https://$thenamefornc:$PVTCLDPortIO2" "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$EFKPort4" &
 	google-chrome "https://${HOST_NAMES[${INDRA_IPS[0]}]}:$VarahaPort2" &
 	
@@ -2916,6 +2929,17 @@ until is_environment_ready || [ $RETRIES -eq $MAX_RETRIES ]; do
 done
 if [ $RETRIES -eq $MAX_RETRIES ]; then
     echo "Local environment did not become ready in time. Exiting."
+    if [[ "$ToBeMonitored" == "Y" ]]; then
+	PID=$(lsof -t -i :$msport)
+	if [ -z "$PID" ]; then
+	    echo "No process is running on port $msport."
+	else
+	    kill -9 $PID
+	    echo "Process $PID running on port $msport has been terminated."
+	fi
+	sudo rm -f $BASE/tmp/Monitor-VAMANA-$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ-$monitorserver.out
+	sudo rm -f $BASE/VAMANA-$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ.html
+    fi    
     #sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
     exit 1
 fi
@@ -2931,6 +2955,18 @@ else
 fi
 #sudo mv $THENOHUPFILE $BASE/Output/Logs/$REQUNQ-VAMANA-$STACKPRETTYNAME.out
 #fi
+
+if [[ "$ToBeMonitored" == "Y" ]]; then
+	PID=$(lsof -t -i :$msport)
+	if [ -z "$PID" ]; then
+	    echo "No process is running on port $msport."
+	else
+	    kill -9 $PID
+	    echo "Process $PID running on port $msport has been terminated."
+	fi
+	sudo rm -f $BASE/tmp/Monitor-VAMANA-$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ-$monitorserver.out
+	sudo rm -f $BASE/VAMANA-$TheNameOfVision-$STACKPRETTYNAME-$REQUNQ.html
+fi
 
 sudo rm -rf /home/$CURRENTUSER/.ssh/known_hosts
 sudo rm -rf /root/.ssh/known_hosts

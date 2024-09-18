@@ -450,7 +450,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
 			NativeApps="${THE_ARGS[9]}"
 			TheIDForCluster="${THE_ARGS[10]}"
 			IsHybridCluster="${THE_ARGS[11]}"
-					
+			ToBeMonitored="${THE_ARGS[12]}"
+			MonitorIP="${THE_ARGS[13]}"
+			MonitorPort="${THE_ARGS[14]}"
+											
 			sudo mkdir -p $BASE/Output/Logs/VAMANA
 			sudo chmod -R 777 $BASE/Output/Logs/VAMANA			
 
@@ -475,7 +478,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "ClusterName": "'"$TheNameForCluster"'",       
   "NativeApps": "'"$NativeApps"'",       
   "ClusterId": "'"$TheIDForCluster"'",       
-  "Hybrid": "'"$IsHybridCluster"'"      
+  "Hybrid": "'"$IsHybridCluster"'",       
+  "ToBeMonitored": "'"$ToBeMonitored"'",       
+  "MonitorIP": "'"$MonitorIP"'",       
+  "MonitorPort": "'"$MonitorPort"'"      
 }'			
 			
 			nohup /opt/Matsya/Scripts/MAYADHI.sh 'VAMANA' '{
@@ -493,7 +499,10 @@ if [ "$THEMODEOFEXECUTION" == "B" ]; then
   "ClusterName": "'"$TheNameForCluster"'",       
   "NativeApps": "'"$NativeApps"'",       
   "ClusterId": "'"$TheIDForCluster"'",       
-  "Hybrid": "'"$IsHybridCluster"'"      
+  "Hybrid": "'"$IsHybridCluster"'",       
+  "ToBeMonitored": "'"$ToBeMonitored"'",       
+  "MonitorIP": "'"$MonitorIP"'",       
+  "MonitorPort": "'"$MonitorPort"'"      
 }' > $BASE/Output/Logs/VAMANA/$TheNameOfVision/$UNQRUNID/Cloud-Instance-Sync-B-VAMANA-Initiate.out 2>&1 &							
 		fi
 		
