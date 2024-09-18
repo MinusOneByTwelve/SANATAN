@@ -1,0 +1,198 @@
+CREATE DATABASE sanatan;
+CREATE USER 'sadhaka'@'%' IDENTIFIED BY 'prajnaDYNPWD';
+GRANT SELECT,INSERT,UPDATE,DELETE ON sanatan.* TO 'sadhaka'@'%';
+FLUSH PRIVILEGES;
+
+USE sanatan; 
+
+CREATE TABLE Users (
+    UserId INT AUTO_INCREMENT PRIMARY KEY,
+    UserName VARCHAR(255) NOT NULL UNIQUE,
+    DisplayName VARCHAR(255),
+    Email VARCHAR(255) UNIQUE,
+    IsActive TINYINT(1) DEFAULT 1,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    LastEvent TIMESTAMP,
+    LDAP_DN VARCHAR(255) UNIQUE
+);
+
+CREATE TABLE Provider (
+    ProviderId INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL,
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE AuthCred (
+    AuthCredId INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL,
+    Param1 VARCHAR(255) NOT NULL,
+    Param2 VARCHAR(255) NOT NULL,
+    Param3 VARCHAR(255), 
+    ProviderId INT,               
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Vision (
+    VisionId INT AUTO_INCREMENT PRIMARY KEY,
+    Name VARCHAR(255) NOT NULL,
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Modes (
+    ModeId INT AUTO_INCREMENT PRIMARY KEY,
+    VisionId INT,    
+    Name VARCHAR(255) NOT NULL,
+    ModeKey VARCHAR(255) NOT NULL,    
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Scope (
+    ScopeId INT AUTO_INCREMENT PRIMARY KEY,
+    ModeId INT,    
+    Name VARCHAR(255) NOT NULL,
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Instance (
+    InstanceId INT AUTO_INCREMENT PRIMARY KEY,
+    ScopeId INT,
+    ProviderId INT, 
+    AuthCredId INT, 
+    IP VARCHAR(512),
+    Parent VARCHAR(512),
+    NIC VARCHAR(512),
+    Gateway VARCHAR(512),
+    Netmask VARCHAR(512),
+    PUserName VARCHAR(512),
+    PPort VARCHAR(512),
+    PPassword VARCHAR(512),
+    PPEM VARCHAR(512),
+    ISVM VARCHAR(3),
+    HostName VARCHAR(512),
+    OS VARCHAR(512),
+    VVBoxStatus VARCHAR(3),
+    TotalRAM VARCHAR(20),
+    FreeRAM VARCHAR(20),
+    CPUCores VARCHAR(20),
+    UserName VARCHAR(512),
+    Port VARCHAR(512),
+    IPassword VARCHAR(512),
+    PEM VARCHAR(512),
+    Encrypted VARCHAR(1),
+    Deleted VARCHAR(1),       
+    Name VARCHAR(255) NOT NULL,
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE OtherInfo (
+    OInfoId INT AUTO_INCREMENT PRIMARY KEY,  
+    RelatedTo VARCHAR(100) NOT NULL,     
+    TheKey VARCHAR(255) NOT NULL,                
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE OtherInfoMapping (
+    OIIMId INT AUTO_INCREMENT PRIMARY KEY,
+    OInfoId INT,    
+    MappedId INT, 
+    TheValue VARCHAR(255) NOT NULL,                            
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Apps (
+    AppId INT AUTO_INCREMENT PRIMARY KEY,   
+    Name VARCHAR(255) NOT NULL,
+    DisplayName VARCHAR(255) NOT NULL,
+    CoreStack CHAR(1),
+    Deployable CHAR(1),
+    Configurable CHAR(1),
+    Hidden CHAR(1),
+    Memory VARCHAR(20),  
+    Cores VARCHAR(20),  
+    Version VARCHAR(255),
+    Suite VARCHAR(50),
+    SuiteVersion VARCHAR(50),
+    OpenSource CHAR(1),
+    IconUrl VARCHAR(255),
+    DownloadUrl VARCHAR(255),
+    Identifier VARCHAR(255),
+    Properties JSON
+);
+
+CREATE TABLE Matsya (
+    MatsyaId INT AUTO_INCREMENT PRIMARY KEY,   
+    Name VARCHAR(255) NOT NULL,
+    CheckForOnPrem VARCHAR(1),
+    SingleLAN VARCHAR(100),
+    ToVamana VARCHAR(1), 
+    VamanaId INT,                
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE MatsyaInstanceMapping (
+    MIMId INT AUTO_INCREMENT PRIMARY KEY,
+    MatsyaId INT,    
+    InstanceId INT,                       
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Cluster (
+    ClusterId INT AUTO_INCREMENT PRIMARY KEY,   
+    Name VARCHAR(255) NOT NULL,
+    Hybrid VARCHAR(1),
+    AdminKey VARCHAR(255) NOT NULL,
+    WebSSHKey VARCHAR(255) NOT NULL,                 
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE Vamana (
+    VamanaId INT AUTO_INCREMENT PRIMARY KEY,   
+    Name VARCHAR(255) NOT NULL,
+    ClusterId INT,
+    AutoPorts VARCHAR(1),
+    Automated VARCHAR(1),
+    FromMatsya VARCHAR(1),
+    PrepOnly VARCHAR(1),
+    TheChoice VARCHAR(20),     
+    ToBeMonitored VARCHAR(1),                    
+    MonitorIP VARCHAR(255), 
+    MonitorPort VARCHAR(20),                 
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
+CREATE TABLE VamanaInstanceMapping (
+    VIMId INT AUTO_INCREMENT PRIMARY KEY,
+    VamanaId INT,    
+    InstanceId INT, 
+    InstanceType VARCHAR(20),
+    InstanceTypeM VARCHAR(20),  
+    InstanceTypeC VARCHAR(20),                             
+    IsActive TINYINT(1) DEFAULT 1,
+    LastEvent TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    EventUser INT
+);
+
